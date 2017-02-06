@@ -145,7 +145,7 @@ namespace KafkaClient.Protocol
                         var offset = reader.ReadInt64();
                         DateTimeOffset? timestamp = null;
 
-                        if (context.ApiVersion >= 2) {
+                        if (context.ApiVersion >= 3) {
                             var milliseconds = reader.ReadInt64();
                             if (milliseconds >= 0) {
                                 timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
