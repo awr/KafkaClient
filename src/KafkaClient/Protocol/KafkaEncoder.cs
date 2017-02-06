@@ -230,7 +230,7 @@ namespace KafkaClient.Protocol
                     var host = reader.ReadString();
                     var port = reader.ReadInt32();
                     string rack = null;
-                    if (context.ApiVersion >= 1) {
+                    if (context.ApiVersion >= 2) {
                         rack = reader.ReadString();
                     }
 
@@ -243,7 +243,7 @@ namespace KafkaClient.Protocol
                 }
 
                 int? controllerId = null;
-                if (context.ApiVersion >= 1) {
+                if (context.ApiVersion >= 2) {
                     controllerId = reader.ReadInt32();
                 }
 
@@ -252,7 +252,7 @@ namespace KafkaClient.Protocol
                     var topicError = (ErrorCode) reader.ReadInt16();
                     var topicName = reader.ReadString();
                     bool? isInternal = null;
-                    if (context.ApiVersion >= 1) {
+                    if (context.ApiVersion >= 2) {
                         isInternal = reader.ReadBoolean();
                     }
 
