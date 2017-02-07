@@ -72,12 +72,7 @@ namespace KafkaClient.Tests
             return consumer.FetchBatchAsync(offset.topic, offset.partition_id, offset.offset, cancellationToken, batchSize);
         }
 
-        public static Task<int> FetchAsync(this IConsumer consumer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, OffsetsResponse.Topic offset, int batchSize, CancellationToken cancellationToken)
-        {
-            return consumer.FetchAsync(onMessagesAsync, offset.topic, offset.partition_id, offset.offset, cancellationToken, batchSize);
-        }
-
-        public static Task<int> FetchAsync(this IConsumer consumer, Func<Message, CancellationToken, Task> onMessageAsync, OffsetsResponse.Topic offset, int batchSize, CancellationToken cancellationToken)
+        public static Task FetchAsync(this IConsumer consumer, Func<Message, CancellationToken, Task> onMessageAsync, OffsetsResponse.Topic offset, int batchSize, CancellationToken cancellationToken)
         {
             return consumer.FetchAsync(onMessageAsync, offset.topic, offset.partition_id, offset.offset, cancellationToken, batchSize);
         }

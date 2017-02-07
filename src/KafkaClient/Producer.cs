@@ -79,7 +79,7 @@ namespace KafkaClient
         }
 
         /// <inheritdoc />
-        public async Task<ProduceResponse.Topic> SendMessagesAsync(IEnumerable<Message> messages, string topicName, int partitionId, ISendMessageConfiguration configuration, CancellationToken cancellationToken)
+        public async Task<ProduceResponse.Topic> SendAsync(IEnumerable<Message> messages, string topicName, int partitionId, ISendMessageConfiguration configuration, CancellationToken cancellationToken)
         {
             var produceTopicTask = new ProduceTask(topicName, partitionId, messages, configuration ?? Configuration.SendDefaults, cancellationToken);
             Interlocked.Add(ref _sendingMessageCount, produceTopicTask.Messages.Count);
@@ -95,7 +95,7 @@ namespace KafkaClient
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ProduceResponse.Topic>> SendMessagesAsync(IEnumerable<Message> messages, string topicName, ISendMessageConfiguration configuration, CancellationToken cancellationToken)
+        public async Task<IEnumerable<ProduceResponse.Topic>> SendAsync(IEnumerable<Message> messages, string topicName, ISendMessageConfiguration configuration, CancellationToken cancellationToken)
         {
             if (_disposeCount > 0) throw new ObjectDisposedException("Cannot send messages after Stopped or Disposed");
 
@@ -106,7 +106,7 @@ namespace KafkaClient
                 into partition
                 select new { PartitionId = partition.Key, Messages = partition };
 
-            var sendPartitions = partitionedMessages.Select(p => SendMessagesAsync(p.Messages, topicName, p.PartitionId, configuration, cancellationToken)).ToArray();
+            var sendPartitions = partitionedMessages.Select(p => SendAsync(p.Messages, topicName, p.PartitionId, configuration, cancellationToken)).ToArray();
             await Task.WhenAll(sendPartitions);
             return sendPartitions.Select(p => p.Result);
         }

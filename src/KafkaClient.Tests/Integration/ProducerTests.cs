@@ -17,7 +17,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
-                        var sendTask = producer.SendMessageAsync(
+                        var sendTask = producer.SendAsync(
                             new Message(Guid.NewGuid().ToString()), TestConfig.TopicName(), 0,
                             new SendMessageConfiguration(acks: 0), CancellationToken.None);
 
@@ -35,7 +35,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
-                        var result = await producer.SendMessagesAsync(new[] { new Message(Guid.NewGuid().ToString()) }, topicName, 0, CancellationToken.None);
+                        var result = await producer.SendAsync(new[] { new Message(Guid.NewGuid().ToString()) }, topicName, 0, CancellationToken.None);
 
                         Assert.That(result.topic, Is.EqualTo(topicName));
                     }
@@ -50,9 +50,9 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var tasks = new[] {
-                            producer.SendMessageAsync(new Message("1"), TestConfig.TopicName(), 0, CancellationToken.None),
-                            producer.SendMessageAsync(new Message("2"), TestConfig.TopicName(), 1, CancellationToken.None),
-                            producer.SendMessageAsync(new Message("3"), TestConfig.TopicName(), 2, CancellationToken.None),
+                            producer.SendAsync(new Message("1"), TestConfig.TopicName(), 0, CancellationToken.None),
+                            producer.SendAsync(new Message("2"), TestConfig.TopicName(), 1, CancellationToken.None),
+                            producer.SendAsync(new Message("3"), TestConfig.TopicName(), 2, CancellationToken.None),
                         };
 
                         await Task.WhenAll(tasks);
@@ -70,9 +70,9 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
-                        var responseAckLevel0 = await producer.SendMessageAsync(new Message("Ack Level 0"), topicName, 0, new SendMessageConfiguration(acks: 0), CancellationToken.None);
+                        var responseAckLevel0 = await producer.SendAsync(new Message("Ack Level 0"), topicName, 0, new SendMessageConfiguration(acks: 0), CancellationToken.None);
                         Assert.AreEqual(responseAckLevel0.base_offset, -1);
-                        var responseAckLevel1 = await producer.SendMessageAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
+                        var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         Assert.That(responseAckLevel1.base_offset, Is.GreaterThan(-1));
                     }
                 });
@@ -85,7 +85,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
-                        var responseAckLevel1 = await producer.SendMessageAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
+                        var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         var offsetResponse = await producer.Router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.partition_id == 0);
                         Assert.AreEqual(responseAckLevel1.base_offset, maxOffset.offset - 1);
@@ -100,7 +100,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
-                        var responseAckLevel1 = await producer.SendMessagesAsync(new[] { new Message("Ack Level 1"), new Message("Ack Level 1") }, topicName, 0,new SendMessageConfiguration(acks: 1), CancellationToken.None);
+                        var responseAckLevel1 = await producer.SendAsync(new[] { new Message("Ack Level 1"), new Message("Ack Level 1") }, topicName, 0,new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         var offsetResponse = await router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.partition_id == 0);
 
@@ -123,7 +123,7 @@ namespace KafkaClient.Tests.Integration
                     using (var producer = new Producer(router, new ProducerConfiguration(partitionSelector: partitionSelector))) {
                         //message should send to PartitionId and not use the key to Select Broker Route !!
                         for (var i = 0; i < 20; i++) {
-                            await producer.SendMessageAsync(new Message(i.ToString(), "key"), offset.topic, offset.partition_id, CancellationToken.None);
+                            await producer.SendAsync(new Message(i.ToString(), "key"), offset.topic, offset.partition_id, CancellationToken.None);
                         }
                     }
 

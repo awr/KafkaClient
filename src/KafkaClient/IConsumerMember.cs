@@ -1,24 +1,18 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
-using KafkaClient.Protocol;
 
 namespace KafkaClient
 {
-    public interface IConsumerMember : IGroupMember, IAsyncDisposable
+    public interface IConsumerMember : IAsyncDisposable
     {
+        string GroupId { get; }
+        string MemberId { get; }
         int GenerationId { get; }
         bool IsLeader { get; }
         string ProtocolType { get; }
 
         ILog Log { get; }
-
-        /// <summary>
-        /// Called from the consumer when joining/rejoining..
-        /// 
-        /// See https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Client-side+Assignment+Proposal
-        /// </summary>
-        void OnJoinGroup(JoinGroupResponse response);
 
         /// <summary>
         /// Fetch messages for this consumer group's current assignment.

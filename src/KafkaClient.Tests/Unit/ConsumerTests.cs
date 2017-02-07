@@ -73,12 +73,9 @@ namespace KafkaClient.Tests.Unit
         {
             var router = Substitute.For<IRouter>();
 
-            var consumer = new Consumer(router);
-            using (consumer) {
-                await AssertAsync.Throws<ArgumentOutOfRangeException>(
-                    () => consumer.JoinConsumerGroupAsync("group", protocolType, new ByteTypeMetadata("mine", new ArraySegment<byte>()), CancellationToken.None),
-                    ex => ex.Message.StartsWith($"ProtocolType {protocolType} is unknown"));
-            }
+            await AssertAsync.Throws<ArgumentOutOfRangeException>(
+                () => router.JoinConsumerGroupAsync("group", protocolType, new ByteTypeMetadata("mine", new ArraySegment<byte>()), new ConsumerConfiguration(), ConnectionConfiguration.Defaults.Encoders(), CancellationToken.None),
+                ex => ex.Message.StartsWith($"ProtocolType {protocolType} is unknown"));
         }
 
         [Test]
@@ -90,14 +87,10 @@ namespace KafkaClient.Tests.Unit
                   .Returns(_ => Task.FromResult(new GroupConnection(_.Arg<string>(), 0, conn)));
             router.Configuration.Returns(new RouterConfiguration(refreshRetry: new Retry(1, TimeSpan.FromSeconds(2))));
 
-            var consumer = new Consumer(router, new ConsumerConfiguration(coordinationRetry: Retry.AtMost(2)), encoders: ConnectionConfiguration.Defaults.Encoders());
-            using (consumer) {
-                try {
-                    await consumer.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), CancellationToken.None);
-                } catch (RequestException) {
-                    // since the servers aren't available
-                }
-            }
+            var configuration = new ConsumerConfiguration(coordinationRetry: Retry.AtMost(2));
+            var encoders = ConnectionConfiguration.Defaults.Encoders();
+            await AssertAsync.Throws<RequestException>(
+                () => router.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), configuration, encoders, CancellationToken.None));
         }
 
         [Test]
@@ -116,7 +109,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(consumer, request, response, log: TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
                 await Task.Delay(300);
             }
 
@@ -149,7 +142,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(consumer, request, response, log: TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
                 await Task.Delay(300);
             }
 
@@ -178,7 +171,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, "other" + memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(consumer, request, response, TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
                 await Task.Delay(300);
             }
 
@@ -210,7 +203,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(consumer, request, response, TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -248,7 +241,7 @@ namespace KafkaClient.Tests.Unit
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
             lastHeartbeat = DateTimeOffset.UtcNow;
 
-            using (new ConsumerMember(consumer, request, response, TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -277,7 +270,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(consumer, request, response, log: TestConfig.Log)) {
+            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
                 await Task.Delay(heartbeatMilliseconds * 3);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed

@@ -961,7 +961,7 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter();
 
             await AssertAsync.Throws<BufferUnderRunException>(
-                () => router.GetOffsetsAsync(RoutingScenario.TestTopic, RoutingScenario.TestGroup, CancellationToken.None),
+                () => router.GetOffsetsAsync(RoutingScenario.TestGroup, RoutingScenario.TestTopic, CancellationToken.None),
                 ex => ex.Message.Contains("test 99"));
         }
 

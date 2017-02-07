@@ -17,7 +17,7 @@ namespace KafkaClient
         /// <param name="configuration">The configuration for sending the messages (ie acks, ack Timeout and codec)</param>
         /// <param name="cancellationToken">The token for cancellation</param>
         /// <returns>List of ProduceTopic response from each partition sent to or empty list if acks = 0.</returns>
-        Task<ProduceResponse.Topic> SendMessagesAsync(IEnumerable<Message> messages, string topicName, int partitionId, ISendMessageConfiguration configuration, CancellationToken cancellationToken);
+        Task<ProduceResponse.Topic> SendAsync(IEnumerable<Message> messages, string topicName, int partitionId, ISendMessageConfiguration configuration, CancellationToken cancellationToken);
 
         /// <summary>
         /// Send messages to the given topic.
@@ -27,7 +27,7 @@ namespace KafkaClient
         /// <param name="configuration">The configuration for sending the messages (ie acks, ack Timeout and codec)</param>
         /// <param name="cancellationToken">The token for cancellation</param>
         /// <returns>List of ProduceTopic response from each partition sent to or empty list if acks = 0.</returns>
-        Task<IEnumerable<ProduceResponse.Topic>> SendMessagesAsync(IEnumerable<Message> messages, string topicName, ISendMessageConfiguration configuration, CancellationToken cancellationToken);
+        Task<IEnumerable<ProduceResponse.Topic>> SendAsync(IEnumerable<Message> messages, string topicName, ISendMessageConfiguration configuration, CancellationToken cancellationToken);
 
         /// <summary>
         /// The configuration for various limits and for send defaults

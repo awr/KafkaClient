@@ -416,6 +416,16 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void DynamicVersionUsesFallbackVersion()
+        {
+            var dynamicVersion = VersionSupport.Kafka10.Dynamic();
+            var staticVersion = VersionSupport.Kafka10;
+            foreach (ApiKey apiKey in Enum.GetValues(typeof (ApiKey))) {
+                Assert.That(dynamicVersion.GetVersion(apiKey), Is.EqualTo(staticVersion.GetVersion(apiKey)));
+            }
+        }
+
+        [Test]
         public async Task SendAsyncShouldUseStatictVersionInfo()
         {
             IRequestContext context = null;

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Assignment;
@@ -22,8 +21,5 @@ namespace KafkaClient
         IImmutableDictionary<string, IMembershipEncoder> Encoders { get; }
 
         IRouter Router { get; }
-
-        Task<IConsumerMember> JoinGroupAsync(string groupId, string protocolType, IEnumerable<IMemberMetadata> metadata, CancellationToken cancellationToken);
-        Task<IMessageBatch> FetchBatchAsync(string groupId, string memberId, int generationId, string topicName, int partitionId, CancellationToken cancellationToken, int? batchSize = null);
     }
 }

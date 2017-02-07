@@ -60,7 +60,7 @@ namespace KafkaClient.Tests.Integration
                             messages.Add(new Message(i.ToString()));
                         }
                         TestConfig.Log.Info(() => LogEvent.Create(">> Start Produce"));
-                        await producer.SendMessagesAsync(messages, topicName, partitionId, new SendMessageConfiguration(codec: MessageCodec.Gzip), CancellationToken.None);
+                        await producer.SendAsync(messages, topicName, partitionId, new SendMessageConfiguration(codec: MessageCodec.Gzip), CancellationToken.None);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Produce"));
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start Consume"));
@@ -134,7 +134,7 @@ namespace KafkaClient.Tests.Integration
                             messages.Add(new Message(i.ToString()));
                         }
                         TestConfig.Log.Info(() => LogEvent.Create(">> Start Produce"));
-                        await producer.SendMessagesAsync(messages, topicName, partitionId, new SendMessageConfiguration(codec: MessageCodec.Snappy), CancellationToken.None);
+                        await producer.SendAsync(messages, topicName, partitionId, new SendMessageConfiguration(codec: MessageCodec.Snappy), CancellationToken.None);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Produce"));
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start Consume"));

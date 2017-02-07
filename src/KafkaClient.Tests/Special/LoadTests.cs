@@ -29,7 +29,7 @@ namespace KafkaClient.Tests.Special
                         var tasks = new Task<ProduceResponse.Topic>[amount];
 
                         for (var i = 0; i < amount; i++) {
-                            tasks[i] = producer.SendMessageAsync(new Message(Guid.NewGuid().ToString()), TestConfig.TopicName(), 0, CancellationToken.None);
+                            tasks[i] = producer.SendAsync(new Message(Guid.NewGuid().ToString()), TestConfig.TopicName(), 0, CancellationToken.None);
                         }
                         var results = await Task.WhenAll(tasks.ToArray());
 
@@ -74,7 +74,7 @@ namespace KafkaClient.Tests.Special
                         var sendList = new List<Task>(totalMessages/batchSize);
                         var timedOut = Task.Delay(maxTimeToRun);
                         for (var i = 0; i < totalMessages; i+=batchSize) {
-                            var sendTask = producer.SendMessagesAsync(batchSize.Repeat(x => new Message(x.ToString())), offset.topic, offset.partition_id, new SendMessageConfiguration(codec: codec), CancellationToken.None);
+                            var sendTask = producer.SendAsync(batchSize.Repeat(x => new Message(x.ToString())), offset.topic, offset.partition_id, new SendMessageConfiguration(codec: codec), CancellationToken.None);
                             sendList.Add(sendTask);
                         }
                         var doneSend = Task.WhenAll(sendList.ToArray());
@@ -112,7 +112,7 @@ namespace KafkaClient.Tests.Special
                             stopwatch.Start();
                             var sendList = new List<Task>(missingMessages/batchSize);
                             for (var i = 0; i < missingMessages; i+=batchSize) {
-                                var sendTask = producer.SendMessagesAsync(batchSize.Repeat(x => new Message(x.ToString())), offset.topic, offset.partition_id, new SendMessageConfiguration(codec: MessageCodec.Gzip), CancellationToken.None);
+                                var sendTask = producer.SendAsync(batchSize.Repeat(x => new Message(x.ToString())), offset.topic, offset.partition_id, new SendMessageConfiguration(codec: MessageCodec.Gzip), CancellationToken.None);
                                 sendList.Add(sendTask);
                             }
                             var doneSend = Task.WhenAll(sendList.ToArray());

@@ -28,7 +28,7 @@ namespace KafkaClient.Tests.Unit
                     new Message("1"), new Message("2")
                 };
 
-                var response = await producer.SendMessagesAsync(messages, "UnitTest", CancellationToken.None);
+                var response = await producer.SendAsync(messages, "UnitTest", CancellationToken.None);
 
                 Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(1));
                 Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(1));
@@ -46,7 +46,7 @@ namespace KafkaClient.Tests.Unit
             {
                 var messages = new List<Message> { new Message("1"), new Message("2") };
 
-                var sendTask = producer.SendMessagesAsync(messages, "UnitTest", CancellationToken.None).ConfigureAwait(false);
+                var sendTask = producer.SendAsync(messages, "UnitTest", CancellationToken.None).ConfigureAwait(false);
                 Assert.ThrowsAsync<RequestException>(async () => await sendTask);
 
                 Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(1));
@@ -73,7 +73,7 @@ namespace KafkaClient.Tests.Unit
 
                 Assert.That(producer.ActiveSenders, Is.EqualTo(0));
 
-                var sendTask = producer.SendMessagesAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
+                var sendTask = producer.SendAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
 
                 await AssertAsync.ThatEventually(() => producer.ActiveSenders >= 1, () => $"senders {producer.ActiveSenders}");
 
@@ -105,11 +105,11 @@ namespace KafkaClient.Tests.Unit
 
                 var task = Task.Run(async () =>
                 {
-                    var t = producer.SendMessagesAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
+                    var t = producer.SendAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
                     Interlocked.Increment(ref count);
                     await t;
 
-                    t = producer.SendMessagesAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
+                    t = producer.SendAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
 
                     Interlocked.Increment(ref count);
                     await t;
@@ -136,8 +136,8 @@ namespace KafkaClient.Tests.Unit
             {
                 var calls = new[]
                 {
-                    producer.SendMessageAsync(new Message("1"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("2"), RoutingScenario.TestTopic, CancellationToken.None)
+                    producer.SendAsync(new Message("1"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("2"), RoutingScenario.TestTopic, CancellationToken.None)
                 };
 
                 await Task.WhenAll(calls);
@@ -156,14 +156,14 @@ namespace KafkaClient.Tests.Unit
             {
                 var calls = new[]
                 {
-                    producer.SendMessageAsync(new Message("1"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("2"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("3"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("4"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("5"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("6"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("7"), RoutingScenario.TestTopic, CancellationToken.None),
-                    producer.SendMessageAsync(new Message("8"), RoutingScenario.TestTopic, CancellationToken.None)
+                    producer.SendAsync(new Message("1"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("2"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("3"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("4"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("5"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("6"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("7"), RoutingScenario.TestTopic, CancellationToken.None),
+                    producer.SendAsync(new Message("8"), RoutingScenario.TestTopic, CancellationToken.None)
                 };
 
                 await Task.WhenAll(calls);
@@ -185,8 +185,8 @@ namespace KafkaClient.Tests.Unit
             {
                 var calls = new[]
                 {
-                    producer.SendMessagesAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(ack1, TimeSpan.FromMilliseconds(time1)), CancellationToken.None),
-                    producer.SendMessagesAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(ack2, TimeSpan.FromMilliseconds(time2)), CancellationToken.None)
+                    producer.SendAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(ack1, TimeSpan.FromMilliseconds(time1)), CancellationToken.None),
+                    producer.SendAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(ack2, TimeSpan.FromMilliseconds(time2)), CancellationToken.None)
                 };
 
                 await Task.WhenAll(calls);
@@ -208,8 +208,8 @@ namespace KafkaClient.Tests.Unit
             {
                 var calls = new[]
                 {
-                    producer.SendMessagesAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(codec: codec1), CancellationToken.None),
-                    producer.SendMessagesAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(codec: codec2), CancellationToken.None)
+                    producer.SendAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(codec: codec1), CancellationToken.None),
+                    producer.SendAsync(new[] {new Message("1"), new Message("2")}, RoutingScenario.TestTopic, new SendMessageConfiguration(codec: codec2), CancellationToken.None)
                 };
 
                 await Task.WhenAll(calls);
@@ -231,7 +231,7 @@ namespace KafkaClient.Tests.Unit
 
                 var senderTask = Task.Run(() => {
                     for (var i = 0; i < count; i++) {
-                        producer.SendMessageAsync(new Message(i.ToString()), RoutingScenario.TestTopic, CancellationToken.None);
+                        producer.SendAsync(new Message(i.ToString()), RoutingScenario.TestTopic, CancellationToken.None);
                     }
                 });
                 await senderTask;
@@ -257,7 +257,7 @@ namespace KafkaClient.Tests.Unit
             {
                 var senderTask = Task.Factory.StartNew(async () => {
                     for (int i = 0; i < 3; i++) {
-                        await producer.SendMessageAsync(new Message(i.ToString()), RoutingScenario.TestTopic, CancellationToken.None);
+                        await producer.SendAsync(new Message(i.ToString()), RoutingScenario.TestTopic, CancellationToken.None);
                         TestConfig.Log.Info(() => LogEvent.Create($"Buffered {producer.BufferedMessageCount}, In Flight: {producer.InFlightMessageCount}"));
                         Interlocked.Increment(ref count);
                     }
@@ -283,7 +283,7 @@ namespace KafkaClient.Tests.Unit
             var router = Substitute.For<IRouter>();
             var producer = new Producer(router);
             using (producer) { }
-            Assert.ThrowsAsync<ObjectDisposedException>(async () => await producer.SendMessageAsync(new Message("1"), "Test", CancellationToken.None));
+            Assert.ThrowsAsync<ObjectDisposedException>(async () => await producer.SendAsync(new Message("1"), "Test", CancellationToken.None));
         }
 
         [Test]

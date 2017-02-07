@@ -49,7 +49,7 @@ namespace KafkaClient.Tests.Special
         {
             for (var id = 0;;) {
                 try {
-                    await producer.SendMessageAsync(new Message((++id).ToString()), topicName, partitionId, CancellationToken.None);
+                    await producer.SendAsync(new Message((++id).ToString()), topicName, partitionId, CancellationToken.None);
                     await Task.Delay(100);
                 } catch (Exception ex) {
                     TestConfig.Log.Info(() => LogEvent.Create(ex, "can't send:"));

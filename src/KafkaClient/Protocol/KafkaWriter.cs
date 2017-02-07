@@ -167,6 +167,5 @@ namespace KafkaClient.Protocol
         public int Position => (int)_stream.Position;
 
         public Stream Stream => _stream;
-        public int Capacity { get { return _stream.Capacity; } set { _stream.Capacity = value; } }
     }
 }

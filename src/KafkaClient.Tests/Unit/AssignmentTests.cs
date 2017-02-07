@@ -27,18 +27,15 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
-            await Async.Using(new Consumer(router, encoders: ConnectionConfiguration.Defaults.Encoders()),
-                async consumer => {
-                    try {
-                        using (var m = await consumer.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, metadata, CancellationToken.None)) {
-                            var member = (ConsumerMember) m;
-                            await member.SyncGroupAsync(CancellationToken.None);
-                        }
-                        Assert.Fail("Should have thrown exception");
-                    } catch (ArgumentOutOfRangeException ex) when (ex.Message.StartsWith($"Unknown strategy {metadata.AssignmentStrategy} for ProtocolType {ConsumerEncoder.Protocol}")) {
-                        // not configured here
-                    }
-                });
+            try {
+                using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
+                    var member = (ConsumerMember) m;
+                    await member.SyncGroupAsync(CancellationToken.None);
+                }
+                Assert.Fail("Should have thrown exception");
+            } catch (ArgumentOutOfRangeException ex) when (ex.Message.StartsWith($"Unknown strategy {metadata.AssignmentStrategy} for ProtocolType {ConsumerEncoder.Protocol}")) {
+                // not configured here
+            }
         }
 
         [Test]
@@ -60,12 +57,10 @@ namespace KafkaClient.Tests.Unit
             var assignor = Substitute.For<IMembershipAssignor>();
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
-            var consumer = new Consumer(router, encoders: encoders);
-            using (consumer) {
-                using (var m = await consumer.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, metadata, CancellationToken.None)) {
-                    var member = (ConsumerMember) m;
-                    await member.SyncGroupAsync(CancellationToken.None);
-                }
+
+            using (var m = await router.JoinConsumerGroupAsync("group", metadata, new ConsumerConfiguration(), encoders, CancellationToken.None)) {
+                var member = (ConsumerMember) m;
+                await member.SyncGroupAsync(CancellationToken.None);
             }
         }
 
@@ -88,12 +83,9 @@ namespace KafkaClient.Tests.Unit
             var assignor = Substitute.For<IMembershipAssignor>();
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
-            var consumer = new Consumer(router, encoders: encoders);
-            using (consumer) {
-                using (var m = await consumer.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, metadata, CancellationToken.None)) {
-                    var member = (ConsumerMember) m;
-                    await member.SyncGroupAsync(CancellationToken.None);
-                }
+            using (var m = await router.JoinConsumerGroupAsync("group", metadata, new ConsumerConfiguration(), encoders, CancellationToken.None)) {
+                var member = (ConsumerMember) m;
+                await member.SyncGroupAsync(CancellationToken.None);
             }
         }
 
@@ -113,12 +105,9 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
-            var consumer = new Consumer(router, encoders: ConnectionConfiguration.Defaults.Encoders());
-            using (consumer) {
-                using (var m = await consumer.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, metadata, CancellationToken.None)) {
-                    var member = (ConsumerMember) m;
-                    await member.SyncGroupAsync(CancellationToken.None);
-                }
+            using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
+                var member = (ConsumerMember) m;
+                await member.SyncGroupAsync(CancellationToken.None);
             }
         }
 
