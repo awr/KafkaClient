@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using KafkaClient.Assignment;
 using KafkaClient.Common;
-using KafkaClient.Connections;
 using KafkaClient.Protocol;
 
 namespace KafkaClient
@@ -14,41 +12,45 @@ namespace KafkaClient
     {
         private int _disposeCount; // = 0;
         private readonly TaskCompletionSource<bool> _disposePromise = new TaskCompletionSource<bool>();
+        private readonly IImmutableList<TopicPartition> _topicPartitions;
         private readonly bool _leaveRouterOpen;
+        private int _fetchCount; // = 0;
 
-        public Consumer(IRouter router, IConsumerConfiguration configuration = null, IImmutableDictionary<string, IMembershipEncoder> encoders = null, bool leaveRouterOpen = true)
+        public Consumer(string topicName, int partitionId, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
+            : this(new TopicPartition(topicName, partitionId), router, configuration, leaveRouterOpen)
         {
-            Router = router;
-            _leaveRouterOpen = leaveRouterOpen;
-            Configuration = configuration ?? new ConsumerConfiguration();
-            Encoders = encoders ?? ConnectionConfiguration.Defaults.Encoders();
         }
 
-        public IImmutableDictionary<string, IMembershipEncoder> Encoders { get; }
+        public Consumer(TopicPartition topicPartition, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
+            : this(new []{ topicPartition }, router, configuration, leaveRouterOpen)
+        {
+        }
+
+        public Consumer(IEnumerable<TopicPartition> partitions, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
+        {
+            Router = router;
+            _topicPartitions = ImmutableList<TopicPartition>.Empty.AddNotNullRange(partitions);
+            _leaveRouterOpen = leaveRouterOpen;
+            Configuration = configuration ?? ConsumerConfiguration.Default;
+        }
 
         public IConsumerConfiguration Configuration { get; }
 
         public IRouter Router { get; }
 
         /// <inheritdoc />
-        public async Task<IMessageBatch> FetchBatchAsync(string topicName, int partitionId, long offset, CancellationToken cancellationToken, int? batchSize = null)
+        public async Task<IMessageBatch> FetchBatchAsync(CancellationToken cancellationToken, int? batchSize = null)
         {
             if (_disposeCount > 0) throw new ObjectDisposedException(nameof(Consumer));
-            if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset), offset, "must be >= 0");
+            var index = Interlocked.Increment(ref _fetchCount);
+            if (index >= _topicPartitions.Count) return MessageBatch.Empty;
 
-            var messages = await Router.FetchBatchAsync(ImmutableList<Message>.Empty, topicName, partitionId, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
-            return new MessageBatch(messages, new TopicPartition(topicName, partitionId), offset, Router, Configuration, batchSize);
-        }
-
-        /// <inheritdoc />
-        public async Task<IMessageBatch> FetchBatchAsync(string groupId, string memberId, int generationId, string topicName, int partitionId, CancellationToken cancellationToken, int? batchSize = null)
-        {
-            if (_disposeCount > 0) throw new ObjectDisposedException(nameof(Consumer));
-
-            var currentOffset = await Router.GetOffsetAsync(groupId, topicName, partitionId, cancellationToken).ConfigureAwait(false);
+            var topicPartition = _topicPartitions[index];
+            var currentOffset = topicPartition as TopicOffset 
+                ?? await Router.GetOffsetAsync(topicPartition.topic, topicPartition.partition_id, cancellationToken);
             var offset = currentOffset.offset + 1;
-            var messages = await Router.FetchBatchAsync(ImmutableList<Message>.Empty, topicName, partitionId, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
-            return new MessageBatch(messages, new TopicPartition(topicName, partitionId), offset, Router, Configuration, batchSize, groupId, memberId, generationId);
+            var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, topicPartition.topic, topicPartition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
+            return new MessageBatch(messages, topicPartition, offset, Router, Configuration, batchSize);
         }
 
         public async Task DisposeAsync()
@@ -73,15 +75,6 @@ namespace KafkaClient
             // trigger, and set the promise appropriately
             DisposeAsync();
 #pragma warning restore 4014
-        }
-
-        public async Task<IConsumerMember> JoinGroupAsync(string groupId, string protocolType, IEnumerable<IMemberMetadata> metadata, CancellationToken cancellationToken)
-        {
-            if (_disposeCount > 0) throw new ObjectDisposedException(nameof(Consumer));
-            if (!Encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(metadata), $"ProtocolType {protocolType} is unknown");
-
-            var response = await Router.JoinGroupAsync(groupId, protocolType, metadata, Configuration, cancellationToken);
-            return new ConsumerMember(Router, groupId, protocolType, response, Configuration, Encoders);
         }
     }
 }

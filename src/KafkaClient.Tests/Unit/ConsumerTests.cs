@@ -49,7 +49,7 @@ namespace KafkaClient.Tests.Unit
         {
             var router = Substitute.For<IRouter>();
 
-            var consumer = new Consumer(router, leaveRouterOpen: false);
+            var consumer = new Consumer("test", 0, router, leaveRouterOpen: false);
             await consumer.DisposeAsync();
 #pragma warning disable 4014
             router.Received(1).DisposeAsync();
@@ -60,7 +60,7 @@ namespace KafkaClient.Tests.Unit
         public async Task EnsureConsumerDoesNotDisposeRouter()
         {
             var router = Substitute.For<IRouter>();
-            var consumer = new Consumer(router);
+            var consumer = new Consumer("test", 0, router);
             await consumer.DisposeAsync();
 #pragma warning disable 4014
             router.DidNotReceive().DisposeAsync();
@@ -104,12 +104,11 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                 .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment(new [] { new TopicPartition("name", 0) }))));
 
-            var consumer = new Consumer(router);
             var request = new JoinGroupRequest(TestConfig.GroupId(), TimeSpan.FromSeconds(30), "", ConsumerEncoder.Protocol, new [] { protocol });
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
@@ -137,12 +136,11 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                 .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment(new [] { new TopicPartition("name", 0) }))));
 
-            var consumer = new Consumer(router);
             var request = new JoinGroupRequest(TestConfig.GroupId(), TimeSpan.FromSeconds(30), "", ConsumerEncoder.Protocol, new [] { protocol });
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
@@ -166,12 +164,11 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                 .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment(new [] { new TopicPartition("name", 0) }))));
 
-            var consumer = new Consumer(router);
             var request = new JoinGroupRequest(TestConfig.GroupId(), TimeSpan.FromSeconds(30), "", ConsumerEncoder.Protocol, new [] { protocol });
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, "other" + memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
@@ -198,12 +195,11 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<HeartbeatRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                 .Returns(_ => Task.FromResult(new HeartbeatResponse(ErrorCode.NONE)));
 
-            var consumer = new Consumer(router);
             var request = new JoinGroupRequest(TestConfig.GroupId(), TimeSpan.FromMilliseconds(heartbeatMilliseconds * 2), "", ConsumerEncoder.Protocol, new [] { protocol });
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -227,7 +223,6 @@ namespace KafkaClient.Tests.Unit
             router.GetGroupConnectionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                   .Returns(_ => Task.FromResult(new GroupConnection(_.Arg<string>(), 0, conn)));
 
-            var consumer = new Consumer(router);
             var lastHeartbeat = DateTimeOffset.UtcNow;
             var heartbeatIntervals = ImmutableArray<TimeSpan>.Empty;
             conn.SendAsync(Arg.Any<HeartbeatRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
@@ -241,7 +236,7 @@ namespace KafkaClient.Tests.Unit
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
             lastHeartbeat = DateTimeOffset.UtcNow;
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -265,12 +260,11 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<HeartbeatRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                 .Returns(_ => Task.FromResult(new HeartbeatResponse(ErrorCode.NETWORK_EXCEPTION)));
 
-            var consumer = new Consumer(router);
             var request = new JoinGroupRequest(TestConfig.GroupId(), TimeSpan.FromMilliseconds(heartbeatMilliseconds), "", ConsumerEncoder.Protocol, new [] { protocol });
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new ConsumerMember(router, request.group_id, request.protocol_type, response, consumer.Configuration, consumer.Encoders, log: TestConfig.Log)) {
+            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
                 await Task.Delay(heartbeatMilliseconds * 3);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed

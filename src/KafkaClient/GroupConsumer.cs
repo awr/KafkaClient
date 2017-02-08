@@ -11,19 +11,16 @@ using Nito.AsyncEx;
 
 namespace KafkaClient
 {
-    public class ConsumerMember : IConsumerMember
+    public class GroupConsumer : IGroupConsumer
     {
         private readonly bool _leaveRouterOpen;
-        private IRouter Router { get; }
-        private IConsumerConfiguration Configuration { get; }
         private IImmutableDictionary<string, IMembershipEncoder> Encoders { get; }
 
-        public ConsumerMember(IRouter router, string groupId, string protocolType, JoinGroupResponse response, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, ILog log = null, bool leaveRouterOpen = true)
+        public GroupConsumer(IRouter router, string groupId, string protocolType, JoinGroupResponse response, IConsumerConfiguration configuration = null, IImmutableDictionary<string, IMembershipEncoder> encoders = null, bool leaveRouterOpen = true)
         {
             Router = router;
             _leaveRouterOpen = leaveRouterOpen;
-            Log = log ?? Router?.Log ?? TraceLog.Log;
-            Configuration = configuration ?? new ConsumerConfiguration();
+            Configuration = configuration ?? ConsumerConfiguration.Default;
             Encoders = encoders ?? ConnectionConfiguration.Defaults.Encoders();
 
             if (!Encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(protocolType), $"ProtocolType {protocolType} is unknown");
@@ -64,13 +61,15 @@ namespace KafkaClient
         private IImmutableDictionary<TopicPartition, IMessageBatch> _batches = ImmutableDictionary<TopicPartition, IMessageBatch>.Empty;
         private IMemberAssignment _assignment;
 
-        public ILog Log { get; }
         public bool IsLeader { get; private set; }
         public int GenerationId { get; private set; }
         private string _groupProtocol;
 
         public string GroupId { get; }
         public string MemberId { get; }
+
+        public IRouter Router { get; }
+        public IConsumerConfiguration Configuration { get; }
 
         /// <summary>
         /// State machine for Member state
@@ -127,7 +126,7 @@ namespace KafkaClient
             if (Interlocked.Increment(ref _activeHeartbeatCount) != 1) return;
 
             try {
-                Log.Info(() => LogEvent.Create($"Starting heartbeat for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                Router.Log.Info(() => LogEvent.Create($"Starting heartbeat for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
                 var delay = _heartbeatDelay;
                 while (!_disposeToken.IsCancellationRequested) {
                     try {
@@ -138,37 +137,37 @@ namespace KafkaClient
                     } catch (RequestException ex) {
                         switch (ex.ErrorCode) {
                             case ErrorCode.REBALANCE_IN_PROGRESS:
-                                Log.Info(() => LogEvent.Create(ex.Message));
+                                Router.Log.Info(() => LogEvent.Create(ex.Message));
                                 TriggerRejoin();
                                 delay = _heartbeatDelay;
                                 break;
 
                             case ErrorCode.GROUP_AUTHORIZATION_FAILED:
                             case ErrorCode.UNKNOWN_MEMBER_ID:
-                                Log.Warn(() => LogEvent.Create(ex));
+                                Router.Log.Warn(() => LogEvent.Create(ex));
                                 _leaveOnDispose = false; // no point in attempting to leave the group since it will fail
                                 _disposeToken.Cancel();
                                 break;
 
                             default:
-                                Log.Info(() => LogEvent.Create(ex));
+                                Router.Log.Info(() => LogEvent.Create(ex));
                                 if (ex.ErrorCode.IsRetryable()) {
                                     delay = TimeSpan.FromMilliseconds(Math.Max(delay.TotalMilliseconds / 2, 1000));
                                 }
                                 break;
                         }
                     } catch (Exception ex) {
-                        Log.Warn(() => LogEvent.Create(ex));
+                        Router.Log.Warn(() => LogEvent.Create(ex));
                         HandleDispose(ex as ObjectDisposedException);
                     }
                 }
             } catch (OperationCanceledException) { // cancellation token fired while attempting to get tasks: normal behavior
             } catch (Exception ex) {
-                Log.Warn(() => LogEvent.Create(ex));
+                Router.Log.Warn(() => LogEvent.Create(ex));
             } finally {
                 await DisposeAsync().ConfigureAwait(false); // safe to call in multiple places
                 Interlocked.Decrement(ref _activeHeartbeatCount);
-                Log.Info(() => LogEvent.Create($"Stopped heartbeat for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                Router.Log.Info(() => LogEvent.Create($"Stopped heartbeat for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
             }
         }
 
@@ -181,14 +180,14 @@ namespace KafkaClient
             if (Interlocked.Increment(ref _activeStateChangeCount) != 1) return;
 
             try {
-                Log.Info(() => LogEvent.Create($"Starting state change for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                Router.Log.Info(() => LogEvent.Create($"Starting state change for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
                 ApiKey? nextRequest = ApiKey.SyncGroup;
                 var failures = 0;
                 while (!_disposeToken.IsCancellationRequested) {
                     try {
                         if (!nextRequest.HasValue) {
                             var next = await _stateChangeQueue.DequeueAsync(_disposeToken.Token);
-                            Log.Info(() => LogEvent.Create($"Triggered {next} for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                            Router.Log.Info(() => LogEvent.Create($"Triggered {next} for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
                             nextRequest = next;
                             failures = 0;
                         }
@@ -204,26 +203,26 @@ namespace KafkaClient
                                 break;
 
                             default:
-                                Log.Warn(() => LogEvent.Create($"Ignoring unknown state change {apiKey} for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                                Router.Log.Warn(() => LogEvent.Create($"Ignoring unknown state change {apiKey} for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
                                 break;
                         }
                         nextRequest = null;
                     } catch (OperationCanceledException) { // cancellation token fired while attempting to get tasks: normal behavior
                     } catch (RequestException ex) {
-                        Log.Info(() => LogEvent.Create(ex));
+                        Router.Log.Info(() => LogEvent.Create(ex));
                         await Task.Delay(Configuration.GroupCoordinationRetry.RetryDelay(failures++, TimeSpan.Zero) ?? TimeSpan.FromSeconds(1)); // avoid spamming, but do retry same request
                     } catch (Exception ex) {
-                        Log.Warn(() => LogEvent.Create(ex));
+                        Router.Log.Warn(() => LogEvent.Create(ex));
                         HandleDispose(ex as ObjectDisposedException);
                     }
                 }
             } catch (OperationCanceledException) { // cancellation token fired while attempting to get tasks: normal behavior
             } catch (Exception ex) {
-                Log.Warn(() => LogEvent.Create(ex));
+                Router.Log.Warn(() => LogEvent.Create(ex));
             } finally {
                 await DisposeAsync().ConfigureAwait(false); // safe to call in multiple places
                 Interlocked.Decrement(ref _activeStateChangeCount);
-                Log.Info(() => LogEvent.Create($"Stopped state change for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                Router.Log.Info(() => LogEvent.Create($"Stopped state change for {{GroupId:{GroupId},MemberId:{MemberId}}}"));
             }
         }
 
@@ -241,7 +240,7 @@ namespace KafkaClient
                 _stateChangeQueue.Enqueue(ApiKey.JoinGroup, _disposeToken.Token);
             } catch (Exception ex) {
                 if (_disposeCount == 0) {
-                    Log.Warn(() => LogEvent.Create(ex));
+                    Router.Log.Warn(() => LogEvent.Create(ex));
                 }
             }
         }
@@ -263,7 +262,7 @@ namespace KafkaClient
                     case ErrorCode.UNKNOWN_MEMBER_ID:
                     case ErrorCode.INCONSISTENT_GROUP_PROTOCOL:
                     case ErrorCode.INVALID_SESSION_TIMEOUT:
-                        Log.Warn(() => LogEvent.Create(ex));
+                        Router.Log.Warn(() => LogEvent.Create(ex));
                         _leaveOnDispose = false; // no point in attempting to leave the group since it will fail
                         _disposeToken.Cancel();
                         return;
@@ -288,7 +287,7 @@ namespace KafkaClient
                     GenerationId = response.generation_id;
                     _groupProtocol = response.group_protocol;
                     _memberMetadata = response.members.ToImmutableDictionary(member => member.member_id, member => member.member_metadata);
-                    Log.Info(() => LogEvent.Create(GenerationId > 1 
+                    Router.Log.Info(() => LogEvent.Create(GenerationId > 1 
                         ? $"Consumer {MemberId} Rejoined {GroupId} Generation{GenerationId}"
                         : $"Consumer {MemberId} Joined {GroupId}"));
                 }, _disposeToken.Token);
@@ -317,13 +316,13 @@ namespace KafkaClient
             } catch (RequestException ex) {
                 switch (ex.ErrorCode) {
                     case ErrorCode.REBALANCE_IN_PROGRESS:
-                        Log.Info(() => LogEvent.Create(ex.Message));
+                        Router.Log.Info(() => LogEvent.Create(ex.Message));
                         TriggerRejoin();
                         return;
 
                     case ErrorCode.GROUP_AUTHORIZATION_FAILED:
                     case ErrorCode.UNKNOWN_MEMBER_ID:
-                        Log.Warn(() => LogEvent.Create(ex));
+                        Router.Log.Warn(() => LogEvent.Create(ex));
                         _leaveOnDispose = false; // no point in attempting to leave the group since it will fail
                         _disposeToken.Cancel();
                         break;
@@ -354,7 +353,7 @@ namespace KafkaClient
             }
 
             try {
-                Log.Debug(() => LogEvent.Create($"Disposing Consumer {{GroupId:{GroupId},MemberId:{MemberId}}}"));
+                Router.Log.Debug(() => LogEvent.Create($"Disposing Consumer {{GroupId:{GroupId},MemberId:{MemberId}}}"));
                 _disposeToken.Cancel();
                 _fetchSemaphore.Dispose();
                 _joinSemaphore.Dispose();
@@ -367,7 +366,7 @@ namespace KafkaClient
                         batch.Dispose();
                     }
                 } catch (Exception ex) {
-                    Log.Info(() => LogEvent.Create(ex));
+                    Router.Log.Info(() => LogEvent.Create(ex));
                 }
                 _assignment = null;
 
@@ -378,7 +377,7 @@ namespace KafkaClient
                         await Router.SendAsync(request, GroupId, CancellationToken.None, retryPolicy: Retry.None).ConfigureAwait(false);
                     }
                 } catch (Exception ex) {
-                    Log.Info(() => LogEvent.Create(ex));
+                    Router.Log.Info(() => LogEvent.Create(ex));
                 }
 
                 if (!_leaveRouterOpen) {
@@ -403,6 +402,14 @@ namespace KafkaClient
 
         public string ProtocolType { get; }
 
+        /// <summary>
+        /// Fetch messages for this consumer group's current assignment.
+        /// Messages are collected together in a batch per assignment. Each batch can be used to get available messages, 
+        /// commit offsets and get subsequent batches on the given topic/partition. Once the topic/partition is reassigned, the batch will be disposed.
+        /// 
+        /// Subsequent calls to this function will result in new batches for each assignment. Once all active assignments have been given,
+        /// the <see cref="MessageBatch.Empty"/> result will be used as an indication of nothing being currently available.
+        /// </summary>
         public async Task<IMessageBatch> FetchBatchAsync(CancellationToken cancellationToken, int? batchSize = null)
         {
             return await _fetchSemaphore.LockAsync(
@@ -415,7 +422,7 @@ namespace KafkaClient
                     if (partition == null) return MessageBatch.Empty;
                     var currentOffset = await Router.GetOffsetAsync(GroupId, partition.topic, partition.partition_id, cancellationToken).ConfigureAwait(false);
                     var offset = currentOffset.offset + 1;
-                    var messages = await Router.FetchBatchAsync(ImmutableList<Message>.Empty, partition.topic, partition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
+                    var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, partition.topic, partition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
                     var batch = new MessageBatch(messages, partition, offset, Router, Configuration, batchSize, GroupId, MemberId, generationId);
                     _syncSemaphore.Lock(() => _batches = _batches.Add(partition, batch), cancellationToken);
                     return batch;                    

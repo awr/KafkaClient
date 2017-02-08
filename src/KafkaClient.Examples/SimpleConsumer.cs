@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using KafkaClient;
 
 namespace KafkaClient.Examples
 {
@@ -18,11 +17,9 @@ namespace KafkaClient.Examples
                         source.Cancel();
                     });
 
-                using (var consumer = await options.CreateConsumerAsync()) {
+                using (var consumer = await options.CreateConsumerAsync(topic, 0)) {
                     var fetchTask = consumer.FetchAsync(
                         message => Console.WriteLine($"{topic}: {message.Value.ToString()}"),
-                        topic,
-                        0, // partition id
                         source.Token);
                     await Task.WhenAny(fetchTask, endTask);
                 }

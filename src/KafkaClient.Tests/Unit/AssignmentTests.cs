@@ -29,7 +29,7 @@ namespace KafkaClient.Tests.Unit
 
             try {
                 using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
-                    var member = (ConsumerMember) m;
+                    var member = (GroupConsumer) m;
                     await member.SyncGroupAsync(CancellationToken.None);
                 }
                 Assert.Fail("Should have thrown exception");
@@ -59,7 +59,7 @@ namespace KafkaClient.Tests.Unit
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
 
             using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
-                var member = (ConsumerMember) m;
+                var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
         }
@@ -84,7 +84,7 @@ namespace KafkaClient.Tests.Unit
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
             using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
-                var member = (ConsumerMember) m;
+                var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
         }
@@ -106,7 +106,7 @@ namespace KafkaClient.Tests.Unit
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
             using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
-                var member = (ConsumerMember) m;
+                var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
         }

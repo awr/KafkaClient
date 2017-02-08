@@ -127,7 +127,7 @@ namespace KafkaClient.Tests.Integration
                         }
                     }
 
-                    using (var consumer = new Consumer(router)) {
+                    using (var consumer = new Consumer(offset, router)) {
                         using (var source = new CancellationTokenSource()) {
                             var i = 0;
                             await consumer.FetchAsync(
@@ -137,7 +137,7 @@ namespace KafkaClient.Tests.Integration
                                         source.Cancel();
                                     }
                                     return Task.FromResult(0);
-                                }, offset, 20, source.Token);
+                                }, source.Token, 20);
                         }
                     }
                 });

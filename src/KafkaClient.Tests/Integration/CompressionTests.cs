@@ -64,8 +64,8 @@ namespace KafkaClient.Tests.Integration
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Produce"));
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start Consume"));
-                    using (var consumer = new Consumer(router)) {
-                        var results = await consumer.FetchBatchAsync(offset, messages.Count, CancellationToken.None);
+                    using (var consumer = new Consumer(offset, router)) {
+                        var results = await consumer.FetchBatchAsync(CancellationToken.None, messages.Count);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
                         Assert.That(results, Is.Not.Null);
                         Assert.That(results.Messages.Count, Is.EqualTo(messages.Count));
@@ -138,8 +138,8 @@ namespace KafkaClient.Tests.Integration
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Produce"));
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start Consume"));
-                    using (var consumer = new Consumer(router)) {
-                        var results = await consumer.FetchBatchAsync(offset, messages.Count, CancellationToken.None);
+                    using (var consumer = new Consumer(offset, router)) {
+                        var results = await consumer.FetchBatchAsync(CancellationToken.None, messages.Count);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
                         Assert.That(results, Is.Not.Null);
                         Assert.That(results.Messages.Count, Is.EqualTo(messages.Count));

@@ -23,7 +23,7 @@ namespace KafkaClient
 
         public static IConnectionConfiguration ToConfiguration(this ITrackEvents tracker)
         {
-            if (tracker == null) return new ConnectionConfiguration();
+            if (tracker == null) return ConnectionConfiguration.Default;
 
             return new ConnectionConfiguration(
                 onDisconnected: tracker.Disconnected,
@@ -107,9 +107,9 @@ namespace KafkaClient
             return options.ConnectionFactory.Create(endpoint, options.ConnectionConfiguration, options.Log);
         }
 
-        public static async Task<IConsumer> CreateConsumerAsync(this KafkaOptions options)
+        public static async Task<IConsumer> CreateConsumerAsync(this KafkaOptions options, string topicName, int partitionId)
         {
-            return new Consumer(await options.CreateRouterAsync(), options.ConsumerConfiguration, options.ConnectionConfiguration.Encoders, false);
+            return new Consumer(topicName, partitionId, await options.CreateRouterAsync(), options.ConsumerConfiguration, false);
         }
 
         public static async Task<IProducer> CreateProducerAsync(this KafkaOptions options)
@@ -218,49 +218,37 @@ namespace KafkaClient
 
         #region Simple Consuming
 
-        public static async Task FetchAsync(this IConsumer consumer, Action<Message> onMessage, string topicName, int partitionId, CancellationToken cancellationToken, int? batchSize = null)
-        {
-            var offset = await consumer.Router.GetOffsetAsync(topicName, partitionId, cancellationToken);
-            await consumer.FetchAsync(onMessage, topicName, partitionId, offset.offset, cancellationToken, batchSize);
-        }
-
-        public static Task FetchAsync(this IConsumer consumer, Action<Message> onMessage, string topicName, int partitionId, long offset, CancellationToken cancellationToken, int? batchSize = null)
+        public static Task FetchAsync(this IConsumer consumer, Action<Message> onMessage, CancellationToken cancellationToken, int? batchSize = null)
         {
             return consumer.FetchAsync(batch => {
                 foreach (var message in batch.Messages) {
                     onMessage(message);
                 }
-            }, topicName, partitionId, offset, cancellationToken, batchSize);
+            }, cancellationToken, batchSize);
         }
 
-        public static Task FetchAsync(this IConsumer consumer, Action<IMessageBatch> onMessages, string topicName, int partitionId, long offset, CancellationToken cancellationToken, int? batchSize = null)
+        public static Task FetchAsync(this IConsumer consumer, Action<IMessageBatch> onMessages, CancellationToken cancellationToken, int? batchSize = null)
         {
             return consumer.FetchAsync(
                 (batch, token) => {
                     onMessages(batch);
                     return Task.FromResult(0);
-                }, topicName, partitionId, offset, cancellationToken, batchSize);
+                }, cancellationToken, batchSize);
         }
 
-        public static async Task FetchAsync(this IConsumer consumer, Func<Message, CancellationToken, Task> onMessageAsync, string topicName, int partitionId, CancellationToken cancellationToken, int? batchSize = null)
-        {
-            var offset = await consumer.Router.GetOffsetAsync(topicName, partitionId, cancellationToken);
-            await consumer.FetchAsync(onMessageAsync, topicName, partitionId, offset.offset, cancellationToken, batchSize);
-        }
-
-        public static Task FetchAsync(this IConsumer consumer, Func<Message, CancellationToken, Task> onMessageAsync, string topicName, int partitionId, long offset, CancellationToken cancellationToken, int? batchSize = null)
+        public static Task FetchAsync(this IConsumer consumer, Func<Message, CancellationToken, Task> onMessageAsync, CancellationToken cancellationToken, int? batchSize = null)
         {
             return consumer.FetchAsync(async (batch, token) => {
                 foreach (var message in batch.Messages) {
                     await onMessageAsync(message, token).ConfigureAwait(false);
                 }
-            }, topicName, partitionId, offset, cancellationToken, batchSize);
+            }, cancellationToken, batchSize);
         }
 
-        public static async Task FetchAsync(this IConsumer consumer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, string topicName, int partitionId, long offset, CancellationToken cancellationToken, int? batchSize = null)
+        public static async Task FetchAsync(this IConsumer consumer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, CancellationToken cancellationToken, int? batchSize = null)
         {
             await MessageBatch.FetchAsync(
-                () => consumer.FetchBatchAsync(topicName, partitionId, offset, cancellationToken, batchSize),
+                () => consumer.FetchBatchAsync(cancellationToken, batchSize),
                 onMessagesAsync, consumer.Router.Log, cancellationToken).ConfigureAwait(false);
         }
 
@@ -268,54 +256,54 @@ namespace KafkaClient
 
         #region Consuming Group
 
-        public static Task<IConsumerMember> JoinConsumerGroupAsync(this IRouter router, string groupId, ConsumerProtocolMetadata metadata, CancellationToken cancellationToken)
+        public static Task<IGroupConsumer> JoinConsumerGroupAsync(this IRouter router, string groupId, ConsumerProtocolMetadata metadata, CancellationToken cancellationToken)
         {
-            return router.JoinConsumerGroupAsync(groupId, ConsumerEncoder.Protocol, metadata, new ConsumerConfiguration(), ConnectionConfiguration.Defaults.Encoders(), cancellationToken);
+            return router.JoinConsumerGroupAsync(groupId, ConsumerEncoder.Protocol, metadata, ConsumerConfiguration.Default, ConnectionConfiguration.Defaults.Encoders(), cancellationToken);
         }
 
-        public static Task<IConsumerMember> JoinConsumerGroupAsync(this IRouter router, string groupId, ConsumerProtocolMetadata metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
+        public static Task<IGroupConsumer> JoinConsumerGroupAsync(this IRouter router, string groupId, ConsumerProtocolMetadata metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
         {
             return router.JoinConsumerGroupAsync(groupId, ConsumerEncoder.Protocol, metadata, configuration, encoders, cancellationToken);
         }
 
-        public static Task<IConsumerMember> JoinConsumerGroupAsync(this IRouter router, string groupId, string protocolType, IMemberMetadata metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
+        public static Task<IGroupConsumer> JoinConsumerGroupAsync(this IRouter router, string groupId, string protocolType, IMemberMetadata metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
         {
             return router.JoinConsumerGroupAsync(groupId, protocolType, new[] { metadata }, configuration, encoders, cancellationToken);
         }
 
-        public static async Task<IConsumerMember> JoinConsumerGroupAsync(this IRouter router, string groupId, string protocolType, IEnumerable<IMemberMetadata> metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
+        public static async Task<IGroupConsumer> JoinConsumerGroupAsync(this IRouter router, string groupId, string protocolType, IEnumerable<IMemberMetadata> metadata, IConsumerConfiguration configuration, IImmutableDictionary<string, IMembershipEncoder> encoders, CancellationToken cancellationToken)
         {
             if (!encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(protocolType), $"ProtocolType {protocolType} is unknown");
 
             var response = await router.JoinGroupAsync(groupId, protocolType, metadata, configuration, cancellationToken);
-            return new ConsumerMember(router, groupId, protocolType, response, configuration, encoders);
+            return new GroupConsumer(router, groupId, protocolType, response, configuration, encoders);
         }
 
-        public static async Task<IImmutableList<IMessageBatch>> FetchBatchesAsync(this IConsumerMember member, CancellationToken cancellationToken, int? batchSize = null)
+        public static async Task<IImmutableList<IMessageBatch>> FetchBatchesAsync(this IGroupConsumer consumer, CancellationToken cancellationToken, int? batchSize = null)
         {
             var batches = new List<IMessageBatch>();
             IMessageBatch batch;
-            while (!(batch = await member.FetchBatchAsync(cancellationToken, batchSize).ConfigureAwait(false)).IsEmpty()) {
+            while (!(batch = await consumer.FetchBatchAsync(cancellationToken, batchSize).ConfigureAwait(false)).IsEmpty()) {
                 batches.Add(batch);
             }
             return batches.ToImmutableList();
         }
 
-        public static async Task FetchUntilDisposedAsync(this IConsumerMember member, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, CancellationToken cancellationToken, int? batchSize = null)
+        public static async Task FetchUntilDisposedAsync(this IGroupConsumer consumer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, CancellationToken cancellationToken, int? batchSize = null)
         {
             try {
-                await member.FetchAsync(onMessagesAsync, cancellationToken, batchSize);
+                await consumer.FetchAsync(onMessagesAsync, cancellationToken, batchSize);
             } catch (ObjectDisposedException) {
                 // ignore
             }
         }
 
-        public static async Task FetchAsync(this IConsumerMember member, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, CancellationToken cancellationToken, int? batchSize = null)
+        public static async Task FetchAsync(this IGroupConsumer consumer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, CancellationToken cancellationToken, int? batchSize = null)
         {
             var tasks = new List<Task>();
             while (!cancellationToken.IsCancellationRequested) {
-                var batches = await member.FetchBatchesAsync(cancellationToken, batchSize).ConfigureAwait(false);
-                tasks.AddRange(batches.Select(batch => MessageBatch.FetchAsync(batch, onMessagesAsync, member.Log, cancellationToken)));
+                var batches = await consumer.FetchBatchesAsync(cancellationToken, batchSize).ConfigureAwait(false);
+                tasks.AddRange(batches.Select(batch => MessageBatch.FetchAsync(batch, onMessagesAsync, consumer.Router.Log, cancellationToken)));
                 if (tasks.Count == 0) break;
                 await Task.WhenAny(tasks).ConfigureAwait(false);
                 tasks = tasks.Where(t => !t.IsCompleted).ToList();
@@ -498,7 +486,7 @@ namespace KafkaClient
             )
             where TRequest : class, IRequest<TResponse>
             where TResponse : class, IResponse<TTopicResponse>
-            where TTopicResponse : TopicResponse
+            where TTopicResponse : TopicOffset
         {
             bool? metadataInvalid = false;
             var offsets = new Dictionary<int, TTopicResponse>();
@@ -548,7 +536,7 @@ namespace KafkaClient
             return response;
         }
 
-        internal static async Task<ImmutableList<Message>> FetchBatchAsync(this IRouter router, ImmutableList<Message> existingMessages, string topicName, int partitionId, long offset, IConsumerConfiguration configuration, CancellationToken cancellationToken, int? count = null)
+        internal static async Task<ImmutableList<Message>> FetchMessagesAsync(this IRouter router, ImmutableList<Message> existingMessages, string topicName, int partitionId, long offset, IConsumerConfiguration configuration, CancellationToken cancellationToken, int? count = null)
         {
             var extracted = ExtractMessages(existingMessages, offset);
             var fetchOffset = extracted == ImmutableList<Message>.Empty

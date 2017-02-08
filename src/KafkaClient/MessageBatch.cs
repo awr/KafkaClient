@@ -46,7 +46,7 @@ namespace KafkaClient
             if (ReferenceEquals(this, Empty)) return this;
 
             var offset = await CommitMarkedAsync(cancellationToken).ConfigureAwait(false);
-            var messages = await _router.FetchBatchAsync(_allMessages, _partition.topic, _partition.partition_id, offset, _configuration, cancellationToken, _batchSize).ConfigureAwait(false);
+            var messages = await _router.FetchMessagesAsync(_allMessages, _partition.topic, _partition.partition_id, offset, _configuration, cancellationToken, _batchSize).ConfigureAwait(false);
             return new MessageBatch(messages, _partition, offset, _router, _configuration, _batchSize);
         }
 

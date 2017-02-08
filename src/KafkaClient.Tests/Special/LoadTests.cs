@@ -127,11 +127,11 @@ namespace KafkaClient.Tests.Special
                             stopwatch.Restart();
                         }
 
-                        using (var consumer = new Consumer(router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero, fetchByteMultiplier: 2))) {
+                        using (var consumer = new Consumer(offset.topic, offset.partition_id, router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero, fetchByteMultiplier: 2))) {
                             var fetched = 0;
                             stopwatch.Restart();
                             while (fetched < totalMessages) {
-                                var doneFetch = consumer.FetchBatchAsync(offset.topic, offset.partition_id, fetched, CancellationToken.None, totalMessages);
+                                var doneFetch = consumer.FetchBatchAsync(CancellationToken.None, totalMessages);
                                 var delay = Task.Delay((int) Math.Max(0, maxTimeToRun.TotalMilliseconds - stopwatch.ElapsedMilliseconds));
                                 await Task.WhenAny(doneFetch, delay);
                                 if (delay.IsCompleted && !doneFetch.IsCompleted) {
