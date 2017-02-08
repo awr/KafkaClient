@@ -28,7 +28,7 @@ namespace KafkaClient.Tests.Unit
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
             try {
-                using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
+                using (var m = await router.CreateGroupConsumerAsync("group", metadata, CancellationToken.None)) {
                     var member = (GroupConsumer) m;
                     await member.SyncGroupAsync(CancellationToken.None);
                 }
@@ -58,7 +58,7 @@ namespace KafkaClient.Tests.Unit
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
 
-            using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
+            using (var m = await router.CreateGroupConsumerAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
                 var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
@@ -83,7 +83,7 @@ namespace KafkaClient.Tests.Unit
             var assignor = Substitute.For<IMembershipAssignor>();
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
-            using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
+            using (var m = await router.CreateGroupConsumerAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
                 var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
@@ -105,7 +105,7 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
-            using (var m = await router.JoinConsumerGroupAsync("group", metadata, CancellationToken.None)) {
+            using (var m = await router.CreateGroupConsumerAsync("group", metadata, CancellationToken.None)) {
                 var member = (GroupConsumer) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }

@@ -119,7 +119,7 @@ namespace KafkaClient.Tests.Integration
 
             using (var router = await new KafkaOptions(TestConfig.IntegrationUri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
-                var offset = await router.GetOffsetAsync(topicName, 0, CancellationToken.None);
+                var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
                     using (var producer = new Producer(router, new ProducerConfiguration(partitionSelector: partitionSelector))) {
                         //message should send to PartitionId and not use the key to Select Broker Route !!
                         for (var i = 0; i < 20; i++) {
@@ -130,7 +130,7 @@ namespace KafkaClient.Tests.Integration
                     using (var consumer = new Consumer(offset, router)) {
                         using (var source = new CancellationTokenSource()) {
                             var i = 0;
-                            await consumer.FetchAsync(
+                            await consumer.ConsumeAsync(
                                 (message, token) => {
                                     Assert.That(message.Value.ToUtf8String(), Is.EqualTo(i++.ToString()));
                                     if (i >= 20) {

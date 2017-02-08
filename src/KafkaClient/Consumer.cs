@@ -39,7 +39,7 @@ namespace KafkaClient
         public IRouter Router { get; }
 
         /// <inheritdoc />
-        public async Task<IMessageBatch> FetchBatchAsync(CancellationToken cancellationToken, int? batchSize = null)
+        public async Task<IMessageBatch> FetchAsync(CancellationToken cancellationToken, int? batchSize = null)
         {
             if (_disposeCount > 0) throw new ObjectDisposedException(nameof(Consumer));
             var index = Interlocked.Increment(ref _fetchCount);
@@ -47,7 +47,7 @@ namespace KafkaClient
 
             var topicPartition = _topicPartitions[index];
             var currentOffset = topicPartition as TopicOffset 
-                ?? await Router.GetOffsetAsync(topicPartition.topic, topicPartition.partition_id, cancellationToken);
+                ?? await Router.GetOffsetsAsync(topicPartition.topic, topicPartition.partition_id, cancellationToken);
             var offset = currentOffset.offset + 1;
             var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, topicPartition.topic, topicPartition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
             return new MessageBatch(messages, topicPartition, offset, Router, Configuration, batchSize);

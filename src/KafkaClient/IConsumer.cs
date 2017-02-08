@@ -6,7 +6,7 @@ namespace KafkaClient
 {
     public interface IConsumer : IAsyncDisposable
     {
-        Task<IMessageBatch> FetchBatchAsync(CancellationToken cancellationToken, int? batchSize = null);
+        Task<IMessageBatch> FetchAsync(CancellationToken cancellationToken, int? batchSize = null);
 
         /// <summary>
         /// The configuration for various limits and for consume defaults

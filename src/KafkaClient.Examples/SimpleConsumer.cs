@@ -18,10 +18,10 @@ namespace KafkaClient.Examples
                     });
 
                 using (var consumer = await options.CreateConsumerAsync(topic, 0)) {
-                    var fetchTask = consumer.FetchAsync(
+                    var consumeTask = consumer.ConsumeAsync(
                         message => Console.WriteLine($"{topic}: {message.Value.ToString()}"),
                         source.Token);
-                    await Task.WhenAny(fetchTask, endTask);
+                    await Task.WhenAny(consumeTask, endTask);
                 }
             }
         }

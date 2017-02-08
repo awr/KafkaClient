@@ -74,7 +74,7 @@ namespace KafkaClient.Tests.Unit
             var router = Substitute.For<IRouter>();
 
             await AssertAsync.Throws<ArgumentOutOfRangeException>(
-                () => router.JoinConsumerGroupAsync("group", protocolType, new ByteTypeMetadata("mine", new ArraySegment<byte>()), new ConsumerConfiguration(), ConnectionConfiguration.Defaults.Encoders(), CancellationToken.None),
+                () => router.CreateGroupConsumerAsync("group", protocolType, new ByteTypeMetadata("mine", new ArraySegment<byte>()), new ConsumerConfiguration(), ConnectionConfiguration.Defaults.Encoders(), CancellationToken.None),
                 ex => ex.Message.StartsWith($"ProtocolType {protocolType} is unknown"));
         }
 
@@ -90,7 +90,7 @@ namespace KafkaClient.Tests.Unit
             var configuration = new ConsumerConfiguration(coordinationRetry: Retry.AtMost(2));
             var encoders = ConnectionConfiguration.Defaults.Encoders();
             await AssertAsync.Throws<RequestException>(
-                () => router.JoinConsumerGroupAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), configuration, encoders, CancellationToken.None));
+                () => router.CreateGroupConsumerAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), configuration, encoders, CancellationToken.None));
         }
 
         [Test]

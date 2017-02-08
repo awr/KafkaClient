@@ -52,7 +52,7 @@ namespace KafkaClient
 
         public void MarkSuccessful(Message message)
         {
-            if (ReferenceEquals(this, Empty)) return;
+            if (ReferenceEquals(this, Empty) || message == null) return;
             if (_disposeCount > 0) throw new ObjectDisposedException($"The {_partition} batch is disposed.");
 
             var offset = message.Offset + 1;
@@ -84,35 +84,5 @@ namespace KafkaClient
         }
 
         public Action OnDisposed { get; set; }
-
-        internal static Task FetchAsync(IMessageBatch batch, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, ILog log, CancellationToken cancellationToken)
-        {
-            return FetchAsync(() => Task.FromResult(batch), onMessagesAsync, log, cancellationToken);
-        }
-
-        internal static async Task FetchAsync(Func<Task<IMessageBatch>> batchProducer, Func<IMessageBatch, CancellationToken, Task> onMessagesAsync, ILog log, CancellationToken cancellationToken)
-        {
-            try {
-                cancellationToken.ThrowIfCancellationRequested();
-                var batch = await batchProducer();
-                do {
-                    using (var source = new CancellationTokenSource()) {
-                        batch.OnDisposed = source.Cancel;
-                        using (cancellationToken.Register(source.Cancel)) {
-                            await onMessagesAsync(batch, source.Token).ConfigureAwait(false);
-                        }
-                        batch.OnDisposed = null;
-                    }
-                    batch = await batch.FetchNextAsync(cancellationToken).ConfigureAwait(false);
-                } while (!batch.IsEmpty() && !cancellationToken.IsCancellationRequested);
-            } catch (ObjectDisposedException ex) {
-                log.Info(() => LogEvent.Create(ex));
-            } catch (OperationCanceledException ex) {
-                log.Verbose(() => LogEvent.Create(ex));
-            } catch (Exception ex) {
-                log.Error(LogEvent.Create(ex));
-                throw;
-            }
-        }
     }
 }

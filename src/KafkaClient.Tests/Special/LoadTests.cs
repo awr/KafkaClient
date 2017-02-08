@@ -66,7 +66,7 @@ namespace KafkaClient.Tests.Special
                 await router.TemporaryTopicAsync(async topicName => {
                     var producer = new Producer(router, new ProducerConfiguration(batchSize: totalMessages / 10, batchMaxDelay: TimeSpan.FromMilliseconds(25)));
                     await producer.UsingAsync(async () => {
-                        var offset = await producer.Router.GetOffsetAsync(TestConfig.TopicName(), 0, CancellationToken.None);
+                        var offset = await producer.Router.GetOffsetsAsync(TestConfig.TopicName(), 0, CancellationToken.None);
 
                         var maxTimeToRun = TimeSpan.FromMilliseconds(timeoutInMs);
                         var stopwatch = new Stopwatch();
@@ -103,7 +103,7 @@ namespace KafkaClient.Tests.Special
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router, new ProducerConfiguration(batchSize: totalMessages / 10, batchMaxDelay: TimeSpan.FromMilliseconds(25)))) {
-                        var offset = await producer.Router.GetOffsetAsync(TestConfig.TopicName(), 0, CancellationToken.None);
+                        var offset = await producer.Router.GetOffsetsAsync(TestConfig.TopicName(), 0, CancellationToken.None);
 
                         var maxTimeToRun = TimeSpan.FromMilliseconds(timeoutInMs);
                         var stopwatch = new Stopwatch();
@@ -131,7 +131,7 @@ namespace KafkaClient.Tests.Special
                             var fetched = 0;
                             stopwatch.Restart();
                             while (fetched < totalMessages) {
-                                var doneFetch = consumer.FetchBatchAsync(CancellationToken.None, totalMessages);
+                                var doneFetch = consumer.FetchAsync(CancellationToken.None, totalMessages);
                                 var delay = Task.Delay((int) Math.Max(0, maxTimeToRun.TotalMilliseconds - stopwatch.ElapsedMilliseconds));
                                 await Task.WhenAny(doneFetch, delay);
                                 if (delay.IsCompleted && !doneFetch.IsCompleted) {
