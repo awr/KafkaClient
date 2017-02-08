@@ -17,11 +17,11 @@ namespace KafkaClient
             ILog log = null)
         {
             ServerUris = ImmutableList<Uri>.Empty.AddNotNullRange(kafkaServerUris);
-            RouterConfiguration = routerConfiguration ?? new RouterConfiguration();
-            ConnectionConfiguration = connectionConfiguration ?? new ConnectionConfiguration();
+            RouterConfiguration = routerConfiguration ?? KafkaClient.RouterConfiguration.Default;
+            ConnectionConfiguration = connectionConfiguration ?? Connections.ConnectionConfiguration.Default;
             ConnectionFactory = connectionFactory ?? new ConnectionFactory();
-            ProducerConfiguration = producerConfiguration ?? new ProducerConfiguration();
-            ConsumerConfiguration = consumerConfiguration ?? new ConsumerConfiguration();
+            ProducerConfiguration = producerConfiguration ?? KafkaClient.ProducerConfiguration.Default;
+            ConsumerConfiguration = consumerConfiguration ?? KafkaClient.ConsumerConfiguration.Default;
             Log = log ?? TraceLog.Log;
         }
 

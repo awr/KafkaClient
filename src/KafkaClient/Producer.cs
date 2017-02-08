@@ -72,7 +72,7 @@ namespace KafkaClient
         {
             _leaveRouterOpen = leaveRouterOpen;
             Router = router;
-            Configuration = configuration ?? new ProducerConfiguration();
+            Configuration = configuration ?? ProducerConfiguration.Default;
             _produceMessageQueue = new AsyncProducerConsumerQueue<ProduceTask>();
             _produceRequestSemaphore = new SemaphoreSlim(Configuration.RequestParallelization, Configuration.RequestParallelization);
             _sendTask = Task.Run(DedicatedSendAsync, _disposeToken.Token);

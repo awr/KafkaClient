@@ -5,6 +5,9 @@ namespace KafkaClient
 {
     public class RouterConfiguration : IRouterConfiguration
     {
+        private static readonly Lazy<RouterConfiguration> LazyDefault = new Lazy<RouterConfiguration>();
+        public static IRouterConfiguration Default => LazyDefault.Value;
+
         public RouterConfiguration(IRetry refreshRetry = null, TimeSpan? cacheExpiration = null, IRetry sendRetry = null)
         {
             RefreshRetry = refreshRetry ?? Defaults.RefreshRetry();

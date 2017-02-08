@@ -7,6 +7,9 @@ namespace KafkaClient
 {
     public class ConsumerConfiguration : IConsumerConfiguration
     {
+        private static readonly Lazy<ConsumerConfiguration> LazyDefault = new Lazy<ConsumerConfiguration>();
+        public static IConsumerConfiguration Default => LazyDefault.Value;
+
         public ConsumerConfiguration(
             TimeSpan? maxServerWait = null, 
             int? minFetchBytes = null, 

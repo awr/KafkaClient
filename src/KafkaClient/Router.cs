@@ -94,7 +94,7 @@ namespace KafkaClient
             ILog log = null)
         {
             Log = log ?? TraceLog.Log;
-            ConnectionConfiguration = connectionConfiguration ?? new ConnectionConfiguration();
+            ConnectionConfiguration = connectionConfiguration ?? KafkaClient.Connections.ConnectionConfiguration.Default;
             _connectionFactory = connectionFactory ?? new ConnectionFactory();
 
             var connections = new Dictionary<Endpoint, IImmutableList<IConnection>>();
@@ -110,7 +110,7 @@ namespace KafkaClient
             _connections = connections.ToImmutableDictionary();
             if (_connections.IsEmpty) throw new ConnectionException("None of the provided Kafka servers are resolvable.");
 
-            Configuration = routerConfiguration ?? new RouterConfiguration();
+            Configuration = routerConfiguration ?? RouterConfiguration.Default;
         }
 
         public IConnectionConfiguration ConnectionConfiguration { get; }

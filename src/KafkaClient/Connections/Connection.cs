@@ -44,7 +44,7 @@ namespace KafkaClient.Connections
         public Connection(Endpoint endpoint, IConnectionConfiguration configuration = null, ILog log = null)
         {
             Endpoint = endpoint;
-            _configuration = configuration ?? new ConnectionConfiguration();
+            _configuration = configuration ?? ConnectionConfiguration.Default;
             _log = log ?? TraceLog.Log;
 
             _transport = _configuration.SslConfiguration == null

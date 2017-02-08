@@ -58,7 +58,7 @@ namespace KafkaClient.Tests.Unit
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
 
-            using (var m = await router.JoinConsumerGroupAsync("group", metadata, new ConsumerConfiguration(), encoders, CancellationToken.None)) {
+            using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
                 var member = (ConsumerMember) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }
@@ -83,7 +83,7 @@ namespace KafkaClient.Tests.Unit
             var assignor = Substitute.For<IMembershipAssignor>();
             assignor.AssignmentStrategy.ReturnsForAnyArgs(_ => strategy);
             var encoders = ConnectionConfiguration.Defaults.Encoders(new ConsumerEncoder(new SimpleAssignor(), assignor));
-            using (var m = await router.JoinConsumerGroupAsync("group", metadata, new ConsumerConfiguration(), encoders, CancellationToken.None)) {
+            using (var m = await router.JoinConsumerGroupAsync("group", metadata, ConsumerConfiguration.Default, encoders, CancellationToken.None)) {
                 var member = (ConsumerMember) m;
                 await member.SyncGroupAsync(CancellationToken.None);
             }

@@ -12,6 +12,9 @@ namespace KafkaClient.Connections
     /// </summary>
     public class ConnectionConfiguration : IConnectionConfiguration
     {
+        private static readonly Lazy<ConnectionConfiguration> LazyDefault = new Lazy<ConnectionConfiguration>();
+        public static IConnectionConfiguration Default => LazyDefault.Value;
+
         /// <summary>
         /// Configuration for the tcp connection.
         /// </summary>

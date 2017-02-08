@@ -4,6 +4,9 @@ namespace KafkaClient
 {
     public class ProducerConfiguration : IProducerConfiguration
     {
+        private static readonly Lazy<ProducerConfiguration> LazyDefault = new Lazy<ProducerConfiguration>();
+        public static IProducerConfiguration Default => LazyDefault.Value;
+
         public ProducerConfiguration(
             int requestParallelization = Defaults.RequestParallelization, 
             int batchSize = Defaults.BatchSize, 
