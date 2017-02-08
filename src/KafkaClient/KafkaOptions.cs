@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Connections;
 
@@ -65,6 +66,8 @@ namespace KafkaClient
         /// Retry and timeout settings.
         /// </summary>
         public IConsumerConfiguration ConsumerConfiguration { get; }
+
+        public IImmutableDictionary<string, IMembershipEncoder> Encoders => ConnectionConfiguration.Encoders;
 
         /// <summary>
         /// Log object to record operational messages.

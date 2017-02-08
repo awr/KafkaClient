@@ -10,7 +10,7 @@ namespace KafkaClient.Examples
         {
             using (var source = new CancellationTokenSource()) {
                 // trigger cancellation when the user hits the ENTER key in the console
-                Console.WriteLine("Hit the ENTER key to stop the receiver ...");
+                Console.WriteLine("Hit the ENTER key to stop the consumer ...");
                 var endTask = Task.Run(
                     () => {
                         Console.ReadLine();

@@ -7,7 +7,7 @@ namespace KafkaClient
 {
     public class ConsumerConfiguration : IConsumerConfiguration
     {
-        private static readonly Lazy<ConsumerConfiguration> LazyDefault = new Lazy<ConsumerConfiguration>();
+        private static readonly Lazy<ConsumerConfiguration> LazyDefault = new Lazy<ConsumerConfiguration>(() => new ConsumerConfiguration());
         public static IConsumerConfiguration Default => LazyDefault.Value;
 
         public ConsumerConfiguration(
@@ -18,7 +18,6 @@ namespace KafkaClient
             int? fetchByteMultiplier = null,
             TimeSpan? heartbeatTimeout = null,
             TimeSpan? rebalanceTimeout = null,
-            string protocolType = null,
             IRetry coordinationRetry = null,
             int batchSize = Defaults.BatchSize)
         {
@@ -29,7 +28,6 @@ namespace KafkaClient
             MaxPartitionFetchBytes = maxPartitionFetchBytes;
             GroupHeartbeat = heartbeatTimeout ?? TimeSpan.FromSeconds(Defaults.HeartbeatSeconds);
             GroupRebalanceTimeout = rebalanceTimeout ?? heartbeatTimeout ?? TimeSpan.FromSeconds(Defaults.RebalanceTimeoutSeconds);
-            ProtocolType = protocolType ?? Defaults.ProtocolType;
             GroupCoordinationRetry = coordinationRetry ?? Defaults.CoordinationRetry(GroupRebalanceTimeout);
             BatchSize = Math.Max(1, batchSize);
         }
@@ -52,17 +50,10 @@ namespace KafkaClient
         /// <inheritdoc/>
         public IRetry GroupCoordinationRetry { get; }
         /// <inheritdoc/>
-        public string ProtocolType { get; }
-        /// <inheritdoc/>
         public int BatchSize { get; }
 
         public static class Defaults
         {
-            /// <summary>
-            /// The default <see cref="ConsumerConfiguration.ProtocolType"/>
-            /// </summary>
-            public const string ProtocolType = ConsumerEncoder.Protocol;
-
             /// <summary>
             /// The default <see cref="GroupHeartbeat"/> seconds
             /// </summary>

@@ -68,7 +68,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
-                        using (var consumer = new Consumer(offset, router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
+                        using (var consumer = new Consumer(offset, router, TestConfig.IntegrationOptions.ConsumerConfiguration, autoConsume: false)) {
 
                             // Produce 5 messages
                             var messages = CreateTestMessages(10, 1);
@@ -79,7 +79,7 @@ namespace KafkaClient.Tests.Integration
                             CheckMessages(messages.Take(5).ToList(), result);
 
                             // Now let's consume again
-                            result = await consumer.FetchAsync(CancellationToken.None, 5);
+                            result = await result.FetchNextAsync(CancellationToken.None);
                             CheckMessages(messages.Skip(5).ToList(), result);
                         }
                     }
@@ -105,7 +105,7 @@ namespace KafkaClient.Tests.Integration
                             CheckMessages(messages.Take(5).ToList(), result);
 
                             // Now let's consume again
-                            result = await consumer.FetchAsync(CancellationToken.None, 5);
+                            result = await result.FetchNextAsync(CancellationToken.None);
                             CheckMessages(messages.Skip(5).ToList(), result);
                         }
                     }
@@ -135,7 +135,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(TestConfig.TopicName(), 0, CancellationToken.None);
-                    using (var consumer = new Consumer(offset, router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
+                    using (var consumer = new Consumer(new TopicOffset(offset.topic, offset.partition_id, offset.offset + 1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
 
                         await AssertAsync.Throws<FetchOutOfRangeException>(
                             () => consumer.FetchAsync(CancellationToken.None, 5),
@@ -153,7 +153,7 @@ namespace KafkaClient.Tests.Integration
                     using (var consumer = new Consumer(new TopicOffset(topicName, 0, -1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
 
                         // Now let's consume
-                        await AssertAsync.Throws<ArgumentOutOfRangeException>(() => consumer.FetchAsync(CancellationToken.None, 5));
+                        await AssertAsync.Throws<FetchOutOfRangeException>(() => consumer.FetchAsync(CancellationToken.None, 5));
                     }
                 });
             }
@@ -500,17 +500,19 @@ namespace KafkaClient.Tests.Integration
                             }
                         }
 
+                        IMessageBatch results1, results2;
                         using (var consumer = new Consumer(offset, router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero))) {
-                            var results1 = await consumer.FetchAsync(CancellationToken.None, totalMessages);
+                            results1 = await consumer.FetchAsync(CancellationToken.None, totalMessages);
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results1.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
-
-                            var results2 = await consumer.FetchAsync(CancellationToken.None, totalMessages);
-                            TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results2.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
-
-                            Assert.That(results1.Messages.Count, Is.EqualTo(results2.Messages.Count));
-                            Assert.That(results1.Messages.Count, Is.EqualTo(totalMessages));
-                            Assert.That(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), Is.EqualTo(results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()), "Expected the message list in the correct order.");
                         }
+                        using (var consumer = new Consumer(offset, router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero))) {
+                            results2 = await consumer.FetchAsync(CancellationToken.None, totalMessages);
+                            TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results2.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
+                        }
+
+                        Assert.That(results1.Messages.Count, Is.EqualTo(results2.Messages.Count));
+                        Assert.That(results1.Messages.Count, Is.EqualTo(totalMessages));
+                        Assert.That(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), Is.EqualTo(results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()), "Expected the message list in the correct order.");
                     }
                 });
             }
@@ -681,7 +683,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     var groupId = TestConfig.GroupId();
 
-                    using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.ConnectionConfiguration.Encoders, CancellationToken.None)) {
+                    using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
                         Assert.That(consumer.GroupId, Is.EqualTo(groupId));
                     }
                 });
@@ -694,7 +696,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var groupId = TestConfig.GroupId();
-                    using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(TestConfig.TopicName()), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.ConnectionConfiguration.Encoders, CancellationToken.None)) {
+                    using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(TestConfig.TopicName()), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
                         Assert.That(consumer.GroupId, Is.EqualTo(groupId));
                         Assert.That(consumer.IsLeader, Is.True);
                     }
@@ -747,7 +749,7 @@ namespace KafkaClient.Tests.Integration
                     var tasks = new List<Task>();
                     for (var index = 0; index < members; index++) {
                         tasks.Add(Task.Run(async () => {
-                            var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.ConnectionConfiguration.Encoders, cancellation.Token);
+                            var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, cancellation.Token);
                             await consumer.UsingAsync(async () => {
                                 try {
                                     await consumer.FetchAsync(async (batch, token) => {
@@ -798,7 +800,7 @@ namespace KafkaClient.Tests.Integration
                             for (var index = 0; index < members; index++) {
                                 tasks.Add(Task.Run(async () => {
                                     using (var merged = CancellationTokenSource.CreateLinkedTokenSource(timed.Token, cancellation.Token)) {
-                                        var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.ConnectionConfiguration.Encoders, merged.Token);
+                                        var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, merged.Token);
                                         await consumer.UsingAsync(async () => {
                                             try {
                                                 await consumer.FetchAsync(async (batch, token) => {

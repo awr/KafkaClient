@@ -61,10 +61,5 @@ namespace KafkaClient
         /// Used for retrying heartbeat and rebalance operations on groups.
         /// </summary>
         IRetry GroupCoordinationRetry { get; }
-
-        /// <summary>
-        /// The protocol type to use for this consumer.
-        /// </summary>
-        string ProtocolType { get; }
     }
 }

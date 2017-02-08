@@ -16,15 +16,15 @@ namespace KafkaClient
         private readonly bool _leaveRouterOpen;
         private IImmutableDictionary<string, IMembershipEncoder> Encoders { get; }
 
-        public GroupConsumer(IRouter router, string groupId, string protocolType, JoinGroupResponse response, IConsumerConfiguration configuration = null, IImmutableDictionary<string, IMembershipEncoder> encoders = null, bool leaveRouterOpen = true)
+        public GroupConsumer(IRouter router, string groupId, string protocolType, JoinGroupResponse response, IConsumerConfiguration configuration = null, IImmutableDictionary<string, IMembershipEncoder> encoders = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
         {
             Router = router;
-            _leaveRouterOpen = leaveRouterOpen;
+            _leaveRouterOpen = leaveRouterOpen.GetValueOrDefault(true);
+            AutoConsume = autoConsume.GetValueOrDefault(false);
             Configuration = configuration ?? ConsumerConfiguration.Default;
             Encoders = encoders ?? ConnectionConfiguration.Defaults.Encoders();
 
             if (!Encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(protocolType), $"ProtocolType {protocolType} is unknown");
-
 
             GroupId = groupId;
             MemberId = response.member_id;
@@ -70,6 +70,7 @@ namespace KafkaClient
 
         public IRouter Router { get; }
         public IConsumerConfiguration Configuration { get; }
+        public bool AutoConsume { get; }
 
         /// <summary>
         /// State machine for Member state
@@ -423,7 +424,7 @@ namespace KafkaClient
                     var currentOffset = await Router.GetOffsetsAsync(GroupId, partition.topic, partition.partition_id, cancellationToken).ConfigureAwait(false);
                     var offset = currentOffset.offset + 1;
                     var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, partition.topic, partition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
-                    var batch = new MessageBatch(messages, partition, offset, Router, Configuration, batchSize, GroupId, MemberId, generationId);
+                    var batch = new MessageBatch(messages, partition, offset, Router, Configuration, AutoConsume, batchSize, GroupId, MemberId, generationId);
                     _syncSemaphore.Lock(() => _batches = _batches.Add(partition, batch), cancellationToken);
                     return batch;                    
                 }, cancellationToken).ConfigureAwait(false);

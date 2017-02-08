@@ -14,5 +14,7 @@ namespace KafkaClient
         IConsumerConfiguration Configuration { get; }
 
         IRouter Router { get; }
+
+        bool AutoConsume { get; }
     }
 }

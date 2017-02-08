@@ -9,9 +9,9 @@ namespace KafkaClient
 {
     public class MessageBatch : IMessageBatch
     {
-        public static readonly MessageBatch Empty = new MessageBatch(ImmutableList<Message>.Empty, null, 0L, null, null, 0);
+        public static readonly MessageBatch Empty = new MessageBatch(ImmutableList<Message>.Empty, null, 0L, null, null, false);
 
-        public MessageBatch(ImmutableList<Message> messages, TopicPartition partition, long offset, IRouter router, IConsumerConfiguration configuration, int? batchSize = null, string groupId = null, string memberId = null, int generationId = -1)
+        public MessageBatch(ImmutableList<Message> messages, TopicPartition partition, long offset, IRouter router, IConsumerConfiguration configuration, bool autoConsume, int? batchSize = null, string groupId = null, string memberId = null, int generationId = -1)
         {
             _offsetMarked = offset;
             _offsetCommitted = offset;
@@ -26,6 +26,7 @@ namespace KafkaClient
             _groupId = groupId;
             _memberId = memberId;
             _generationId = generationId;
+            _autoConsume = autoConsume;
         }
 
         public IImmutableList<Message> Messages { get; }
@@ -37,6 +38,7 @@ namespace KafkaClient
         private readonly string _groupId;
         private readonly string _memberId;
         private readonly int _generationId;
+        private readonly bool _autoConsume;
         private long _offsetMarked;
         private long _offsetCommitted;
         private int _disposeCount;
@@ -45,9 +47,12 @@ namespace KafkaClient
         {
             if (ReferenceEquals(this, Empty)) return this;
 
+            if (_autoConsume) {
+                MarkSuccessful(this.Last());
+            }
             var offset = await CommitMarkedAsync(cancellationToken).ConfigureAwait(false);
             var messages = await _router.FetchMessagesAsync(_allMessages, _partition.topic, _partition.partition_id, offset, _configuration, cancellationToken, _batchSize).ConfigureAwait(false);
-            return new MessageBatch(messages, _partition, offset, _router, _configuration, _batchSize);
+            return new MessageBatch(messages, _partition, offset, _router, _configuration, _autoConsume, _batchSize);
         }
 
         public void MarkSuccessful(Message message)

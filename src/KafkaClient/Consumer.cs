@@ -16,21 +16,22 @@ namespace KafkaClient
         private readonly bool _leaveRouterOpen;
         private int _fetchCount; // = 0;
 
-        public Consumer(string topicName, int partitionId, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
-            : this(new TopicPartition(topicName, partitionId), router, configuration, leaveRouterOpen)
+        public Consumer(string topicName, int partitionId, IRouter router, IConsumerConfiguration configuration = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
+            : this(new TopicPartition(topicName, partitionId), router, configuration, leaveRouterOpen, autoConsume)
         {
         }
 
-        public Consumer(TopicPartition topicPartition, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
-            : this(new []{ topicPartition }, router, configuration, leaveRouterOpen)
+        public Consumer(TopicPartition topicPartition, IRouter router, IConsumerConfiguration configuration = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
+            : this(new []{ topicPartition }, router, configuration, leaveRouterOpen, autoConsume)
         {
         }
 
-        public Consumer(IEnumerable<TopicPartition> partitions, IRouter router, IConsumerConfiguration configuration = null, bool leaveRouterOpen = true)
+        public Consumer(IEnumerable<TopicPartition> partitions, IRouter router, IConsumerConfiguration configuration = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
         {
             Router = router;
             _topicPartitions = ImmutableList<TopicPartition>.Empty.AddNotNullRange(partitions);
-            _leaveRouterOpen = leaveRouterOpen;
+            _leaveRouterOpen = leaveRouterOpen.GetValueOrDefault(true);
+            AutoConsume = autoConsume.GetValueOrDefault(true);
             Configuration = configuration ?? ConsumerConfiguration.Default;
         }
 
@@ -38,19 +39,21 @@ namespace KafkaClient
 
         public IRouter Router { get; }
 
+        public bool AutoConsume { get; }
+
         /// <inheritdoc />
         public async Task<IMessageBatch> FetchAsync(CancellationToken cancellationToken, int? batchSize = null)
         {
             if (_disposeCount > 0) throw new ObjectDisposedException(nameof(Consumer));
-            var index = Interlocked.Increment(ref _fetchCount);
+            var index = Interlocked.Increment(ref _fetchCount) - 1;
             if (index >= _topicPartitions.Count) return MessageBatch.Empty;
 
             var topicPartition = _topicPartitions[index];
             var currentOffset = topicPartition as TopicOffset 
                 ?? await Router.GetOffsetsAsync(topicPartition.topic, topicPartition.partition_id, cancellationToken);
-            var offset = currentOffset.offset + 1;
+            var offset = currentOffset.offset;
             var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, topicPartition.topic, topicPartition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
-            return new MessageBatch(messages, topicPartition, offset, Router, Configuration, batchSize);
+            return new MessageBatch(messages, topicPartition, offset, Router, Configuration, AutoConsume, batchSize);
         }
 
         public async Task DisposeAsync()

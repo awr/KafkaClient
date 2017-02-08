@@ -4,7 +4,7 @@ namespace KafkaClient
 {
     public class ProducerConfiguration : IProducerConfiguration
     {
-        private static readonly Lazy<ProducerConfiguration> LazyDefault = new Lazy<ProducerConfiguration>();
+        private static readonly Lazy<ProducerConfiguration> LazyDefault = new Lazy<ProducerConfiguration>(() => new ProducerConfiguration());
         public static IProducerConfiguration Default => LazyDefault.Value;
 
         public ProducerConfiguration(

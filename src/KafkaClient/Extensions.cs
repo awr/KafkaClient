@@ -116,7 +116,12 @@ namespace KafkaClient
         {
             var router = await options.CreateRouterAsync();
             var response = await router.JoinGroupAsync(groupId, ConsumerEncoder.Protocol, new []{ metadata }, options.ConsumerConfiguration, cancellationToken);
-            return new GroupConsumer(router, groupId, ConsumerEncoder.Protocol, response, options.ConsumerConfiguration, options.ConnectionConfiguration.Encoders, false);
+            return new GroupConsumer(router, groupId, ConsumerEncoder.Protocol, response, options.ConsumerConfiguration, options.Encoders, false);
+        }
+
+        public static Task<IGroupConsumer> CreateGroupConsumerAsync(this KafkaOptions options, IRouter router, string groupId, ConsumerProtocolMetadata metadata, CancellationToken cancellationToken)
+        {
+            return router.CreateGroupConsumerAsync(groupId, metadata, options.ConsumerConfiguration, options.Encoders, cancellationToken);
         }
 
         public static async Task<IProducer> CreateProducerAsync(this KafkaOptions options)
@@ -253,7 +258,9 @@ namespace KafkaClient
             return consumer.FetchAsync(batch => {
                 foreach (var message in batch.Messages) {
                     onMessage(message);
-                    batch.MarkSuccessful(message);
+                    if (consumer.AutoConsume) {
+                        batch.MarkSuccessful(message);
+                    }
                 }
             }, cancellationToken, batchSize);
         }
@@ -272,7 +279,9 @@ namespace KafkaClient
             return consumer.FetchAsync(async (batch, token) => {
                 foreach (var message in batch.Messages) {
                     await onMessageAsync(message, token).ConfigureAwait(false);
-                    batch.MarkSuccessful(message);
+                    if (consumer.AutoConsume) {
+                        batch.MarkSuccessful(message);
+                    }
                 }
             }, cancellationToken, batchSize);
         }
