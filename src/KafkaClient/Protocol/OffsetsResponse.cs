@@ -96,27 +96,27 @@ namespace KafkaClient.Protocol
 
         #endregion
 
-        public class Topic : TopicResponse, IEquatable<Topic>
+        public class Topic : TopicOffset, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},error_code:{error_code},offset:{offset}}}";
+            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset},error_code:{error_code}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode = ErrorCode.NONE, long offset = -1, DateTimeOffset? timestamp = null) 
-                : base(topic, partitionId, errorCode)
+                : base(topic, partitionId, offset)
             {
-                this.offset = offset;
                 this.timestamp = timestamp;
+                this.error_code = errorCode;
             }
+
+            /// <summary>
+            /// Error response code.
+            /// </summary>
+            public ErrorCode error_code { get; }
 
             /// <summary>
             /// The timestamp associated with the returned offset.
             /// This only applies to version 1 and above.
             /// </summary>
-            public DateTimeOffset? timestamp { get; set; }
-
-            /// <summary>
-            /// The offset found.
-            /// </summary>
-            public long offset { get; set; }
+            public DateTimeOffset? timestamp { get; }
 
             #region Equality
 
@@ -131,7 +131,7 @@ namespace KafkaClient.Protocol
                 if (ReferenceEquals(this, other)) return true;
                 return base.Equals(other) 
                     && timestamp?.ToUnixTimeMilliseconds() == other.timestamp?.ToUnixTimeMilliseconds()
-                    && offset == other.offset;
+                    && error_code == other.error_code;
             }
 
             public override int GetHashCode()
@@ -139,7 +139,7 @@ namespace KafkaClient.Protocol
                 unchecked {
                     var hashCode = base.GetHashCode();
                     hashCode = (hashCode*397) ^ (timestamp?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ offset.GetHashCode();
+                    hashCode = (hashCode*397) ^ error_code.GetHashCode();
                     return hashCode;
                 }
             }

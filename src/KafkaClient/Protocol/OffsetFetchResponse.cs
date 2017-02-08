@@ -80,21 +80,21 @@ namespace KafkaClient.Protocol
 
         #endregion
 
-        public class Topic : TopicResponse, IEquatable<Topic>
+        public class Topic : TopicOffset, IEquatable<Topic>
         {
             public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset},metadata:{metadata},error_code:{error_code}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode, long offset, string metadata) 
-                : base(topic, partitionId, errorCode)
+                : base(topic, partitionId, offset)
             {
-                this.offset = offset;
+                this.error_code = errorCode;
                 this.metadata = metadata;
             }
 
             /// <summary>
-            /// The offset position saved to the server.
+            /// Error response code.
             /// </summary>
-            public long offset { get; }
+            public ErrorCode error_code { get; }
 
             /// <summary>
             /// Any arbitrary metadata stored during a CommitRequest.
@@ -113,7 +113,7 @@ namespace KafkaClient.Protocol
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
                 return base.Equals(other) 
-                       && offset == other.offset 
+                       && error_code == other.error_code 
                        && string.Equals(metadata, other.metadata);
             }
 
@@ -121,7 +121,7 @@ namespace KafkaClient.Protocol
             {
                 unchecked {
                     int hashCode = base.GetHashCode();
-                    hashCode = (hashCode*397) ^ offset.GetHashCode();
+                    hashCode = (hashCode*397) ^ error_code.GetHashCode();
                     hashCode = (hashCode*397) ^ (metadata?.GetHashCode() ?? 0);
                     return hashCode;
                 }
