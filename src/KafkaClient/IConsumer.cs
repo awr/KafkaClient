@@ -4,6 +4,10 @@ using KafkaClient.Common;
 
 namespace KafkaClient
 {
+    /// <summary>
+    /// Provides a mechanism for fetching batches of messages, possibly from many topics and partitions. 
+    /// There are many extensions available through <see cref="Extensions"/>, making consumption simpler.
+    /// </summary>
     public interface IConsumer : IAsyncDisposable
     {
         Task<IMessageBatch> FetchAsync(CancellationToken cancellationToken, int? batchSize = null);

@@ -5,6 +5,13 @@ using KafkaClient.Protocol;
 
 namespace KafkaClient.Connections
 {
+    /// <summary>
+    /// Provides async methods to send data to a kafka server. It uses a persistent connection, and interleaves requests and responses. 
+    /// 
+    /// The send method internally uses the <see cref="ITransport"/> abstraction to allow for either direct tcp socket access, or ssl 
+    /// stream access (when ssl is configured). Tcp reconnection is coordinated between the <see cref="IConnection"/> and the 
+    /// <see cref="ITransport"/>, based on the configuration settings for ssl.
+    /// </summary>
     public interface IConnection : IAsyncDisposable
     {
         /// <summary>

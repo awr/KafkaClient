@@ -6,6 +6,11 @@ using KafkaClient.Protocol;
 
 namespace KafkaClient
 {
+    /// <summary>
+    /// Provides a high level abstraction for sending messages (batches or otherwise) to a Kafka cluster.
+    /// There are several extensions available through <see cref="Extensions"/>, making production simpler. In particular, it is possible 
+    /// to select the partition based on the topic metadata and message key by way of a <see cref="IPartitionSelector"/>.
+    /// </summary>
     public interface IProducer : IAsyncDisposable
     {
         /// <summary>

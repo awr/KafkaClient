@@ -8,6 +8,10 @@ using KafkaClient.Protocol;
 
 namespace KafkaClient
 {
+    /// <summary>
+    /// This implementation can be used for simple consumption, and is useful for consuming previous messages or managing data.
+    /// There are many extensions available through <see cref="Extensions"/>, making consumption simpler.
+    /// </summary>
     public class Consumer : IConsumer
     {
         private int _disposeCount; // = 0;

@@ -11,6 +11,13 @@ using Nito.AsyncEx;
 
 namespace KafkaClient
 {
+    /// <summary>
+    /// Provides a mechanism for fetching batches of messages, possibly from many topics and partitions. 
+    /// This implementation can be used for group consumption, enabling complex coordination across multiple consumers of a set of 
+    /// Kafka topics. Group consumption is where consumer assignment comes into play, through the configured 
+    /// <see cref="IMembershipAssignor"/>.
+    /// There are many extensions available through <see cref="Extensions"/>, making consumption simpler.
+    /// </summary>
     public class GroupConsumer : IGroupConsumer
     {
         private readonly bool _leaveRouterOpen;
