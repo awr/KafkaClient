@@ -12,7 +12,7 @@ namespace KafkaClient.Protocol
         public KafkaWriter()
         {
             _stream = new MemoryStream();
-            Write((int) Request.IntegerByteSize); //pre-allocate space for buffer length
+            Write(Request.IntegerByteSize); // pre-allocate space for buffer length -- note the int type, not the actual value is important here
         }
 
         public IKafkaWriter Write(bool value)
@@ -86,7 +86,7 @@ namespace KafkaClient.Protocol
                 WriteLength(0);
                 return ToSegment(0);
             }
-            return ToSegment((int) Request.IntegerByteSize);
+            return ToSegment(Request.IntegerByteSize);
         }
 
         private ArraySegment<byte> ToSegment(int offset)

@@ -19,7 +19,7 @@ namespace KafkaClient
         private readonly bool _leaveRouterOpen;
 
         private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
-        private int _disposeCount = 0;
+        private int _disposeCount; // = 0;
         private readonly TaskCompletionSource<bool> _disposePromise = new TaskCompletionSource<bool>();
 
         private readonly AsyncProducerConsumerQueue<ProduceTask> _produceMessageQueue;

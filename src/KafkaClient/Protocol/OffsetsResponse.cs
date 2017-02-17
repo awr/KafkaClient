@@ -104,7 +104,7 @@ namespace KafkaClient.Protocol
                 : base(topic, partitionId, offset)
             {
                 this.timestamp = timestamp;
-                this.error_code = errorCode;
+                error_code = errorCode;
             }
 
             /// <summary>

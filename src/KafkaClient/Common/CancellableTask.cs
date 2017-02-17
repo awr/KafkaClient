@@ -6,7 +6,7 @@ namespace KafkaClient.Common
 {
     internal class CancellableTask<T> : IDisposable
     {
-        public CancellableTask(CancellationToken cancellationToken)
+        protected CancellableTask(CancellationToken cancellationToken)
         {
             Tcs = new TaskCompletionSource<T>();
             CancellationToken = cancellationToken;

@@ -1,4 +1,5 @@
 ﻿using System;
+// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {

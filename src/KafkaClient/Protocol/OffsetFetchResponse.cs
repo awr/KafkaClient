@@ -87,7 +87,7 @@ namespace KafkaClient.Protocol
             public Topic(string topic, int partitionId, ErrorCode errorCode, long offset, string metadata) 
                 : base(topic, partitionId, offset)
             {
-                this.error_code = errorCode;
+                error_code = errorCode;
                 this.metadata = metadata;
             }
 

@@ -242,7 +242,7 @@ namespace KafkaClient
             }
         }
 
-        internal void TriggerRejoin()
+        private void TriggerRejoin()
         {
             try {
                 _stateChangeQueue.Enqueue(ApiKey.JoinGroup, _disposeToken.Token);
@@ -284,7 +284,7 @@ namespace KafkaClient
         /// 
         /// See https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Client-side+Assignment+Proposal
         /// </summary>
-        internal void OnJoinGroup(JoinGroupResponse response)
+        private void OnJoinGroup(JoinGroupResponse response)
         {
             if (response.member_id != MemberId) throw new ArgumentOutOfRangeException(nameof(response), $"Member is not valid ({MemberId} != {response.member_id})");
             if (_disposeCount > 0) throw new ObjectDisposedException($"Consumer {{GroupId:{GroupId},MemberId:{MemberId}}} is no longer valid");

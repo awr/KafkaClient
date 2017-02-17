@@ -39,7 +39,7 @@ namespace KafkaClient.Protocol
                     throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
                 }
 
-                var topics = new List<FetchResponse.Topic>();
+                var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
                 for (var t = 0; t < topicCount; t++) {
                     var topicName = reader.ReadString();

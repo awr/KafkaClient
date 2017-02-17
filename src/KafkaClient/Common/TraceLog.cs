@@ -10,18 +10,13 @@ namespace KafkaClient.Common
     /// </summary>
     public class TraceLog : ILog
     {
-        public static TraceLog Log { get; } = new TraceLog();
+        public static TraceLog Log { get; } = new TraceLog(LogLevel.Info);
 
         private readonly LogLevel _minLevel;
 
         public TraceLog(LogLevel minLevel)
         {
             _minLevel = minLevel;
-        }
-
-        public TraceLog()
-        {
-            _minLevel = LogLevel.Info;
         }
 
         /// <inheritdoc />

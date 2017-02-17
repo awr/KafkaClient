@@ -28,7 +28,7 @@ namespace KafkaClient.Protocol
             return new AggregateException(exceptions);
         }
 
-        public static Exception ExtractException(this IRequest request, ErrorCode errorCode, Endpoint endpoint) 
+        private static Exception ExtractException(this IRequest request, ErrorCode errorCode, Endpoint endpoint) 
         {
             return ExtractFetchException(request as FetchRequest, errorCode, endpoint) ??
                    ExtractMemberException(request, errorCode, endpoint) ??

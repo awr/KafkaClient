@@ -1,5 +1,4 @@
 using System;
-using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Connections;
 

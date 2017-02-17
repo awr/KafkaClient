@@ -4,6 +4,7 @@ using KafkaClient.Protocol;
 
 namespace KafkaClient
 {
+    // ReSharper disable once ClassNeverInstantiated.Global -- see LazySingleton below
     public class RoundRobinPartitionSelector : IPartitionSelector
     {
         private static readonly Lazy<RoundRobinPartitionSelector> LazySingleton = new Lazy<RoundRobinPartitionSelector>();

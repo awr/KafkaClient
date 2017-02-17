@@ -164,7 +164,7 @@ namespace KafkaClient.Common
         //    return BitConverter.ToUInt64(value, 0).ToBigEndian();
         //}
 
-        public static long ToBigEndian(this long value)
+        private static long ToBigEndian(this long value)
         {
             if (!BitConverter.IsLittleEndian) return value;
 
@@ -196,7 +196,7 @@ namespace KafkaClient.Common
                 : value;
         }
 
-        public static uint ToBigEndian(this uint value)
+        private static uint ToBigEndian(this uint value)
         {
             return BitConverter.IsLittleEndian
                 ? ((value << 24) & 0xFF000000) 
@@ -206,7 +206,7 @@ namespace KafkaClient.Common
                 : value;
         }
 
-        public static short ToBigEndian(this short value)
+        private static short ToBigEndian(this short value)
         {
             return BitConverter.IsLittleEndian
                 ? (short)(((value & 0xFF) << 8) | ((value >> 8) & 0xFF))

@@ -14,8 +14,8 @@ namespace KafkaClient.Common
     /// </summary>
     public static class Crc32
     {
-        public const uint DefaultPolynomial = 0xedb88320u;
-        public const uint DefaultSeed = 0xffffffffu;
+        private const uint DefaultPolynomial = 0xedb88320u;
+        private const uint DefaultSeed = 0xffffffffu;
         private static readonly uint[] PolynomialTable;
 
         static Crc32()
