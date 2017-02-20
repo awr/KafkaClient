@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26206.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KafkaClient", "src\KafkaClient\KafkaClient.csproj", "{CE0CD053-674A-4FA5-A01C-941A30F9E5B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KafkaClient", "KafkaClient\KafkaClient.csproj", "{CE0CD053-674A-4FA5-A01C-941A30F9E5B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Examples", "src\KafkaClient.Examples\KafkaClient.Examples.csproj", "{12398593-DD0E-4C1A-BAC4-DC4B6DA9BE19}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Examples", "KafkaClient.Examples\KafkaClient.Examples.csproj", "{12398593-DD0E-4C1A-BAC4-DC4B6DA9BE19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Testing", "src\KafkaClient.Testing\KafkaClient.Testing.csproj", "{EAB1485A-C63E-4D5E-A6F1-6FB76A7DD78C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Testing", "KafkaClient.Testing\KafkaClient.Testing.csproj", "{EAB1485A-C63E-4D5E-A6F1-6FB76A7DD78C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Tests", "src\KafkaClient.Tests\KafkaClient.Tests.csproj", "{A8A14490-E740-490E-831C-91DFA8C2A269}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Tests", "KafkaClient.Tests\KafkaClient.Tests.csproj", "{A8A14490-E740-490E-831C-91DFA8C2A269}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Performance", "src\KafkaClient.Performance\KafkaClient.Performance.csproj", "{3885B949-00DF-4712-819C-A6C4580728EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaClient.Performance", "KafkaClient.Performance\KafkaClient.Performance.csproj", "{3885B949-00DF-4712-819C-A6C4580728EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
