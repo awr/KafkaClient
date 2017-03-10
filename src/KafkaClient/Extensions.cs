@@ -21,11 +21,20 @@ namespace KafkaClient
             return new DynamicVersionSupport(versionSupport);
         }
 
-        public static IConnectionConfiguration ToConfiguration(this ITrackEvents tracker)
+        public static IConnectionConfiguration ToConfiguration(this ITrackEvents tracker, IConnectionConfiguration configuration = null)
         {
-            if (tracker == null) return ConnectionConfiguration.Default;
+            if (configuration == null) configuration = ConnectionConfiguration.Default;
+            if (tracker == null) return configuration;
 
-            return new ConnectionConfiguration(
+            return configuration.CopyWith(
+                configuration.ConnectionRetry,
+                configuration.VersionSupport,
+                configuration.RequestTimeout,
+                configuration.ReadBufferSize,
+                configuration.WriteBufferSize,
+                configuration.IsTcpKeepalive,
+                configuration.Encoders.Values,
+                configuration.SslConfiguration,
                 onDisconnected: tracker.Disconnected,
                 onConnecting: tracker.Connecting,
                 onConnected: tracker.Connected,

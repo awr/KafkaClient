@@ -83,11 +83,11 @@ namespace KafkaClient.Connections
                 using (var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeToken.Token)) {
                     var timer = new Stopwatch();
                     try {
+                        _configuration.OnWriting?.Invoke(Endpoint, request.ApiKey);
                         await _transport.ConnectAsync(cancellation.Token).ConfigureAwait(false);
                         var item = asyncItem;
                         _log.Info(() => LogEvent.Create($"Sending {request.ShortString()} (id {context.CorrelationId}, {item.RequestBytes.Count} bytes) to {Endpoint}"));
                         _log.Debug(() => LogEvent.Create($"{request.ApiKey} -----> {Endpoint} {{Context:{context},\nRequest:{request}}}"));
-                        _configuration.OnWriting?.Invoke(Endpoint, request.ApiKey);
                         timer.Start();
                         var bytesWritten = await _transport.WriteBytesAsync(asyncItem.RequestBytes, cancellation.Token, context.CorrelationId).ConfigureAwait(false);
                         timer.Stop();

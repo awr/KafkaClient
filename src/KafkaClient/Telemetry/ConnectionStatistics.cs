@@ -10,32 +10,32 @@ namespace KafkaClient.Telemetry
         {
         }
 
-        private int _attempted;
-        public int Attempted => _attempted;
+        private int _attempts;
+        public int Attempts => _attempts;
 
-        public void Attempt()
+        public void Attempting()
         {
-            Interlocked.Increment(ref _attempted);
+            Interlocked.Increment(ref _attempts);
         }
 
-        private int _successes;
-        public int Successes => _successes;
+        private int _connects;
+        public int Connects => _connects;
 
         private long _duration;
         public TimeSpan Duration => TimeSpan.FromTicks(_duration);
 
-        public void Success(TimeSpan duration)
+        public void Connected(TimeSpan duration)
         {
-            Interlocked.Increment(ref _successes);
+            Interlocked.Increment(ref _connects);
             Interlocked.Add(ref _duration, duration.Ticks);
         }
 
-        private int _failures;
-        public int Failures => _failures;
+        private int _disconnects;
+        public int Disconnects => _disconnects;
 
-        public void Failure()
+        public void Disconnected()
         {
-            Interlocked.Increment(ref _failures);
+            Interlocked.Increment(ref _disconnects);
         }
     }
 }

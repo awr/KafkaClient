@@ -10,7 +10,7 @@ namespace KafkaClient.Telemetry
         private readonly TimeSpan _aggregationPeriod;
         private readonly int _maxStatistics;
 
-        public TelemetryTracker(TimeSpan aggregationPeriod, int maxStatistics = 0)
+        public TelemetryTracker(TimeSpan aggregationPeriod, int maxStatistics = 10)
         {
             _aggregationPeriod = aggregationPeriod;
             _maxStatistics = maxStatistics;
@@ -19,56 +19,94 @@ namespace KafkaClient.Telemetry
         public ImmutableList<TcpStatistics> TcpReads => _tcpReads;
         private ImmutableList<TcpStatistics> _tcpReads = ImmutableList<TcpStatistics>.Empty;
         private readonly object _tcpReadLock = new object();
-        private TcpStatistics GetTcpRead() => GetStatistics(_tcpReadLock, () => new TcpStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpReads);
- 
+        private TcpStatistics GetTcpRead()
+        {
+            var stats = GetStatistics(_tcpReads);
+            if (stats == null) {
+                lock (_tcpReadLock) {
+                    stats = GetOrAddStatistics(() => new TcpStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpReads);
+                }
+            }
+            return stats;
+        }
+
         public ImmutableList<TcpStatistics> TcpWrites => _tcpWrites;
         private ImmutableList<TcpStatistics> _tcpWrites = ImmutableList<TcpStatistics>.Empty;
         private readonly object _tcpWriteLock = new object();
-        private TcpStatistics GetTcpWrite() => GetStatistics(_tcpWriteLock, () => new TcpStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpWrites);
+        private TcpStatistics GetTcpWrite()
+        {
+            var stats = GetStatistics(_tcpWrites);
+            if (stats == null) {
+                lock (_tcpWriteLock) {
+                    stats = GetOrAddStatistics(() => new TcpStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpWrites);
+                }
+            }
+            return stats;
+        }
 
         public ImmutableList<ConnectionStatistics> TcpConnections => _tcpConnections;
         private ImmutableList<ConnectionStatistics> _tcpConnections = ImmutableList<ConnectionStatistics>.Empty;
         private readonly object _tcpConnectionLock = new object();
-        private ConnectionStatistics GetTcpConnect() => GetStatistics(_tcpConnectionLock, () => new ConnectionStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpConnections);
-
-        public ImmutableList<ApiStatistics> ApiRequests => _apiRequests;
-        private ImmutableList<ApiStatistics> _apiRequests = ImmutableList<ApiStatistics>.Empty;
-        private readonly object _apiRequestLock = new object();
-        private ApiStatistics GetApiRequests() => GetStatistics(_apiRequestLock, () => new ApiStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _apiRequests);
-
-        private T GetStatistics<T>(object tLock, Func<T> producer, ref ImmutableList<T> telemetry) where T : Statistics
+        private ConnectionStatistics GetTcpConnect()
         {
-            lock (tLock) {
-                if (telemetry.IsEmpty) {
-                    var first = producer();
-                    telemetry = telemetry.Add(first);
-                    return first;
+            var stats = GetStatistics(_tcpConnections);
+            if (stats == null) {
+                lock (_tcpConnectionLock) {
+                    stats = GetOrAddStatistics(() => new ConnectionStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _tcpConnections);
                 }
-                var latest = telemetry[telemetry.Count - 1];
-                if (DateTimeOffset.UtcNow < latest.EndedAt) return latest;
-
-                var next = producer();
-                telemetry = telemetry.Add(next);
-                if (telemetry.Count > _maxStatistics) {
-                    telemetry = telemetry.RemoveAt(0);
-                }
-                return next;
             }
+            return stats;
+        }
+
+        public ImmutableList<ApiStatistics> Requests => _requests;
+        private ImmutableList<ApiStatistics> _requests = ImmutableList<ApiStatistics>.Empty;
+        private readonly object _apiRequestLock = new object();
+        private ApiStatistics GetApiRequests()
+        {
+            var stats = GetStatistics(_requests);
+            if (stats == null) {
+                lock (_apiRequestLock) {
+                    stats = GetOrAddStatistics(() => new ApiStatistics(DateTimeOffset.UtcNow, _aggregationPeriod), ref _requests);
+                }
+            }
+            return stats;
+        }
+
+        private T GetStatistics<T>(ImmutableList<T> telemetry) where T : Statistics
+        {
+            if (telemetry.IsEmpty) return null;
+            var latest = telemetry[telemetry.Count - 1];
+            if (DateTimeOffset.UtcNow >= latest.EndedAt) return null;
+            return latest;
+        }
+
+        private T GetOrAddStatistics<T>(Func<T> producer, ref ImmutableList<T> telemetry) where T : Statistics
+        {
+            return GetStatistics(telemetry) ?? AddStatistics(producer(), ref telemetry);
+        }
+
+        private T AddStatistics<T>(T stats, ref ImmutableList<T> telemetry)
+        {
+            telemetry = telemetry.Add(stats);
+            if (telemetry.Count > _maxStatistics) {
+                telemetry = telemetry.RemoveAt(0);
+            }
+            return stats;
         }
 
         public void Disconnected(Endpoint endpoint, Exception exception)
         {
-            GetTcpConnect().Failure();
+            GetTcpConnect().Disconnected();
         }
 
         public void Connecting(Endpoint endpoint, int attempt, TimeSpan elapsed)
         {
-            GetTcpConnect().Attempt();
+            GetTcpConnect().Attempting();
         }
 
         public void Connected(Endpoint endpoint, int attempt, TimeSpan elapsed)
         {
-            GetTcpConnect().Success(elapsed);
+            GetTcpConnect().Connected(elapsed);
         }
 
         public void Writing(Endpoint endpoint, ApiKey apiKey)

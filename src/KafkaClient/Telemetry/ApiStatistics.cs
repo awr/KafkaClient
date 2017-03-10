@@ -10,34 +10,34 @@ namespace KafkaClient.Telemetry
         public ApiStatistics(DateTimeOffset startedAt, TimeSpan duration)
             : base(startedAt, duration)
         {
-            RequestsAttempted = new ConcurrentDictionary<ApiKey, int>();
-            Requests = new ConcurrentDictionary<ApiKey, int>();
-            RequestsFailed = new ConcurrentDictionary<ApiKey, int>();
+            Attempts = new ConcurrentDictionary<ApiKey, int>();
+            Successes = new ConcurrentDictionary<ApiKey, int>();
+            Failures = new ConcurrentDictionary<ApiKey, int>();
         }
 
-        public ConcurrentDictionary<ApiKey, int> RequestsAttempted { get; }
+        public ConcurrentDictionary<ApiKey, int> Attempts { get; }
 
         public void Attempt(ApiKey apiKey)
         {
-            RequestsAttempted.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
+            Attempts.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
         }
 
-        public ConcurrentDictionary<ApiKey, int> Requests { get; }
+        public ConcurrentDictionary<ApiKey, int> Successes { get; }
 
         private long _duration;
         public TimeSpan Duration => TimeSpan.FromTicks(_duration);
 
         public void Success(ApiKey apiKey, TimeSpan duration)
         {
-            Requests.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
+            Successes.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
             Interlocked.Add(ref _duration, duration.Ticks);
         }
 
-        public ConcurrentDictionary<ApiKey, int> RequestsFailed { get; }
+        public ConcurrentDictionary<ApiKey, int> Failures { get; }
 
         public void Failure(ApiKey apiKey, TimeSpan duration)
         {
-            RequestsFailed.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
+            Failures.AddOrUpdate(apiKey, 1, (key, old) => old + 1);
             Interlocked.Add(ref _duration, duration.Ticks);
         }
 
