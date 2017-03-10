@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Provides high and low level classes for communicating with an Apache Kafka cluster.</Description>
+    <Copyright>Nudge Software 2017</Copyright>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <Authors>Nudge Software Inc</Authors>
+    <TargetFrameworks>net462;netstandard1.6</TargetFrameworks>
+    <AssemblyName>KafkaClient</AssemblyName>
+    <PackageId>KafkaClient</PackageId>
+    <PackageTags>C#;Apache;Kafka;Messaging</PackageTags>
+    <PackageReleaseNotes>https://github.com/awr/KafkaClient/releases</PackageReleaseNotes>
+    <PackageIconUrl>http://kafka.apache.org/images/kafka_logo.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/awr/KafkaClient</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/awr/KafkaClient/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/awr/KafkaClient</RepositoryUrl>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="1.2.0" />
+    <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
+    <PackageReference Include="Nito.AsyncEx.Coordination" Version="1.0.2" />
+    <PackageReference Include="System.Net.Security" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <DefineConstants>$(DefineConstants);DOTNETSTANDARD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <PackageReference Include="System.Diagnostics.TraceSource" Version="4.0.0" />
+    <PackageReference Include="System.Net.NameResolution" Version="4.0.0" />
+    <PackageReference Include="System.Threading.Thread" Version="4.0.0" />
+    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Extensions" Version="4.3.0" />
+    <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
+    <PackageReference Include="Snappy.Standard" Version="0.2.0" />
+  </ItemGroup>
+
+</Project>

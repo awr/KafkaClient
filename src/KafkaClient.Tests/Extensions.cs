@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -103,6 +104,25 @@ namespace KafkaClient.Tests
                 throw new OperationCanceledException();
             }
             return await task.ConfigureAwait(false);
+        }
+
+        public static TValue GetOrDefault<TKey, TValue>(
+            this ConcurrentDictionary<TKey, TValue> dict, TKey key)
+        {
+            return dict.GetOrDefault(key, default (TValue));
+        }
+
+        public static TValue GetOrDefault<TKey, TValue>(
+            this ConcurrentDictionary<TKey, TValue> dict, TKey key, TValue defaultValue)
+        {
+            TValue value;
+            if (dict.TryGetValue(key, out value)) return value;
+            return defaultValue;
+        }
+
+        public static TimeSpan Times(this TimeSpan span, double multiplier)
+        {
+            return TimeSpan.FromMilliseconds(span.TotalMilliseconds * multiplier);
         }
     }
 }
