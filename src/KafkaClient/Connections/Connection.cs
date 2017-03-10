@@ -217,8 +217,7 @@ namespace KafkaClient.Connections
 
         private AsyncItem LookupByCorrelateId(int correlationId, int expectedBytes)
         {
-            AsyncItem asyncItem;
-            if (_requestsByCorrelation.TryRemove(correlationId, out asyncItem) || _timedOutRequestsByCorrelation.TryRemove(correlationId, out asyncItem)) {
+            if (_requestsByCorrelation.TryRemove(correlationId, out AsyncItem asyncItem) || _timedOutRequestsByCorrelation.TryRemove(correlationId, out asyncItem)) {
                 _log.Debug(() => LogEvent.Create($"Matched {asyncItem.ApiKey} response (id {correlationId}, {expectedBytes}? bytes) from {Endpoint}"));
                 return asyncItem;
             }
@@ -252,8 +251,7 @@ namespace KafkaClient.Connections
             if (asyncItem == null) return;
 
             var correlationId = asyncItem.Context.CorrelationId;
-            AsyncItem request;
-            if (_requestsByCorrelation.TryRemove(correlationId, out request)) {
+            if (_requestsByCorrelation.TryRemove(correlationId, out AsyncItem request)) {
                 _log.Info(() => LogEvent.Create($"Removed request {request.ApiKey} (id {correlationId}): timed out or otherwise errored in client."));
                 if (_timedOutRequestsByCorrelation.Count > 100) {
                     _log.Debug(() => LogEvent.Create($"Clearing timed out requests to avoid overflow ({_timedOutRequestsByCorrelation.Count})."));

@@ -94,8 +94,7 @@ namespace KafkaClient.Protocol
             var length = _stream.Length - offset;
             if (length < 0) throw new EndOfStreamException($"Cannot get offset {offset} past end of stream");
 
-            ArraySegment<byte> segment;
-            if (!_stream.TryGetBuffer(out segment)) {
+            if (!_stream.TryGetBuffer(out ArraySegment<byte> segment)) {
                 // the stream is a memorystream, always owning its own buffer
                 throw new NotSupportedException();
             }
@@ -113,9 +112,8 @@ namespace KafkaClient.Protocol
         private void WriteCrc(int offset)
         {
             uint crc;
-            ArraySegment<byte> segment;
             var computeFrom = offset + Request.IntegerByteSize;
-            if (!_stream.TryGetBuffer(out segment)) {
+            if (!_stream.TryGetBuffer(out ArraySegment<byte> segment)) {
                 // the stream is a memorystream, always owning its own buffer
                 throw new NotSupportedException();
             }

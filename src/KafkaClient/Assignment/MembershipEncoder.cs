@@ -65,8 +65,7 @@ namespace KafkaClient.Assignment
 
         public IMembershipAssignor GetAssignor(string strategy)
         {
-            IMembershipAssignor assignor;
-            if (!_assignors.TryGetValue(strategy ?? "", out assignor)) throw new ArgumentOutOfRangeException(nameof(strategy), $"Unknown strategy {strategy} for ProtocolType {ProtocolType}");
+            if (!_assignors.TryGetValue(strategy ?? "", out IMembershipAssignor assignor)) throw new ArgumentOutOfRangeException(nameof(strategy), $"Unknown strategy {strategy} for ProtocolType {ProtocolType}");
             return assignor;
         }
     }

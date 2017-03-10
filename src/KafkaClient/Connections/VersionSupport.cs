@@ -100,8 +100,7 @@ namespace KafkaClient.Connections
 
         public short? GetVersion(ApiKey apiKey)
         {
-            short version;
-            return _versionSupport.TryGetValue(apiKey, out version) ? version : (short?)null;
+            return _versionSupport.TryGetValue(apiKey, out short version) ? version : (short?)null;
         }
     }
 }

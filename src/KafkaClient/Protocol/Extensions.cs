@@ -63,8 +63,7 @@ namespace KafkaClient.Protocol
         public static IMembershipEncoder GetEncoder(this IRequestContext context, string protocolType = null)
         {
             var type = protocolType ?? context.ProtocolType;
-            IMembershipEncoder encoder;
-            if (type != null && context.Encoders != null && context.Encoders.TryGetValue(type, out encoder) && encoder != null) return encoder;
+            if (type != null && context.Encoders != null && context.Encoders.TryGetValue(type, out IMembershipEncoder encoder) && encoder != null) return encoder;
 
             throw new ArgumentOutOfRangeException(nameof(protocolType), $"Unknown protocol type {protocolType}");
         }
@@ -356,8 +355,7 @@ namespace KafkaClient.Protocol
         {
             shouldRetry = null;
             foreach (var brokeredRequest in brokeredRequests) {
-                bool? requestRetry;
-                brokeredRequest.OnRetry(exception, out requestRetry);
+                brokeredRequest.OnRetry(exception, out bool? requestRetry);
                 if (requestRetry.HasValue) {
                     shouldRetry = requestRetry;
                 }

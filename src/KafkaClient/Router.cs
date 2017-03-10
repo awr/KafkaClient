@@ -140,9 +140,9 @@ namespace KafkaClient
 
         private TopicConnection GetCachedTopicConnection(string topicName, MetadataResponse.Partition partition)
         {
-            Endpoint endpoint;
-            IImmutableList<IConnection> connections;
-            if (_serverEndpoints.TryGetValue(partition.leader, out endpoint) && _connections.TryGetValue(endpoint, out connections)) {
+            if (_serverEndpoints.TryGetValue(partition.leader, out Endpoint endpoint) 
+                && _connections.TryGetValue(endpoint, out IImmutableList<IConnection> connections))
+            {
                 var index = _selector.Next(0, connections.Count - 1);
                 return new TopicConnection(topicName, partition.partition_id, partition.leader, connections[index]);
             }
@@ -219,8 +219,7 @@ namespace KafkaClient
 
         private MetadataResponse.Topic TryGetCachedTopic(string topicName, TimeSpan? expiration = null)
         {
-            Tuple<MetadataResponse.Topic, DateTimeOffset> cachedValue;
-            if (_topicCache.TryGetValue(topicName, out cachedValue) && !HasExpired(cachedValue, expiration)) {
+            if (_topicCache.TryGetValue(topicName, out Tuple<MetadataResponse.Topic, DateTimeOffset> cachedValue) && !HasExpired(cachedValue, expiration)) {
                 return cachedValue.Item1;
             }
             return null;
@@ -331,13 +330,11 @@ namespace KafkaClient
 
         private GroupConnection GetCachedGroupConnection(string groupId, int serverId)
         {
-            Endpoint endpoint;
-            if (!_serverEndpoints.TryGetValue(serverId, out endpoint)) {
+            if (!_serverEndpoints.TryGetValue(serverId, out Endpoint endpoint)) {
                 throw new RoutingException($"Server cannot be found for Group {groupId}");
             }
 
-            IImmutableList<IConnection> connections;
-            if (_connections.TryGetValue(endpoint, out connections)) {
+            if (_connections.TryGetValue(endpoint, out IImmutableList<IConnection> connections)) {
                 var index = _selector.Next(0, connections.Count - 1);
                 return new GroupConnection(groupId, serverId, connections[index]);
             }
@@ -355,8 +352,7 @@ namespace KafkaClient
 
         private int? TryGetCachedGroupServerId(string groupId, TimeSpan? expiration = null)
         {
-            Tuple<int, DateTimeOffset> cachedValue;
-            if (_groupServerCache.TryGetValue(groupId, out cachedValue) && !HasExpired(cachedValue, expiration)) {
+            if (_groupServerCache.TryGetValue(groupId, out Tuple<int, DateTimeOffset> cachedValue) && !HasExpired(cachedValue, expiration)) {
                 return cachedValue.Item1;
             }
             return null;
@@ -454,8 +450,7 @@ namespace KafkaClient
 
         private DescribeGroupsResponse.Group TryGetCachedGroup(string groupId, TimeSpan? expiration = null)
         {
-            Tuple<DescribeGroupsResponse.Group, DateTimeOffset> cachedValue;
-            if (_groupCache.TryGetValue(groupId, out cachedValue) && !HasExpired(cachedValue, expiration)) {
+            if (_groupCache.TryGetValue(groupId, out Tuple<DescribeGroupsResponse.Group, DateTimeOffset> cachedValue) && !HasExpired(cachedValue, expiration)) {
                 return cachedValue.Item1;
             }
             return null;
@@ -529,8 +524,7 @@ namespace KafkaClient
 
         private IImmutableDictionary<string, IMemberAssignment> TryGetCachedMemberAssignment(string groupId, int? generationId = null)
         {
-            Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int> cachedValue;
-            if (_memberAssignmentCache.TryGetValue(groupId, out cachedValue) && (!generationId.HasValue || generationId.Value == cachedValue.Item2)) {
+            if (_memberAssignmentCache.TryGetValue(groupId, out Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int> cachedValue) && (!generationId.HasValue || generationId.Value == cachedValue.Item2)) {
                 return cachedValue.Item1.ToImmutableDictionary(assignment => assignment.member_id, assignment => assignment.member_assignment);
             }
             return null;
@@ -581,13 +575,11 @@ namespace KafkaClient
         public async Task<IConnection> GetConnectionAsync(string groupId, string memberId, CancellationToken cancellationToken)
         {
             var memberConnections = _memberConnectionAssignment.GetOrAdd(groupId, key => new ConcurrentDictionary<string, IConnection>());
-            IConnection connection;
             // check if already assigned
-            if (memberConnections.TryGetValue(memberId, out connection)) return connection;
+            if (memberConnections.TryGetValue(memberId, out IConnection connection)) return connection;
 
             var serverId = await GetGroupServerIdAsync(groupId, cancellationToken);
-            Endpoint endpoint;
-            if (!_serverEndpoints.TryGetValue(serverId, out endpoint)) {
+            if (!_serverEndpoints.TryGetValue(serverId, out Endpoint endpoint)) {
                 throw new RoutingException($"Expected to resolve endpoint for serverId {serverId}, on behalf of group {groupId}");
             }
 
@@ -595,8 +587,7 @@ namespace KafkaClient
                 // try again to avoid race conditions while waiting on lock
                 if (memberConnections.TryGetValue(memberId, out connection)) return connection;
 
-                IImmutableList<IConnection> connections;
-                if (!_connections.TryGetValue(endpoint, out connections)) {
+                if (!_connections.TryGetValue(endpoint, out IImmutableList<IConnection> connections)) {
                     connections = ImmutableList<IConnection>.Empty;
                 }
                 var assignedConnections = memberConnections.Values.ToList();
@@ -614,13 +605,11 @@ namespace KafkaClient
         /// <inheritdoc />
         public void ReturnConnection(string groupId, string memberId, IConnection connection)
         {
-            ConcurrentDictionary<string, IConnection> memberConnections;
-            if (!_memberConnectionAssignment.TryGetValue(groupId, out memberConnections)) {
+            if (!_memberConnectionAssignment.TryGetValue(groupId, out ConcurrentDictionary<string, IConnection> memberConnections)) {
                 Log.Warn(() => LogEvent.Create($"Router could not find connections assigned to {groupId}"));
                 return;
             }
-            IConnection removed;
-            if (!memberConnections.TryRemove(memberId, out removed)) {
+            if (!memberConnections.TryRemove(memberId, out IConnection removed)) {
                 Log.Warn(() => LogEvent.Create($"Router could not find and remove connection assigned to {groupId} {memberId}"));
             } else if (!ReferenceEquals(connection, removed)) {
                 Log.Warn(() => LogEvent.Create($"Router remove different connection than assigned to {{GroupId:{groupId},MemberId:{memberId}}}"));
@@ -633,10 +622,9 @@ namespace KafkaClient
             if (connection == null) return false;
 
             var endpoint = connection.Endpoint;
-            IImmutableList<IConnection> ownedConnections;
             // false if the endpoint isn't part of the router
             // true if the one in the router is already restore (or will by itself)
-            if (!_connections.TryGetValue(endpoint, out ownedConnections)) return false;
+            if (!_connections.TryGetValue(endpoint, out IImmutableList<IConnection> ownedConnections)) return false;
             var ownedConnection = ownedConnections.SingleOrDefault(owned => ReferenceEquals(owned, connection));
             if (ownedConnection == null) return false;
             if (!ownedConnection.IsDisposed) return true;
@@ -663,8 +651,7 @@ namespace KafkaClient
                 try {
                     var hasNewServer = false;
                     foreach (var server in servers) {
-                        Endpoint existing;
-                        if (serverEndpoints.TryGetValue(server.Id, out existing) 
+                        if (serverEndpoints.TryGetValue(server.Id, out Endpoint existing) 
                             && existing.Host == server.Host 
                             && existing.Ip.Port == server.Port)
                         {

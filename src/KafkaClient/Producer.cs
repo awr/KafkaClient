@@ -246,8 +246,7 @@ namespace KafkaClient
 
                     foreach (var pair in resultTopics) {
                         var topic = pair.Value;
-                        ImmutableList<ProduceTask> produceTasks;
-                        if (!batch.ProduceTasksByTopic.TryGetValue(pair.Key, out produceTasks)) {
+                        if (!batch.ProduceTasksByTopic.TryGetValue(pair.Key, out ImmutableList<ProduceTask> produceTasks)) {
                             Router.Log.Error(LogEvent.Create($"Extra response to produce batch topic/{topic.topic}/partition/{topic.partition_id} on {batch.Endpoint}"));
                             continue;
                         }
