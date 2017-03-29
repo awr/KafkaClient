@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Provides high and low level classes for communicating with an Apache Kafka cluster.</Description>
+    <Description>Native C# client for communicating with an Apache Kafka cluster.</Description>
     <Copyright>Nudge Software 2017</Copyright>
     <VersionPrefix>0.2.0</VersionPrefix>
     <Authors>Nudge Software Inc</Authors>
@@ -15,10 +15,6 @@
     <PackageLicenseUrl>https://github.com/awr/KafkaClient/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/awr/KafkaClient</RepositoryUrl>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
   </PropertyGroup>
 
   <ItemGroup>
