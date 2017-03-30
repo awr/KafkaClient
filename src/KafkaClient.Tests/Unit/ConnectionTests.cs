@@ -7,7 +7,7 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -15,7 +15,7 @@ namespace KafkaClient.Tests.Unit
     {
         #region Construct
 
-        [Test]
+        [Fact]
         public async Task ShouldStartReadPollingOnConstruction()
         {
             var log = new MemoryLog();
@@ -25,7 +25,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void ShouldReportServerUriOnConstruction()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -35,7 +35,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ThrowsConnectionExceptionOnInvalidEndpoint()
         {
             var options = new KafkaOptions(new Uri("tcp://notadomain"));
@@ -46,7 +46,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Connection
 
-        [Test]
+        [Fact]
         public async Task ShouldStartDedicatedThreadOnConstruction()
         {
             var count = 0;
@@ -57,7 +57,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldAttemptMultipleTimesWhenConnectionFails()
         {
             var count = 0;
@@ -73,7 +73,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Dispose
 
-        [Test]
+        [Fact]
         public async Task ShouldDisposeWithoutExceptionThrown()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -85,7 +85,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldDisposeWithoutExceptionEvenWhileCallingSendAsync()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -101,7 +101,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Read
 
-        [Test]
+        [Fact]
         public async Task ShouldLogDisconnectAndRecover()
         {
             var log = new MemoryLog();
@@ -142,7 +142,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldFinishPartiallyReadMessage()
         {
             var log = new MemoryLog();
@@ -184,7 +184,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldNotFinishPartiallyReadMessage()
         {
             var log = new MemoryLog();
@@ -220,7 +220,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldIgnoreMessageWithUnknownCorrelationId()
         {
             const int correlationId = 99;
@@ -245,7 +245,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldCancelWhileAwaitingResponse()
         {
             var count = 0;
@@ -273,7 +273,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldCancelWhileAwaitingReconnection()
         {
             using (var token = new CancellationTokenSource()) {
@@ -287,7 +287,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldReconnectEvenAfterCancelledRead()
         {
             using (var token = new CancellationTokenSource()) {
@@ -306,7 +306,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldReconnectAfterLosingConnectionAndBeAbleToStartNewRead()
         {
             var log = TestConfig.Log;
@@ -346,7 +346,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Send
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldTimeoutWhenSendAsyncTakesTooLong()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -364,7 +364,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldReturnImmediatelyWhenNoAcks()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -382,7 +382,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldNotAllowResponseToTimeoutWhileAwaitingKafkaToEstableConnection()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -414,7 +414,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void DynamicVersionUsesFallbackVersion()
         {
             var dynamicVersion = VersionSupport.Kafka10.Dynamic();
@@ -424,7 +424,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldUseStatictVersionInfo()
         {
             IRequestContext context = null;
@@ -442,7 +442,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncWithDynamicVersionInfoMakesVersionCallFirst()
         {
             var firstCorrelation = -1;
@@ -482,7 +482,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncWithDynamicVersionInfoOnlyMakesVersionCallOnce()
         {
             var versionRequests = 0;
@@ -514,7 +514,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldTimeoutMultipleMessagesAtATime()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -537,7 +537,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task MessagesStillLogWhenSendTimesOut()
         {
             var logger = new MemoryLog();
@@ -562,7 +562,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task TimedOutQueueIsClearedWhenTooBig()
         {
             var logger = new MemoryLog();
@@ -578,7 +578,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task CorrelationOverflowGuardWorks()
         {
             var correlationId = -1;

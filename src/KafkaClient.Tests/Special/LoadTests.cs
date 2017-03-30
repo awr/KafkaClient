@@ -6,14 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
     [Category("Load")]
     public class LoadTests
     {
-        [Test]
+        [Fact]
         [TestCase(10, 1000)]
         [TestCase(100, 1000)]
         [TestCase(1000, 1000)]
@@ -43,7 +43,7 @@ namespace KafkaClient.Tests.Special
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(1, 1, MessageCodec.None)]
         [TestCase(1, 1, MessageCodec.Gzip)]
         [TestCase(1000, 50, MessageCodec.None)]
@@ -90,7 +90,7 @@ namespace KafkaClient.Tests.Special
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(1, 1)]
         [TestCase(1000, 50)]
         [TestCase(50000, 100)]

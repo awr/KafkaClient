@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 #pragma warning disable 1998
 
@@ -16,7 +16,7 @@ namespace KafkaClient.Tests.Integration
 {
     public class ConsumerTests
     {
-        [Test]
+        [Fact]
         public async Task CanFetch()
         {
             const int partitionId = 0;
@@ -38,7 +38,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesSimpleTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -60,7 +60,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesCacheContainsAllRequestTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -86,7 +86,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesCacheContainsPartOfRequestTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -112,7 +112,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesNoNewMessagesInQueueTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -128,7 +128,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesOffsetBiggerThanLastOffsetInQueueTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -144,7 +144,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesInvalidOffsetTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -158,7 +158,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesTopicDoesntExist()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -173,7 +173,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesPartitionDoesntExist()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -187,7 +187,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesBufferUnderRunNoMultiplier()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -212,7 +212,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchMessagesBufferUnderRunWithMultiplier()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -238,7 +238,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchOffsetConsumerGroupDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -251,7 +251,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -269,7 +269,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -286,7 +286,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchOffsetConsumerGroupExistsTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -304,7 +304,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchOffsetConsumerGroupArgumentNull([Values(null, "")] string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -320,7 +320,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task UpdateOrCreateOffsetConsumerGroupExistsTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -344,7 +344,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task UpdateOrCreateOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -363,7 +363,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task UpdateOrCreateOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -383,7 +383,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task UpdateOrCreateOffsetConsumerGroupArgumentNull([Values(null, "")] string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -397,7 +397,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task UpdateOrCreateOffsetNegativeOffsetTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -412,7 +412,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchLastOffsetSimpleTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -424,7 +424,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchLastOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -441,7 +441,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task FetchLastOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -457,7 +457,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumeByOffsetShouldGetSameMessageProducedAtSameOffset()
         {
             long offsetResponse;
@@ -477,7 +477,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerShouldBeAbleToSeekBackToEarlierOffset([Values(20)] int sends, [Values(1, 10)] int messagesPerSend)
         {
             var totalMessages = sends * messagesPerSend;
@@ -517,7 +517,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerShouldBeAbleToGetCurrentOffsetInformation()
         {
             var totalMessages = 20;
@@ -548,7 +548,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(1, 200)]
         [TestCase(1000, 500)]
         public async Task ConsumerShouldConsumeInSameOrderAsProduced(int totalMessages, int timeoutInMs)
@@ -603,7 +603,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        //[Test]
+        //[Fact]
         //public async Task ConsumerShouldNotLoseMessageWhenBlocked()
         //{
         //    var testId = Guid.NewGuid().ToString();
@@ -634,7 +634,7 @@ namespace KafkaClient.Tests.Integration
         //    }
         //}
 
-        //[Test]
+        //[Fact]
         //public async Task ConsumerShouldMoveToNextAvailableOffsetWhenQueryingForNextMessage()
         //{
         //    const int expectedCount = 1000;
@@ -675,7 +675,7 @@ namespace KafkaClient.Tests.Integration
         //    }
         //}
 
-        [Test]
+        [Fact]
         public async Task JoiningConsumerGroupOnMissingTopicFails()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -689,7 +689,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerCanJoinConsumerGroup()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -729,7 +729,7 @@ namespace KafkaClient.Tests.Integration
             });
         }
 
-        [Test]
+        [Fact]
         [TestCase(1, 100)]
         [TestCase(2, 100)]
         [TestCase(10, 500)]
@@ -776,7 +776,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
         
-        [Test]
+        [Fact]
         [TestCase(2, 2)]
         [TestCase(5, 5)]
         public async Task CanConsumeFromMultipleGroups(int groups, int members)

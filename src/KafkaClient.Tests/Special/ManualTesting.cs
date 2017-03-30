@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
@@ -15,7 +15,7 @@ namespace KafkaClient.Tests.Special
         /// These tests are for manual run. You need to stop the partition leader and then start it again and let it became the leader.        
         /// </summary>
 
-        [Test]
+        [Fact]
         public async Task NewlyCreatedTopicShouldRetryUntilBrokerIsAssigned()
         {
             // Disable auto topic create in our server
@@ -29,7 +29,7 @@ namespace KafkaClient.Tests.Special
             Assert.That(topic.topic_error_code, Is.EqualTo((int)ErrorCode.NONE));
         }
 
-        [Test]
+        [Fact]
         public async Task ManualConsumerFailure()
         {
             var topicName = "TestTopicIssue13-3R-1P";

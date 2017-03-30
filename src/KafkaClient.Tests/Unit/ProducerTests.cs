@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 
 #pragma warning disable 1998
 
@@ -15,7 +15,7 @@ namespace KafkaClient.Tests.Unit
     {
         #region SendMessagesAsync Tests...
 
-        [Test]
+        [Fact]
         public async Task ProducerShouldGroupMessagesByBroker()
         {
             var scenario = new RoutingScenario();
@@ -34,7 +34,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void ShouldSendAsyncToAllConnectionsEvenWhenExceptionOccursOnOne()
         {
             var scenario = new RoutingScenario();
@@ -53,7 +53,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerShouldReportCorrectNumberOfAsyncRequests()
         {
             var semaphore = new SemaphoreSlim(0);
@@ -83,7 +83,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldBlockWhenMaximumAsyncQueueReached()
         {
             TestConfig.Log.Info(() => LogEvent.Create("Start SendAsyncShouldBlockWhenMaximumAsyncQueueReached"));
@@ -126,7 +126,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Nagle Tests...
 
-        [Test]
+        [Fact]
         public async Task ProducesShouldBatchAndOnlySendOneProduceRequest()
         {
             var scenario = new RoutingScenario();
@@ -146,7 +146,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducesShouldSendOneProduceRequestForEachBatchSize()
         {
             var scenario = new RoutingScenario();
@@ -172,7 +172,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(1, 2, 100, 100, 2)]
         [TestCase(1, 1, 100, 200, 2)]
         [TestCase(1, 1, 100, 100, 1)]
@@ -195,7 +195,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(MessageCodec.Gzip, MessageCodec.None, 2)]
         [TestCase(MessageCodec.Gzip, MessageCodec.Gzip, 1)]
         [TestCase(MessageCodec.None, MessageCodec.None, 1)]
@@ -218,7 +218,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerShouldAllowFullBatchSizeOfMessagesToQueue()
         {
             var scenario = new RoutingScenario();
@@ -241,7 +241,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         //someTime failed
         public async Task ProducerShouldBlockWhenFullBufferReached()
         {
@@ -276,7 +276,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Dispose Tests...
 
-        [Test]
+        [Fact]
         public async Task SendingMessageWhenDisposedShouldThrow()
         {
             var router = Substitute.For<IRouter>();
@@ -285,7 +285,7 @@ namespace KafkaClient.Tests.Unit
             Assert.ThrowsAsync<ObjectDisposedException>(async () => await producer.SendAsync(new Message("1"), "Test", CancellationToken.None));
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureProducerDisposesRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -295,7 +295,7 @@ namespace KafkaClient.Tests.Unit
             router.Received(1).Dispose();
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureProducerDoesNotDisposeRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -305,7 +305,7 @@ namespace KafkaClient.Tests.Unit
             router.DidNotReceive().Dispose();
         }
 
-        [Test]
+        [Fact]
         public void ProducerShouldInterruptWaitOnEmptyCollection()
         {
             //use the fake to actually cause loop to execute

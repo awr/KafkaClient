@@ -4,13 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Integration
 {
     public class ProducerTests
     {
-        [Test]
+        [Fact]
         public async Task ProducerShouldNotExpectResponseWhenAckIsZero()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -28,7 +28,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldGetOneResultForMessage()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task SendAsyncShouldGetOneResultForEachPartitionThroughBatching()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -63,7 +63,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerAckLevel()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -78,7 +78,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerAckLevel1ResponseOffsetShouldBeEqualToLastOffset()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -93,7 +93,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerLastResposeOffsetAckLevel1ShouldBeEqualToLastOffset()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -109,7 +109,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ProducerShouldUsePartitionIdInsteadOfMessageKeyToChoosePartition()
         {
             var partitionSelector = Substitute.For<IPartitionSelector>();

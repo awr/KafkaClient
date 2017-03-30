@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -13,7 +13,7 @@ namespace KafkaClient.Tests.Unit
     public class KafkaReaderTests
     {
         // validates my assumptions about the default implementation doing the opposite of this implementation
-        [Test]
+        [Fact]
         [TestCase((int)0, new byte[] { 0x00, 0x00, 0x00, 0x00 })]
         [TestCase((int)1, new byte[] { 0x01, 0x00, 0x00, 0x00 })]
         [TestCase((int)(-1), new byte[] { 0xFF, 0xFF, 0xFF, 0xFF })]
@@ -38,7 +38,7 @@ namespace KafkaClient.Tests.Unit
             return new ArraySegment<byte>(buffer, offset, bytes.Length);
         }
 
-        [Test]
+        [Fact]
         [TestCase((short)0, new byte[] { 0x00, 0x00 })]
         [TestCase((short)1, new byte[] { 0x00, 0x01 })]
         [TestCase((short)256, new byte[] { 0x01, 0x00 })]
@@ -60,7 +60,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(0, new byte[] { 0x00, 0x00, 0x00, 0x00 })]
         [TestCase(1, new byte[] { 0x00, 0x00, 0x00, 0x01 })]
         [TestCase(256, new byte[] { 0x00, 0x00, 0x01, 0x00 })]
@@ -83,7 +83,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase(0L, new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })]
         [TestCase(1L, new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })]
         [TestCase(258L, new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02 })]
@@ -105,7 +105,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase((uint)0, new byte[] { 0x00, 0x00, 0x00, 0x00 })]
         [TestCase((uint)1, new byte[] { 0x00, 0x00, 0x00, 0x01 })]
         [TestCase((uint)123456789, new byte[] { 0x07, 0x5B, 0xCD, 0x15 })]
@@ -125,7 +125,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase("0000", new byte[] { 0x00, 0x04, 0x30, 0x30, 0x30, 0x30 })]
         [TestCase("€€€€", new byte[] { 0x00, 0x0C, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC })]
         [TestCase("", new byte[] { 0x00, 0x00 })]

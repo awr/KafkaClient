@@ -8,13 +8,13 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
     public class ConsumerTests
     {
-//        [Test]
+//        [Fact]
 //        public async Task CancellationShouldInterruptConsumption()
 //        {
 //            var scenario = new RoutingScenario();
@@ -43,7 +43,7 @@ namespace KafkaClient.Tests.Unit
 //            }
 //        }
 
-        [Test]
+        [Fact]
         public async Task EnsureConsumerDisposesRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -55,7 +55,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureConsumerDoesNotDisposeRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -67,7 +67,7 @@ namespace KafkaClient.Tests.Unit
             router.DidNotReceive().Dispose();
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerThowsArgumentExceptionWhenMemberMetadataIsNotKnownByConsumer([Values(null, "", "unknown")] string protocolType)
         {
             var router = Substitute.For<IRouter>();
@@ -77,7 +77,7 @@ namespace KafkaClient.Tests.Unit
                 ex => ex.Message.StartsWith($"ProtocolType {protocolType} is unknown"));
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerDoesNotThowArgumentExceptionWhenMemberMetadataIsKnownByConsumer()
         {
             var router = Substitute.For<IRouter>();
@@ -92,7 +92,7 @@ namespace KafkaClient.Tests.Unit
                 () => router.CreateGroupConsumerAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), configuration, encoders, CancellationToken.None));
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerSyncsGroupAfterJoining()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -124,7 +124,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerLeaderSyncsGroupWithAssignment()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -152,7 +152,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Test]
+        [Fact]
         public async Task ConsumerFollowerSyncsGroupWithoutAssignment()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));

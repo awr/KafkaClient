@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -27,7 +27,7 @@ namespace KafkaClient.Tests.Unit
                                         });
         }
 
-        [Test]
+        [Fact]
         public void RoundRobinShouldRollOver()
         {
             RoundRobinPartitionSelector.Singleton.Reset();
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(third.partition_id, Is.EqualTo(0));
         }
 
-        [Test]
+        [Fact]
         public void RoundRobinShouldHandleMultiThreadedRollOver()
         {
             RoundRobinPartitionSelector.Singleton.Reset();
@@ -54,7 +54,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(bag.Count(x => x.partition_id == 1), Is.EqualTo(50));
         }
 
-        [Test]
+        [Fact]
         public void RoundRobinShouldTrackEachTopicSeparately()
         {
             RoundRobinPartitionSelector.Singleton.Reset();
@@ -72,7 +72,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(b2.partition_id, Is.EqualTo(1));
         }
 
-        [Test]
+        [Fact]
         public void RoundRobinShouldEvenlyDistributeAcrossManyPartitions()
         {
             RoundRobinPartitionSelector.Singleton.Reset();
@@ -92,7 +92,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(eachPartitionHasThree, Is.EqualTo(TotalPartitions), "Each partition should have received three selections.");
         }
 
-        [Test]
+        [Fact]
         public void KeyHashShouldSelectEachPartitionType()
         {
             var selector = new PartitionSelector();
@@ -114,7 +114,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void KeyHashShouldThrowExceptionWhenChoosesAPartitionIdThatDoesNotExist()
         {
             var selector = new PartitionSelector();
@@ -126,7 +126,7 @@ namespace KafkaClient.Tests.Unit
             Assert.Throws<RoutingException>(() => selector.Select(topic, CreateKeyForPartition(1)));
         }
 
-        [Test]
+        [Fact]
         public void PartitionSelectionOnEmptyKeyHashShouldNotFail()
         {
             var selector = new PartitionSelector();
@@ -138,7 +138,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(selector.Select(topic, new ArraySegment<byte>()), Is.Not.Null);
         }
 
-        [Test]
+        [Fact]
         public void SelectorShouldThrowExceptionWhenPartitionsAreEmpty()
         {
             var selector = new PartitionSelector();
@@ -146,7 +146,7 @@ namespace KafkaClient.Tests.Unit
             Assert.Throws<RoutingException>(() => selector.Select(topic, CreateKeyForPartition(1)));
         }
 
-        [Test]
+        [Fact]
         public void RoundRobinShouldThrowExceptionWhenPartitionsAreEmpty()
         {
             var topic = new MetadataResponse.Topic("emptyPartition");

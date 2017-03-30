@@ -5,13 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Integration
 {
     public class ConnectionTests
     {
-        [Test]
+        [Fact]
         public async Task EnsureTwoRequestsCanCallOneAfterAnother()
         {
             await Async.Using(
@@ -24,7 +24,7 @@ namespace KafkaClient.Tests.Integration
                 });
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureAsyncRequestResponsesCorrelate()
         {
             await Async.Using(
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Integration
                 });
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureMultipleAsyncRequestsCanReadResponses([Values(1, 5)] int senders, [Values(10, 50, 200)] int totalRequests)
         {
             var requestsSoFar = 0;
@@ -74,7 +74,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureDifferentTypesOfResponsesCanBeReadAsync()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {

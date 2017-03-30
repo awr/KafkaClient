@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Integration
 {
     public class CompressionTests
     {
-        [Test]
+        [Fact]
         public async Task GzipCanCompressMessageAndSend()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         public async Task GzipCanDecompressMessageFromKafka()
         {
             const int numberOfMessages = 3;
@@ -78,7 +78,7 @@ namespace KafkaClient.Tests.Integration
         }
 
 #if DOTNETSTANDARD
-        [Test]
+        [Fact]
         public async Task SnappyCanCompressMessageAndSend()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -109,7 +109,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
+        [Fact]
         [Ignore("Current Snappy lib has issues -- ignored until they are solved or alternative is found")]
         public async Task SnappyCanDecompressMessageFromKafka()
         {

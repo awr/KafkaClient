@@ -7,14 +7,14 @@ using System.Text;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
     [Category("Benchmark")]
     internal class BenchmarkTesting
     {
-        [Test]
+        [Fact]
         public void FetchSize()
         {
             int partitions = 1;
@@ -56,7 +56,7 @@ namespace KafkaClient.Tests.Special
             WriteResults(results);
         }
 
-        [Test]
+        [Fact]
         public void ProduceSize()
         {
             int partitions = 1;

@@ -2,13 +2,13 @@
 using System.Net;
 using System.Threading.Tasks;
 using KafkaClient.Connections;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
     public class EndpointTests
     {
-        [Test]
+        [Fact]
         public void ThrowsExceptionIfIpNull()
         {
             Assert.Throws<ArgumentNullException>(
@@ -17,7 +17,7 @@ namespace KafkaClient.Tests.Unit
                 });
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureEndpointCanBeResolved()
         {
             var expected = IPAddress.Parse("127.0.0.1");
@@ -26,7 +26,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(endpoint.Ip.Port, Is.EqualTo(8888));
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureTwoEndpointNotOfTheSameReferenceButSameIPAreEqual()
         {
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
@@ -36,7 +36,7 @@ namespace KafkaClient.Tests.Unit
             Assert.That(endpoint1, Is.EqualTo(endpoint2));
         }
 
-        [Test]
+        [Fact]
         public async Task EnsureTwoEndointWithSameIPButDifferentPortsAreNotEqual()
         {
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);

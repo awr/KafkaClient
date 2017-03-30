@@ -1,20 +1,20 @@
 using System;
 using KafkaClient.Common;
 using KafkaClient.Connections;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
     public class SocketTransportTests : TransportTests<SocketTransport>
     {
-        [Test]
+        [Fact]
         public void CreatingWithNullEndpointThrowsException()
         {
             var config = new ConnectionConfiguration(sslConfiguration: new SslConfiguration());
             Assert.Throws<ArgumentNullException>(() => new ReconnectingSocket(null, config, TestConfig.Log, false));
         }
 
-        [Test]
+        [Fact]
         public void CreatingWithSslConfigurationThrowsException()
         {
             var config = new ConnectionConfiguration(sslConfiguration: new SslConfiguration());

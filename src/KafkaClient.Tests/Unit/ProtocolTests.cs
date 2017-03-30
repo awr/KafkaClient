@@ -4,8 +4,8 @@ using System.Linq;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
-using NUnit.Framework.Internal;
+using Xunit;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -13,7 +13,7 @@ namespace KafkaClient.Tests.Unit
     {
         private readonly Randomizer _randomizer = new Randomizer();
 
-        [Test]
+        [Fact]
         public void HeaderShouldCorrectPackByteLengths()
         {
             var result = new ApiVersionsRequest().ToBytes(new RequestContext(123456789, clientId: "test"));
@@ -26,7 +26,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Messages
 
-        [Test]
+        [Fact]
         public void DecodeMessageShouldThrowWhenCrcFails()
         {
             var testMessage = new Message(value: "kafka test message.", key: "test");
@@ -43,7 +43,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         [TestCase("test key", "test message")]
         [TestCase(null, "test message")]
         [TestCase("test key", null)]
@@ -66,7 +66,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void EncodeMessageSetEncodesMultipleMessages()
         {
             //expected generated from python library
@@ -92,7 +92,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void DecodeMessageSetShouldHandleResponseWithMaxBufferSizeHit()
         {
             using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow))
@@ -107,7 +107,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void WhenMessageIsTruncatedThenBufferUnderRunExceptionIsThrown()
         {
             // arrange
@@ -127,7 +127,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void WhenMessageIsExactlyTheSizeOfBufferThenMessageIsDecoded()
         {
             // arrange
@@ -159,7 +159,7 @@ namespace KafkaClient.Tests.Unit
         #region Request / Response
 
 #if DOTNETSTANDARD
-        [Test]
+        [Fact]
         public void ProduceRequest(
             [Values(0, 1, 2)] short version,
             [Values(0, 2, -1)] short acks, 
@@ -184,7 +184,7 @@ namespace KafkaClient.Tests.Unit
         }
 #endif
 
-        [Test]
+        [Fact]
         public void ProduceResponse(
             [Values(0, 1, 2)] short version,
             [Values(-1, 0, 10000000)] long timestampMilliseconds, 
@@ -206,7 +206,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Test]
+        [Fact]
         public void FetchRequest(
             [Values(0, 1, 2, 3)] short version,
             [Values(0, 100)] int maxWaitMilliseconds, 
@@ -225,7 +225,7 @@ namespace KafkaClient.Tests.Unit
         }
 
 #if DOTNETSTANDARD
-        [Test]
+        [Fact]
         public void FetchResponse(
             [Values(0, 1, 2, 3)] short version,
             [Values(0, 1234)] int throttleTime,
@@ -255,7 +255,7 @@ namespace KafkaClient.Tests.Unit
         }
 #endif
 
-        [Test]
+        [Fact]
         public void OffsetsRequest(
             [Values(0, 1)] short version,
             [Values("testTopic")] string topic, 
@@ -274,7 +274,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-        [Test]
+        [Fact]
         public void OffsetsResponse(
             [Values(0, 1)] short version,
             [Values("testTopic")] string topicName, 
@@ -299,7 +299,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Test]
+        [Fact]
         public void MetadataRequest(
             [Values("testTopic")] string topic,
             [Values(0, 1, 10)] int topicsPerRequest)
@@ -313,7 +313,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void MetadataResponse(
             [Values(0, 1, 2)] short version,
             [Values(1, 15)] int brokersPerRequest,
@@ -351,7 +351,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Test]
+        [Fact]
         public void OffsetCommitRequest(
             [Values(0, 1, 2)] short version,
             [Values("group1", "group2")] string groupId,
@@ -383,7 +383,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-        [Test]
+        [Fact]
         public void OffsetCommitResponse(
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -404,7 +404,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void OffsetFetchRequest(
             [Values("group1", "group2")] string groupId,
             [Values("testTopic")] string topic,
@@ -420,7 +420,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void OffsetFetchResponse(
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -448,14 +448,14 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void GroupCoordinatorRequest([Values("group1", "group2")] string groupId)
         {
             var request = new GroupCoordinatorRequest(groupId);
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void GroupCoordinatorResponse(
             [Values(
                  ErrorCode.NONE,
@@ -470,14 +470,14 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void ApiVersionsRequest()
         {
             var request = new ApiVersionsRequest();
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void ApiVersionsResponse(
             [Values(
                  ErrorCode.NONE,
@@ -494,7 +494,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void JoinGroupRequest(
             [Values(0, 1)] short version,
             [Values("test", "a groupId")] string groupId, 
@@ -514,7 +514,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version, new ByteMembershipEncoder(protocolType));
         }
 
-        [Test]
+        [Fact]
         public void JoinGroupResponse(
             [Values(
                  ErrorCode.NONE,
@@ -537,7 +537,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocol));
         }
 
-        [Test]
+        [Fact]
         public void JoinConsumerGroupRequest(
             [Values("test", "a groupId")] string groupId, 
             [Values(1, 20000)] int sessionTimeout,
@@ -558,7 +558,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0, encoder);
         }
 
-        [Test]
+        [Fact]
         public void JoinConsumerGroupResponse(
             [Values(
                  ErrorCode.NONE,
@@ -583,7 +583,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Test]
+        [Fact]
         public void HeartbeatRequest(
             [Values("test", "a groupId")] string groupId, 
             [Values(0, 1, 20000)] int generationId,
@@ -594,7 +594,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void HeartbeatResponse(
             [Values(
                  ErrorCode.NONE,
@@ -606,7 +606,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void LeaveGroupRequest(
             [Values("test", "a groupId")] string groupId, 
             [Values("", "an existing member")] string memberId)
@@ -616,7 +616,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void LeaveGroupResponse(
             [Values(
                  ErrorCode.NONE,
@@ -628,7 +628,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void SyncGroupRequest(
             [Values("test", "a groupId")] string groupId, 
             [Values(0, 1, 20000)] int generationId,
@@ -647,7 +647,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0, new ByteMembershipEncoder(protocolType));
         }
 
-        [Test]
+        [Fact]
         public void SyncGroupResponse(
             [Values(
                  ErrorCode.NONE,
@@ -661,7 +661,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder("protocolType"));
         }
 
-        [Test]
+        [Fact]
         public void SyncConsumerGroupRequest(
             [Values("test", "a groupId")] string groupId, 
             [Values(0, 1, 20000)] int generationId,
@@ -686,7 +686,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0, encoder);
         }
 
-        [Test]
+        [Fact]
         public void SyncConsumerGroupResponse(
             [Values(
                  ErrorCode.NONE,
@@ -707,7 +707,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Test]
+        [Fact]
         public void DescribeGroupsRequest(
             [Values("test", "a groupId")] string groupId, 
             [Range(1, 10)] int count)
@@ -721,7 +721,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void DescribeGroupsResponse(
             [Values(
                  ErrorCode.NONE,
@@ -751,7 +751,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocolType));
         }
 
-        [Test]
+        [Fact]
         public void DescribeConsumerGroupsResponse(
             [Values(
                  ErrorCode.NONE,
@@ -788,14 +788,14 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Test]
+        [Fact]
         public void ListGroupsRequest()
         {
             var request = new ListGroupsRequest();
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void ListGroupsResponse(
             [Values(
                  ErrorCode.NONE,
@@ -814,7 +814,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void SaslHandshakeRequest(
             [Values("EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER")] string mechanism)
         {
@@ -823,7 +823,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void SaslHandshakeResponse(
             [Values(
                  ErrorCode.NONE,
@@ -837,7 +837,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void DeleteTopicsRequest(
             [Values("test", "anotherNameForATopic")] string topicName, 
             [Range(2, 3)] int count,
@@ -852,7 +852,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void DeleteTopicsResponse(
             [Values(
                  ErrorCode.NONE,
@@ -870,7 +870,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Test]
+        [Fact]
         public void CreateTopicsRequest(
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -895,7 +895,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void CreateTopicsExplicitRequest(
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -927,7 +927,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Test]
+        [Fact]
         public void CreateTopicsResponse(
             [Values(
                  ErrorCode.NONE,

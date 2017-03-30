@@ -6,7 +6,7 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 using Xunit;
 using Assert = NUnit.Framework.Assert;
 
@@ -39,7 +39,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task AssignmentFoundWhenStrategyExists([Values("type1", "type2")] string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
@@ -65,7 +65,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task AssignorFoundWhenStrategyExists([Values("type1", "type2")] string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
@@ -90,7 +90,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task AssigmentSucceedsWhenStrategyExists()
         {
             var metadata = new ConsumerProtocolMetadata("mine");
@@ -112,7 +112,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public void InterfacesAreFormattedWithinProtocol()
         {
             var request = new SyncGroupRequest("group", 5, "member", new[] { new SyncGroupRequest.GroupAssignment("member", new ConsumerMemberAssignment(new[] { new TopicPartition("topic-foo", 0), new TopicPartition("topic", 1) })) });
