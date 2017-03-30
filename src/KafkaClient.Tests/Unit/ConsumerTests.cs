@@ -12,7 +12,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class ConsumerTests
     {
 //        [Test]
@@ -37,7 +36,7 @@ namespace KafkaClient.Tests.Unit
 //            try
 //            {
 //                await consumeTask;
-//                Assert.Fail("Should throw OperationFailedException");
+//                Assert.True(false, "Should throw OperationFailedException");
 //            }
 //            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
 //            {

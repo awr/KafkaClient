@@ -8,7 +8,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class SslTransportTests : TransportTests<SslTransport>
     {
         private const string CertPassword = "password";

@@ -9,7 +9,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class PartitionSelectorTests
     {
         private MetadataResponse.Topic _topicA;

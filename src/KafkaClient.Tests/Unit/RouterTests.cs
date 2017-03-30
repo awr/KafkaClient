@@ -14,7 +14,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class RouterTests
     {
         #region SendAsync

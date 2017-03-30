@@ -9,7 +9,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    [TestFixture]
     public class ConnectionTests
     {
         [Test]

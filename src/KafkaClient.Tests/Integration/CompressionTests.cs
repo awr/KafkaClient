@@ -9,7 +9,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    [TestFixture]
     public class CompressionTests
     {
         [Test]
@@ -78,12 +77,10 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
+#if DOTNETSTANDARD
         [Test]
         public async Task SnappyCanCompressMessageAndSend()
         {
-#if ! DOTNETSTANDARD
-            Assert.Inconclusive("Snappy is only available in .net core");
-#endif
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start EnsureGzipCompressedMessageCanSend"));
@@ -116,10 +113,6 @@ namespace KafkaClient.Tests.Integration
         [Ignore("Current Snappy lib has issues -- ignored until they are solved or alternative is found")]
         public async Task SnappyCanDecompressMessageFromKafka()
         {
-#if ! DOTNETSTANDARD
-            Assert.Inconclusive("Snappy is only available in .net core");
-#endif
-
             const int numberOfMessages = 3;
             const int partitionId = 0;
 
@@ -151,5 +144,6 @@ namespace KafkaClient.Tests.Integration
                 });
             }
         }
+#endif
     }
 }

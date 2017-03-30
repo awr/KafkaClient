@@ -5,7 +5,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class SocketTransportTests : TransportTests<SocketTransport>
     {
         [Test]

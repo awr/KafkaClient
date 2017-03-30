@@ -10,7 +10,6 @@ namespace KafkaClient.Tests.Unit
     /// https://github.com/Zoltu/Zoltu.EndianAwareBinaryReaderWriter
     /// </summary>
     /// <remarks>Modified to work with nunit from xunit.</remarks>
-    [TestFixture]
     public class KafkaWriterTests
     {
         // validates my assumptions about the default implementation doing the opposite of this implementation

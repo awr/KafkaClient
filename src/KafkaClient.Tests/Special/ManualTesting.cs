@@ -8,7 +8,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Special
 {
-    [TestFixture]
     [Category("Manual")]
     internal class ManualTesting
     {

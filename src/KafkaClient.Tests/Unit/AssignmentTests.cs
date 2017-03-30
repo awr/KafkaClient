@@ -7,13 +7,14 @@ using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
 using NUnit.Framework;
+using Xunit;
+using Assert = NUnit.Framework.Assert;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class AssignmentTests
     {
-        [Test]
+        [Fact]
         public async Task AssignmentThrowsExceptionWhenStrategyNotFound()
         {
             var metadata = new ConsumerProtocolMetadata("mine", "unknown");
@@ -32,7 +33,7 @@ namespace KafkaClient.Tests.Unit
                     var member = (GroupConsumer) m;
                     await member.SyncGroupAsync(CancellationToken.None);
                 }
-                Assert.Fail("Should have thrown exception");
+                Assert.True(false, "Should have thrown exception");
             } catch (ArgumentOutOfRangeException ex) when (ex.Message.StartsWith($"Unknown strategy {metadata.AssignmentStrategy} for ProtocolType {ConsumerEncoder.Protocol}")) {
                 // not configured here
             }

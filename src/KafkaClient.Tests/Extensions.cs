@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests
 {
@@ -55,7 +55,7 @@ namespace KafkaClient.Tests
             try {
                 var response = await router.SendToAnyAsync(new DeleteTopicsRequest(new [] { topicName }, TimeSpan.FromMilliseconds(500)), CancellationToken.None);
                 if (response.Errors.Any(e => e == ErrorCode.REQUEST_TIMED_OUT)) {
-                    Assert.Inconclusive("Cannot validate when topic remains");
+                    Assert.True(false, "Cannot validate when timed out");
                 }
             } catch (RequestException ex) when (ex.ErrorCode == ErrorCode.TOPIC_ALREADY_EXISTS) {
                 // ignore already exists

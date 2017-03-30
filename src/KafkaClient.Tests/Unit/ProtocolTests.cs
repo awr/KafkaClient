@@ -9,7 +9,6 @@ using NUnit.Framework.Internal;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class ProtocolTests
     {
         private readonly Randomizer _randomizer = new Randomizer();
@@ -159,6 +158,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Request / Response
 
+#if DOTNETSTANDARD
         [Test]
         public void ProduceRequest(
             [Values(0, 1, 2)] short version,
@@ -170,9 +170,6 @@ namespace KafkaClient.Tests.Unit
             [Values(3)] int messagesPerSet,
             [Values(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec)
         {
-#if ! DOTNETSTANDARD
-            if (codec == MessageCodec.Snappy) Assert.Inconclusive($"{codec} is only available in .net core");
-#endif
             var payloads = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partition = 1 + t%totalPartitions;
@@ -185,6 +182,7 @@ namespace KafkaClient.Tests.Unit
 
             request.AssertCanEncodeDecodeRequest(version, forComparison: requestWithUpdatedAttribute);
         }
+#endif
 
         [Test]
         public void ProduceResponse(
@@ -226,6 +224,7 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
+#if DOTNETSTANDARD
         [Test]
         public void FetchResponse(
             [Values(0, 1, 2, 3)] short version,
@@ -241,9 +240,6 @@ namespace KafkaClient.Tests.Unit
             [Values(3)] int messagesPerSet
             )
         {
-#if ! DOTNETSTANDARD
-            if (codec == MessageCodec.Snappy) Assert.Inconclusive($"{codec} is only available in .net core");
-#endif
             var topics = new List<FetchResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partitionId = t % totalPartitions;
@@ -257,6 +253,7 @@ namespace KafkaClient.Tests.Unit
 
             response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
         }
+#endif
 
         [Test]
         public void OffsetsRequest(

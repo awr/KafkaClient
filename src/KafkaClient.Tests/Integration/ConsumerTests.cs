@@ -14,7 +14,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    [TestFixture]
     public class ConsumerTests
     {
         [Test]
@@ -262,7 +261,7 @@ namespace KafkaClient.Tests.Integration
 
                     try {
                         await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
-                        Assert.Fail("should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown CachedMetadataException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -280,7 +279,7 @@ namespace KafkaClient.Tests.Integration
                 var groupId = TestConfig.GroupId();
                 try {
                     await router.GetOffsetsAsync(groupId, topicName, 0, CancellationToken.None);
-                    Assert.Fail("should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown CachedMetadataException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }
@@ -356,7 +355,7 @@ namespace KafkaClient.Tests.Integration
                     var offest = 5;
                     try {
                         await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
-                        Assert.Fail("should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown CachedMetadataException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -377,7 +376,7 @@ namespace KafkaClient.Tests.Integration
                 var offest = 5;
                 try {
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
-                    Assert.Fail("should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown CachedMetadataException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }
@@ -434,7 +433,7 @@ namespace KafkaClient.Tests.Integration
 
                     try {
                         await router.GetOffsetsAsync(topicName, partitionId, CancellationToken.None);
-                        Assert.Fail("should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown CachedMetadataException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -451,7 +450,7 @@ namespace KafkaClient.Tests.Integration
 
                 try {
                     await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
-                    Assert.Fail("should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown CachedMetadataException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }
@@ -574,7 +573,7 @@ namespace KafkaClient.Tests.Integration
                         stopwatch.Stop();
                         if (!doneSend.IsCompleted) {
                             var completed = sendList.Count(t => t.IsCompleted);
-                            Assert.Inconclusive($"Only finished sending {completed} of {totalMessages} in {timeoutInMs} ms.");
+                            Assert.True(false, $"Only finished sending {completed} of {totalMessages} in {timeoutInMs} ms.");
                         }
                         await doneSend;
                         TestConfig.Log.Info(() => LogEvent.Create($">> done send, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
@@ -588,7 +587,7 @@ namespace KafkaClient.Tests.Integration
                                 var delay = Task.Delay((int) Math.Max(0, maxTimeToRun.TotalMilliseconds - stopwatch.ElapsedMilliseconds));
                                 await Task.WhenAny(doneFetch, delay);
                                 if (delay.IsCompleted && !doneFetch.IsCompleted) {
-                                    Assert.Fail($"Received {fetched.Count} of {totalMessages} in {timeoutInMs} ms.");
+                                    Assert.True(false, $"Received {fetched.Count} of {totalMessages} in {timeoutInMs} ms.");
                                 }
                                 var results = await doneFetch;
                                 fetched = fetched.AddRange(results.Messages);

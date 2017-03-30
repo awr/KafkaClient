@@ -10,7 +10,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Special
 {
-    [TestFixture]
     [Category("Load")]
     public class LoadTests
     {
@@ -82,7 +81,7 @@ namespace KafkaClient.Tests.Special
                         stopwatch.Stop();
                         if (!doneSend.IsCompleted) {
                             var completed = sendList.Count(t => t.IsCompleted);
-                            Assert.Fail($"Only finished sending {completed} of {totalMessages} in {timeoutInMs} ms.");
+                            Assert.True(false, $"Only finished sending {completed} of {totalMessages} in {timeoutInMs} ms.");
                         }
                         await doneSend;
                         TestConfig.Log.Info(() => LogEvent.Create($">> done send, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
@@ -120,7 +119,7 @@ namespace KafkaClient.Tests.Special
                             stopwatch.Stop();
                             if (!doneSend.IsCompleted) {
                                 var completed = sendList.Count(t => t.IsCompleted);
-                                Assert.Inconclusive($"Only finished sending {completed} of {missingMessages} in {timeoutInMs} ms.");
+                                Assert.True(false, $"Only finished sending {completed} of {missingMessages} in {timeoutInMs} ms.");
                             }
                             await doneSend;
                             TestConfig.Log.Info(() => LogEvent.Create($">> done send, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
@@ -135,7 +134,7 @@ namespace KafkaClient.Tests.Special
                                 var delay = Task.Delay((int) Math.Max(0, maxTimeToRun.TotalMilliseconds - stopwatch.ElapsedMilliseconds));
                                 await Task.WhenAny(doneFetch, delay);
                                 if (delay.IsCompleted && !doneFetch.IsCompleted) {
-                                    Assert.Fail($"Received {fetched} of {totalMessages} in {timeoutInMs} ms.");
+                                    Assert.True(false, $"Received {fetched} of {totalMessages} in {timeoutInMs} ms.");
                                 }
                                 var results = await doneFetch;
                                 fetched += results.Messages.Count;

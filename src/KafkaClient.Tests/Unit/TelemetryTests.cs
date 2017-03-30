@@ -6,20 +6,21 @@ using System.Threading.Tasks;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using KafkaClient.Telemetry;
-using NUnit.Framework;
 using KafkaClient.Testing;
 using KafkaClient.Common;
 using System.IO;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
-    [TestFixture]
     public class TelemetryTests
     {
         #region ConnectionStatistics
 
-        [Test]
-        public async Task TracksConnectionAttemptsCorrectly([Values(1, 10)] int total)
+        [Theory]
+        [InlineData(1)]
+        [InlineData(10)]
+        public async Task TracksConnectionAttemptsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
             var telemetry = new TelemetryTracker(aggregationPeriod.Times(100));
@@ -34,13 +35,15 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
             }
 
-            Assert.That(telemetry.TcpConnections.Count, Is.EqualTo(total));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Connects), Is.EqualTo(0));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Attempts), Is.EqualTo(total));
+            Assert.Equal(telemetry.TcpConnections.Count, total);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Connects), 0);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Attempts), total);
         }
 
-        [Test]
-        public async Task TracksConnectionSuccessCorrectly([Values(1, 10)] int total)
+        [Theory]
+        [InlineData(1)]
+        [InlineData(10)]
+        public async Task TracksConnectionSuccessCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
             var telemetry = new TelemetryTracker(aggregationPeriod.Times(100));
@@ -57,9 +60,9 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
             }
 
-            Assert.That(telemetry.TcpConnections.Count, Is.EqualTo(total));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Connects), Is.EqualTo(1));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Attempts), Is.EqualTo(total));
+            Assert.Equal(telemetry.TcpConnections.Count, total);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Connects), 1);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Attempts), total);
         }
 
         private static byte[] CreateCorrelationMessage(int id)
@@ -71,8 +74,10 @@ namespace KafkaClient.Tests.Unit
             return buffer;
         }
 
-        [Test]
-        public async Task TracksDisconnectsCorrectly([Values(1, 3)] int total)
+        [Theory]
+        [InlineData(1)]
+        [InlineData(3)]
+        public async Task TracksDisconnectsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
             var telemetry = new TelemetryTracker(aggregationPeriod.Times(100));
@@ -97,14 +102,14 @@ namespace KafkaClient.Tests.Unit
                     TestConfig.Log.Write(LogLevel.Info, () => LogEvent.Create($"Dropping CONNECTION attempt {currentAttempt}"));
                     server.DropConnection();
 
-                    Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Info && e.Item2.Message.StartsWith("Disposing transport to")), Is.AtLeast(currentAttempt));
+                    Assert.True(log.LogEvents.Count(e => e.Item1 == LogLevel.Info && e.Item2.Message.StartsWith("Disposing transport to")) >= currentAttempt);
                 }
             }
 
-            //Assert.That(telemetry.TcpConnections.Count, Is.EqualTo(total));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Attempts), Is.EqualTo(total));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Connects), Is.EqualTo(total));
-            Assert.That(telemetry.TcpConnections.Sum(t => t.Disconnects), Is.EqualTo(total));
+            //Assert.Equal(telemetry.TcpConnections.Count, total);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Attempts), total);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Connects), total);
+            Assert.Equal(telemetry.TcpConnections.Sum(t => t.Disconnects), total);
         }
 
 
@@ -121,8 +126,10 @@ namespace KafkaClient.Tests.Unit
 
         #region ApiStatistics
 
-        [Test]
-        public async Task TracksRequestFailuresCorrectly([Values(1, 10)] int total)
+        [Theory]
+        [InlineData(1)]
+        [InlineData(10)]
+        public async Task TracksRequestFailuresCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
             var telemetry = new TelemetryTracker(aggregationPeriod.Times(100));
@@ -137,13 +144,13 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
             }
 
-            Assert.That(telemetry.Requests.Count, Is.EqualTo(total));
-            Assert.That(telemetry.Requests.Sum(t => t.Successes.GetOrDefault(ApiKey.Fetch)), Is.EqualTo(0));
-            Assert.That(telemetry.Requests.Sum(t => t.Attempts.GetOrDefault(ApiKey.Fetch)), Is.EqualTo(total));
-            Assert.That(telemetry.Requests.Sum(t => t.Failures.GetOrDefault(ApiKey.Fetch)), Is.EqualTo(total));
-            Assert.That(telemetry.Requests.Sum(t => t.Successes.Sum(p => p.Value)), Is.EqualTo(0));
-            Assert.That(telemetry.Requests.Sum(t => t.Attempts.Sum(p => p.Value)), Is.EqualTo(total));
-            Assert.That(telemetry.Requests.Sum(t => t.Failures.Sum(p => p.Value)), Is.EqualTo(total));
+            Assert.Equal(telemetry.Requests.Count, total);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Successes.GetOrDefault(ApiKey.Fetch)), 0);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Attempts.GetOrDefault(ApiKey.Fetch)), total);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Failures.GetOrDefault(ApiKey.Fetch)), total);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Successes.Sum(p => p.Value)), 0);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Attempts.Sum(p => p.Value)), total);
+            Assert.Equal(telemetry.Requests.Sum(t => t.Failures.Sum(p => p.Value)), total);
         }
 
         // success

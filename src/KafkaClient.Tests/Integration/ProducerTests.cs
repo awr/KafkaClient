@@ -8,7 +8,6 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    [TestFixture]
     public class ProducerTests
     {
         [Test]

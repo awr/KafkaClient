@@ -9,7 +9,7 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -21,7 +21,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Connect
 
-        [Test]
+        [Fact]
         public async Task ShouldAttemptMultipleTimesWhenConnectionFails()
         {
             var count = 0;
@@ -36,7 +36,7 @@ namespace KafkaClient.Tests.Unit
 
         #region Dispose
 
-        [Test]
+        [Fact]
         public async Task ShouldDisposeWithoutExceptionThrown()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -49,7 +49,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldDisposeEvenWhilePollingToReconnect()
         {
             var connectionAttempt = -1;
@@ -67,7 +67,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ShouldDisposeEvenWhileAwaitingReadAndThrowException()
         {
             int readSize = 0;
@@ -86,7 +86,7 @@ namespace KafkaClient.Tests.Unit
                     transport = null;
 
                     await taskResult.CancelAfter();
-                    Assert.Fail("Expected ObjectDisposedException to be thrown");
+                    Assert.True(false, "Expected ObjectDisposedException to be thrown");
                 } catch (ObjectDisposedException) {
                     // expected
                 } finally {
@@ -99,7 +99,7 @@ namespace KafkaClient.Tests.Unit
 
         #region ReadBytes
 
-        [Test]
+        [Fact]
         public async Task ReadShouldBlockUntilAllBytesRequestedAreReceived()
         {
             var readCompleted = 0;
@@ -120,22 +120,22 @@ namespace KafkaClient.Tests.Unit
 
                     // Three bytes should have been received and we are waiting on the last byte.
                     await AssertAsync.ThatEventually(() => bytesReceived >= 3, () => $"bytesReceived {bytesReceived}");
-                    Assert.That(readTask.IsCompleted, Is.False, "Task should still be running, blocking.");
-                    Assert.That(readCompleted, Is.EqualTo(0), "Should still block even though bytes have been received.");
+                    Assert.False(readTask.IsCompleted, "Task should still be running, blocking.");
+                    Assert.Equal(readCompleted, 0); // Should still block even though bytes have been received
 
                     TestConfig.Log.Info(() => LogEvent.Create("Sending the last bytes"));
                     var sendLastByte = await server.SendDataAsync(new ArraySegment<byte>(new byte[] { 0 }));
-                    Assert.That(sendLastByte, Is.True, "Last byte should have sent.");
+                    Assert.True(sendLastByte, "Last byte should have sent.");
 
                     // Ensuring task unblocks...
                     await AssertAsync.ThatEventually(() => readTask.IsCompleted);
-                    Assert.That(bytesReceived, Is.EqualTo(4), "");
-                    Assert.That(readCompleted, Is.EqualTo(1), "Task ContinueWith should have executed.");
+                    Assert.Equal(bytesReceived, 4);
+                    Assert.Equal(readCompleted, 1); // Task ContinueWith should have executed
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldBeAbleToReceiveMoreThanOnce()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -151,17 +151,17 @@ namespace KafkaClient.Tests.Unit
 
                     var buffer = new byte[48];
                     await transport.ReadBytesAsync(new ArraySegment<byte>(buffer, 0, 4), CancellationToken.None);
-                    Assert.That(buffer.ToInt32(), Is.EqualTo(firstMessage));
+                    Assert.Equal(buffer.ToInt32(), firstMessage);
 
                     TestConfig.Log.Info(() => LogEvent.Create("Sending second message to receive"));
                     var send2 = (Task) server.SendDataAsync(new ArraySegment<byte>(Encoding.ASCII.GetBytes(secondMessage)));
                     var read = await transport.ReadBytesAsync(new ArraySegment<byte>(buffer, 0, secondMessage.Length), CancellationToken.None);
-                    Assert.That(Encoding.ASCII.GetString(buffer, 0, read), Is.EqualTo(secondMessage));
+                    Assert.Equal(Encoding.ASCII.GetString(buffer, 0, read), secondMessage);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldBeAbleToReceiveMoreThanOnceAsyncronously()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -183,13 +183,13 @@ namespace KafkaClient.Tests.Unit
                     var secondResponseTask = transport.ReadBytesAsync(new ArraySegment<byte>(buffer2), CancellationToken.None);
 
                     await Task.WhenAll(firstResponseTask, secondResponseTask);
-                    Assert.That(buffer1.ToInt32(), Is.EqualTo(firstMessage));
-                    Assert.That(buffer2.ToInt32(), Is.EqualTo(secondMessage));
+                    Assert.Equal(buffer1.ToInt32(), firstMessage);
+                    Assert.Equal(buffer2.ToInt32(), secondMessage);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldNotLoseDataFromStreamOverMultipleReads()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -206,19 +206,19 @@ namespace KafkaClient.Tests.Unit
                     var buffer = new byte[96];
                     var read = await transport.ReadBytesAsync(new ArraySegment<byte>(buffer, 0, 4), CancellationToken.None);
                     await send;
-                    Assert.That(read, Is.EqualTo(4));
-                    Assert.That(buffer.ToInt32(), Is.EqualTo(firstMessage));
+                    Assert.Equal(read, 4);
+                    Assert.Equal(buffer.ToInt32(), firstMessage);
 
                     TestConfig.Log.Info(() => LogEvent.Create("Sending second message to receive"));
                     var send2 = server.SendDataAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(secondMessage)));
                     var receive2 = await transport.ReadBytesAsync(new ArraySegment<byte>(buffer, 0, secondMessage.Length), CancellationToken.None);
                     await send2;
-                    Assert.That(Encoding.ASCII.GetString(buffer, 0, receive2), Is.EqualTo(secondMessage));
+                    Assert.Equal(Encoding.ASCII.GetString(buffer, 0, receive2), secondMessage);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldThrowServerDisconnectedExceptionWhenDisconnected()
         {
             var disconnectedCount = 0;
@@ -239,13 +239,13 @@ namespace KafkaClient.Tests.Unit
 
                     await Task.WhenAny(taskResult, Task.Delay(1000)).ConfigureAwait(false);
 
-                    Assert.That(taskResult.IsFaulted, Is.True);
-                    Assert.That(taskResult.Exception.InnerException, Is.TypeOf<ConnectionException>());
+                    Assert.True(taskResult.IsFaulted);
+                    Assert.IsType<ConnectionException>(taskResult.Exception.InnerException);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task WhenNoConnectionThrowSocketExceptionAfterMaxRetry()
         {
             var connectionAttempts = 0;
@@ -258,15 +258,15 @@ namespace KafkaClient.Tests.Unit
             using (var transport = CreateTransport(endpoint, config, TestConfig.Log)) {
                 try {
                     await transport.ConnectAsync(CancellationToken.None);
-                    Assert.Fail("Did not throw ConnectionException");
+                    Assert.True(false, "Did not throw ConnectionException");
                 } catch (ConnectionException) {
                     // expected
                 }
-                Assert.That(connectionAttempts, Is.EqualTo(1 + maxRetries));
+                Assert.Equal(connectionAttempts, 1 + maxRetries);
             }
         }
 
-        [Test]
+        [Fact]
         public async Task ReadShouldStackReadRequestsAndReturnOneAtATime()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -289,7 +289,7 @@ namespace KafkaClient.Tests.Unit
                     await Task.WhenAll(tasks);
 
                     foreach (var task in tasks) {
-                        Assert.That(task.Result, Is.EqualTo(expectedLength));
+                        Assert.Equal(task.Result, expectedLength);
                     }
                 }
             }
@@ -299,7 +299,7 @@ namespace KafkaClient.Tests.Unit
 
         #region WriteBytes
 
-        [Test]
+        [Fact]
         public async Task WriteAsyncShouldSendData()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -326,7 +326,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task WriteAsyncShouldAllowMoreThanOneWrite()
         {
             var endpoint = TestConfig.ServerEndpoint();
@@ -348,7 +348,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Test]
+        [Fact]
         public async Task AsynchronousWriteAndReadShouldBeConsistent()
         {
             const int requests = 10;
@@ -385,23 +385,25 @@ namespace KafkaClient.Tests.Unit
                     foreach (var value in bytes.Batch(4).Select(x => x.ToArray().ToInt32())) {
                         readOnServer.Add(value);
                     }
-                    Assert.That(readOnServer.Count, Is.EqualTo(requests), "not all writes propagated to the server in time");
+                    Assert.Equal(readOnServer.Count, requests); // not all writes propagated to the server in time
                     await AssertAsync.ThatEventually(() => readOnClient.Count == requests, () => $"read {readOnClient.Count}, requests {requests}");
                     var w = readOnServer.OrderBy(x => x);
                     var r = readOnClient.OrderBy(x => x);
 
                     for (var i = 0; i < requests; i++) {
-                        Assert.That(w.ElementAt(i), Is.EqualTo(expected[i]));
+                        Assert.Equal(w.ElementAt(i), expected[i]);
                     }
                     for (var i = 0; i < requests; i++) {
-                        Assert.That(r.ElementAt(i), Is.EqualTo(expected[i]));
+                        Assert.Equal(r.ElementAt(i), expected[i]);
                     }
                 }
             }
         }
 
-        [Test]
-        public async Task WriteShouldHandleLargeVolumeSendAsynchronously([Values(1000, 5000)] int requests)
+        [Fact]
+        [InlineData(1000)]
+        [InlineData(5000)]
+        public async Task WriteShouldHandleLargeVolumeSendAsynchronously(int requests)
         {
             var endpoint = TestConfig.ServerEndpoint();
             using (var server = CreateServer(endpoint.Ip.Port, TestConfig.Log)) {
@@ -428,13 +430,13 @@ namespace KafkaClient.Tests.Unit
                     foreach (var value in bytes.Batch(4).Select(x => x.ToArray().ToInt32())) {
                         readOnServer.Add(value);
                     }
-                    Assert.That(readOnServer.Count, Is.EqualTo(requests), "not all writes propagated to the server in time");
-                    Assert.That(readOnServer.OrderBy(x => x), Is.EqualTo(Enumerable.Range(1, requests)));
+                    Assert.Equal(readOnServer.Count, requests); // not all writes propagated to the server in time
+                    Assert.Equal(readOnServer.OrderBy(x => x), Enumerable.Range(1, requests));
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public async Task WriteShouldCancelWhileSendingData()
         {
             var clientWriteAttempts = 0;
@@ -456,7 +458,7 @@ namespace KafkaClient.Tests.Unit
                         var taskResult = transport.WriteBytesAsync(new ArraySegment<byte>(data), token.Token, 6);
                         await Task.WhenAny(taskResult, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
 
-                        Assert.That(taskResult.IsCanceled || !taskResult.IsFaulted, Is.True, "Task should have cancelled.");
+                        Assert.True(taskResult.IsCanceled || !taskResult.IsFaulted, "Task should have cancelled.");
                     }
                 }
             }

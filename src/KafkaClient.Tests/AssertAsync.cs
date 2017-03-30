@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AgileObjects.ReadableExpressions;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests
 {
@@ -22,9 +22,9 @@ namespace KafkaClient.Tests
             while (compiled() == false) {
                 if (timer.ElapsedMilliseconds > timeoutMilliseconds) {
                     if (messageFunc != null) {
-                        Assert.Fail(predicate.ToReadableString() + $"\n{messageFunc()}");
+                        Assert.True(false, predicate.ToReadableString() + $"\n{messageFunc()}");
                     }
-                    Assert.Fail(predicate.ToReadableString());
+                    Assert.True(false, predicate.ToReadableString());
                 }
                 await Task.Delay(50).ConfigureAwait(false);
             }
@@ -35,7 +35,7 @@ namespace KafkaClient.Tests
         {
             try {
                 await asyncAction();
-                Assert.Fail($"Should have thrown {typeof(T)}");
+                Assert.True(false, $"Should have thrown {typeof(T)}");
             } catch (T ex) {
                 if (when != null && !when(ex)) throw;
             }

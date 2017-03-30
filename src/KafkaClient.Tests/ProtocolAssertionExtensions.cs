@@ -4,7 +4,7 @@ using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using NUnit.Framework;
+using Xunit;
 
 namespace KafkaClient.Tests
 {
@@ -24,14 +24,14 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = request;
             }
-            Assert.That(forComparison.GetHashCode(), Is.EqualTo(decoded.GetHashCode()), "HashCode equality");
-            Assert.That(forComparison.ShortString(), Is.EqualTo(decoded.ShortString()), "ShortString equality");
+            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
+            Assert.Equal(forComparison.ShortString(), decoded.ShortString()); // ShortString equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.That(original, Is.EqualTo(final), "ToString equality");
-            Assert.That(decoded.Equals(final), Is.False); // general equality test for sanity
-            Assert.That(decoded.Equals(decoded), Is.True); // general equality test for sanity
-            Assert.That(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
+            Assert.Equal(original, final); // ToString equality
+            Assert.False(decoded.Equals(final)); // general equality test for sanity
+            Assert.True(decoded.Equals(decoded)); // general equality test for sanity
+            Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
         }
 
         public static void AssertCanEncodeDecodeResponse<T>(this T response, short version, IMembershipEncoder encoder = null, T forComparison = null) where T : class, IResponse
@@ -48,14 +48,14 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = response;
             }
-            Assert.That(forComparison.GetHashCode(), Is.EqualTo(decoded.GetHashCode()), "HashCode equality");
+            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.That(original, Is.EqualTo(final), "ToString equality");
-            Assert.That(decoded.Equals(final), Is.False); // general test for equality
-            Assert.That(decoded.Equals(decoded), Is.True); // general equality test for sanity
-            Assert.That(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
-            Assert.That(forComparison.Errors.HasEqualElementsInOrder(decoded.Errors), "Errors");
+            Assert.Equal(original, final); // ToString equality
+            Assert.False(decoded.Equals(final)); // general test for equality
+            Assert.True(decoded.Equals(decoded)); // general equality test for sanity
+            Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
+            Assert.True(forComparison.Errors.HasEqualElementsInOrder(decoded.Errors), "Errors");
         }
 
         public static ApiKey GetType<T>() where T : class, IResponse
