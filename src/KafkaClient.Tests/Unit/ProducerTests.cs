@@ -29,8 +29,8 @@ namespace KafkaClient.Tests.Unit
 
                 var response = await producer.SendAsync(messages, "UnitTest", CancellationToken.None);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(1));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(1));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], 1);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], 1);
             }
         }
 
@@ -48,8 +48,8 @@ namespace KafkaClient.Tests.Unit
                 var sendTask = producer.SendAsync(messages, "UnitTest", CancellationToken.None).ConfigureAwait(false);
                 Assert.ThrowsAsync<RequestException>(async () => await sendTask);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(1));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(1));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], 1);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], 1);
             }
         }
 
@@ -70,7 +70,7 @@ namespace KafkaClient.Tests.Unit
             {
                 var messages = new[] { new Message("1") };
 
-                Assert.That(producer.ActiveSenders, Is.EqualTo(0));
+                Assert.Equal(producer.ActiveSenders, 0);
 
                 var sendTask = producer.SendAsync(messages, RoutingScenario.TestTopic, CancellationToken.None);
 
@@ -78,8 +78,8 @@ namespace KafkaClient.Tests.Unit
 
                 semaphore.Release();
                 await Task.WhenAny(sendTask, Task.Delay(2500));
-                Assert.That(sendTask.IsCompleted, Is.True, "Send task should be marked as completed.");
-                Assert.That(producer.ActiveSenders, Is.EqualTo(0), "Async should now show zero count.");
+                Assert.True(sendTask.IsCompleted, "Send task should be marked as completed.");
+                Assert.Equal(producer.ActiveSenders, 0, "Async should now show zero count.");
             }
         }
 
@@ -141,8 +141,8 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAll(calls);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(1));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(1));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], 1);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], 1);
             }
         }
 
@@ -167,8 +167,8 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAll(calls);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(2));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(2));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], 2);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], 2);
             }
         }
 
@@ -190,8 +190,8 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAll(calls);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(expected));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(expected));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], expected);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], expected);
             }
         }
 
@@ -213,8 +213,8 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAll(calls);
 
-                Assert.That(scenario.Connection1[ApiKey.Produce], Is.EqualTo(expected));
-                Assert.That(scenario.Connection2[ApiKey.Produce], Is.EqualTo(expected));
+                Assert.Equal(scenario.Connection1[ApiKey.Produce], expected);
+                Assert.Equal(scenario.Connection2[ApiKey.Produce], expected);
             }
         }
 
@@ -268,7 +268,7 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(senderTask, Task.Delay(5000));
 
                 Assert.That(senderTask.IsCompleted);
-                Assert.That(producer.BufferedMessageCount, Is.EqualTo(1), "One message should be left in the buffer.");
+                Assert.Equal(producer.BufferedMessageCount, 1, "One message should be left in the buffer.");
             }
         }
 

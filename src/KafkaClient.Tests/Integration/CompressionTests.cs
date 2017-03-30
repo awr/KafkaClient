@@ -35,7 +35,7 @@ namespace KafkaClient.Tests.Integration
                     TestConfig.Log.Info(() => LogEvent.Create(">> start SendAsync"));
                     var response = await conn.Connection.SendAsync(request, CancellationToken.None);
                     TestConfig.Log.Info(() => LogEvent.Create("end SendAsync"));
-                    Assert.That(response.Errors.Any(e => e != ErrorCode.NONE), Is.False);
+                    Assert.False(response.Errors.Any(e => e != ErrorCode.NONE));
                     TestConfig.Log.Info(() => LogEvent.Create("start dispose"));
                     TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCompressedMessageCanSend"));
                 });
@@ -66,10 +66,10 @@ namespace KafkaClient.Tests.Integration
                     using (var consumer = new Consumer(offset, router)) {
                         var results = await consumer.FetchAsync(CancellationToken.None, messages.Count);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
-                        Assert.That(results, Is.Not.Null);
-                        Assert.That(results.Messages.Count, Is.EqualTo(messages.Count));
+                        Assert.NotNull(results);
+                        Assert.Equal(results.Messages.Count, messages.Count);
                         for (var i = 0; i < messages.Count; i++) {
-                            Assert.That(results.Messages[i].Value.ToUtf8String(), Is.EqualTo(i.ToString()));
+                            Assert.Equal(results.Messages[i].Value.ToUtf8String(), i.ToString());
                         }
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCanDecompressMessageFromKafka"));
@@ -102,7 +102,7 @@ namespace KafkaClient.Tests.Integration
                     TestConfig.Log.Info(() => LogEvent.Create(">> start SendAsync"));
                     var response = await conn.Connection.SendAsync(request, CancellationToken.None);
                     TestConfig.Log.Info(() => LogEvent.Create("end SendAsync"));
-                    Assert.That(response.Errors.Any(e => e != ErrorCode.NONE), Is.False);
+                    Assert.False(response.Errors.Any(e => e != ErrorCode.NONE));
                     TestConfig.Log.Info(() => LogEvent.Create("start dispose"));
                     TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCompressedMessageCanSend"));
                 });
@@ -134,10 +134,10 @@ namespace KafkaClient.Tests.Integration
                     using (var consumer = new Consumer(offset, router)) {
                         var results = await consumer.FetchAsync(CancellationToken.None, messages.Count);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
-                        Assert.That(results, Is.Not.Null);
-                        Assert.That(results.Messages.Count, Is.EqualTo(messages.Count));
+                        Assert.NotNull(results);
+                        Assert.Equal(results.Messages.Count, messages.Count);
                         for (var i = 0; i < messages.Count; i++) {
-                            Assert.That(results.Messages[i].Value.ToUtf8String(), Is.EqualTo(i.ToString()));
+                            Assert.Equal(results.Messages[i].Value.ToUtf8String(), i.ToString());
                         }
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCanDecompressMessageFromKafka"));

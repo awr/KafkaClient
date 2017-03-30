@@ -7,8 +7,6 @@ using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
 using Xunit;
-using Xunit;
-using Assert = NUnit.Framework.Assert;
 
 namespace KafkaClient.Tests.Unit
 {
@@ -39,8 +37,10 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
-        public async Task AssignmentFoundWhenStrategyExists([Values("type1", "type2")] string strategy)
+        [Theory]
+        [InlineData("type1")]
+        [InlineData("type2")]
+        public async Task AssignmentFoundWhenStrategyExists(string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
 
@@ -65,8 +65,10 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
-        public async Task AssignorFoundWhenStrategyExists([Values("type1", "type2")] string strategy)
+        [Theory]
+        [InlineData("type1")]
+        [InlineData("type2")]
+        public async Task AssignorFoundWhenStrategyExists(string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
 
@@ -117,8 +119,8 @@ namespace KafkaClient.Tests.Unit
         {
             var request = new SyncGroupRequest("group", 5, "member", new[] { new SyncGroupRequest.GroupAssignment("member", new ConsumerMemberAssignment(new[] { new TopicPartition("topic-foo", 0), new TopicPartition("topic", 1) })) });
             var formatted = request.ToString();
-            Assert.That(formatted.Contains("topic:topic-foo"));
-            Assert.That(formatted.Contains("partition_id:1"));
+            Assert.True(formatted.Contains("topic:topic-foo"));
+            Assert.True(formatted.Contains("partition_id:1"));
         }
 
         // design unit TESTS to write:

@@ -22,7 +22,7 @@ namespace KafkaClient.Tests.Integration
 
                         await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromMinutes(2)));
 
-                        Assert.That(sendTask.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+                        Assert.Equal(sendTask.Status, TaskStatus.RanToCompletion);
                     }
                 });
             }
@@ -36,7 +36,7 @@ namespace KafkaClient.Tests.Integration
                     using (var producer = new Producer(router)) {
                         var result = await producer.SendAsync(new[] { new Message(Guid.NewGuid().ToString()) }, topicName, 0, CancellationToken.None);
 
-                        Assert.That(result.topic, Is.EqualTo(topicName));
+                        Assert.Equal(result.topic, topicName);
                     }
                 });
             }
@@ -57,7 +57,7 @@ namespace KafkaClient.Tests.Integration
                         await Task.WhenAll(tasks);
 
                         var result = tasks.Select(x => x.Result).Distinct().ToList();
-                        Assert.That(result.Count, Is.EqualTo(tasks.Length));
+                        Assert.Equal(result.Count, tasks.Length);
                     }
                 }, 3);
             }
@@ -72,7 +72,7 @@ namespace KafkaClient.Tests.Integration
                         var responseAckLevel0 = await producer.SendAsync(new Message("Ack Level 0"), topicName, 0, new SendMessageConfiguration(acks: 0), CancellationToken.None);
                         Assert.AreEqual(responseAckLevel0.base_offset, -1);
                         var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
-                        Assert.That(responseAckLevel1.base_offset, Is.GreaterThan(-1));
+                        Assert.True(responseAckLevel1.base_offset > -1);
                     }
                 });
             }
@@ -131,7 +131,7 @@ namespace KafkaClient.Tests.Integration
                             var i = 0;
                             await consumer.ConsumeAsync(
                                 (message, token) => {
-                                    Assert.That(message.Value.ToUtf8String(), Is.EqualTo(i++.ToString()));
+                                    Assert.Equal(message.Value.ToUtf8String(), i++.ToString());
                                     if (i >= 20) {
                                         source.Cancel();
                                     }

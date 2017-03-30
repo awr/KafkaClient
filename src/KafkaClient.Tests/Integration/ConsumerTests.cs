@@ -304,8 +304,10 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
-        public async Task FetchOffsetConsumerGroupArgumentNull([Values(null, "")] string group)
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        public async Task FetchOffsetConsumerGroupArgumentNull(string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
@@ -383,8 +385,10 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
-        public async Task UpdateOrCreateOffsetConsumerGroupArgumentNull([Values(null, "")] string group)
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        public async Task UpdateOrCreateOffsetConsumerGroupArgumentNull(string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
@@ -477,8 +481,10 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
-        public async Task ConsumerShouldBeAbleToSeekBackToEarlierOffset([Values(20)] int sends, [Values(1, 10)] int messagesPerSend)
+        [Theory]
+        [InlineData(20, 1)]
+        [InlineData(20, 10)]
+        public async Task ConsumerShouldBeAbleToSeekBackToEarlierOffset(int sends, int messagesPerSend)
         {
             var totalMessages = sends * messagesPerSend;
 
@@ -509,9 +515,9 @@ namespace KafkaClient.Tests.Integration
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results2.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
                         }
 
-                        Assert.That(results1.Messages.Count, Is.EqualTo(results2.Messages.Count));
-                        Assert.That(results1.Messages.Count, Is.EqualTo(totalMessages));
-                        Assert.That(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), Is.EqualTo(results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()), "Expected the message list in the correct order.");
+                        Assert.Equal(results1.Messages.Count, results2.Messages.Count);
+                        Assert.Equal(results1.Messages.Count, totalMessages);
+                        Assert.Equal(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), results2.Messages.Select(x => x.Value.ToUtf8String()).ToList(), "Expected the message list in the correct order.");
                     }
                 });
             }
@@ -537,11 +543,11 @@ namespace KafkaClient.Tests.Integration
                             var results = await consumer.FetchAsync(CancellationToken.None, totalMessages);
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
 
-                            Assert.That(results.Messages.Count, Is.EqualTo(totalMessages));
-                            Assert.That(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), Is.EqualTo(expected), "Expected the message list in the correct order.");
+                            Assert.Equal(results.Messages.Count, totalMessages);
+                            Assert.Equal(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected, "Expected the message list in the correct order.");
 
                             var newOffset = await producer.Router.GetOffsetsAsync(offset.topic, offset.partition_id, CancellationToken.None);
-                            Assert.That(newOffset.offset - offset.offset, Is.EqualTo(totalMessages));
+                            Assert.Equal(newOffset.offset - offset.offset, totalMessages);
                         }
                     }
                 });
@@ -595,8 +601,8 @@ namespace KafkaClient.Tests.Integration
                             stopwatch.Stop();
                             TestConfig.Log.Info(() => LogEvent.Create($">> done Consume, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
 
-                            Assert.That(fetched.Select(x => x.Value.ToUtf8String()).ToList(), Is.EqualTo(expected), "Expected the message list in the correct order.");
-                            Assert.That(fetched.Count, Is.EqualTo(totalMessages));
+                            Assert.Equal(fetched.Select(x => x.Value.ToUtf8String()).ToList(), expected, "Expected the message list in the correct order.");
+                            Assert.Equal(fetched.Count, totalMessages);
                         }
                     }
                 });
@@ -625,8 +631,8 @@ namespace KafkaClient.Tests.Integration
         //                    for (var i = 0; i < 20; i++)
         //                    {
         //                        var result = consumer.Consume().Take(1).First();
-        //                        Assert.That(result.Key.ToUtf8String(), Is.EqualTo(testId));
-        //                        Assert.That(result.Value.ToUtf8String(), Is.EqualTo(i.ToString()));
+        //                        Assert.Equal(result.Key.ToUtf8String(), testId);
+        //                        Assert.Equal(result.Value.ToUtf8String(), i.ToString());
         //                    }
         //                }
         //            }
@@ -653,7 +659,7 @@ namespace KafkaClient.Tests.Integration
         //                    Console.WriteLine("Sending {0} test messages", expectedCount);
         //                    var response = await producer.SendMessagesAsync(Enumerable.Range(0, expectedCount).Select(x => new Message(x.ToString())), topicName, CancellationToken.None);
 
-        //                    Assert.That(response.Any(x => x.ErrorCode != (int)ErrorResponseCode.None), Is.False, "Error occured sending test messages to server.");
+        //                    Assert.False(response.Any(x => x.ErrorCode != (int)ErrorResponseCode.None), "Error occured sending test messages to server.");
 
         //                    var stream = consumer.Consume();
 
@@ -667,8 +673,8 @@ namespace KafkaClient.Tests.Integration
         //                        .OrderBy(x => x.PartitionId)
         //                        .ToList();
 
-        //                    Assert.That(consumerOffset, Is.EqualTo(positionOffset), "The consumerOffset position should match the server offset position.");
-        //                    Assert.That(data.Count, Is.EqualTo(expectedCount), "We should have received 2000 messages from the server.");
+        //                    Assert.Equal(consumerOffset, positionOffset, "The consumerOffset position should match the server offset position.");
+        //                    Assert.Equal(data.Count, expectedCount, "We should have received 2000 messages from the server.");
         //                }
         //            }
         //        });
@@ -683,7 +689,7 @@ namespace KafkaClient.Tests.Integration
                     var groupId = TestConfig.GroupId();
 
                     using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
-                        Assert.That(consumer.GroupId, Is.EqualTo(groupId));
+                        Assert.Equal(consumer.GroupId, groupId);
                     }
                 });
             }
@@ -696,8 +702,8 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     var groupId = TestConfig.GroupId();
                     using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(TestConfig.TopicName()), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
-                        Assert.That(consumer.GroupId, Is.EqualTo(groupId));
-                        Assert.That(consumer.IsLeader, Is.True);
+                        Assert.Equal(consumer.GroupId, groupId);
+                        Assert.True(consumer.IsLeader);
                     }
                 });
             }
@@ -771,7 +777,7 @@ namespace KafkaClient.Tests.Integration
                     }
 //                    await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(TimeSpan.FromMinutes(1)));
                     await Task.WhenAll(tasks);
-                    Assert.That(fetched, Is.AtLeast(totalMessages));
+                    Assert.True(fetched >= totalMessages);
                 }, 10);
             }
         }
@@ -824,7 +830,7 @@ namespace KafkaClient.Tests.Integration
                             }
                         }
                         await Task.WhenAll(tasks);
-                        Assert.That(allFetched, Is.AtLeast(totalMessages * groups));
+                        Assert.True(allFetched >= totalMessages * groups);
     //                    await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(TimeSpan.FromMinutes(1)));
                     }, 10);
                 }

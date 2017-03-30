@@ -22,8 +22,8 @@ namespace KafkaClient.Tests.Unit
         {
             var expected = IPAddress.Parse("127.0.0.1");
             var endpoint = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
-            Assert.That(endpoint.Ip.Address, Is.EqualTo(expected));
-            Assert.That(endpoint.Ip.Port, Is.EqualTo(8888));
+            Assert.Equal(endpoint.Ip.Address, expected);
+            Assert.Equal(endpoint.Ip.Port, 8888);
         }
 
         [Fact]
@@ -32,8 +32,8 @@ namespace KafkaClient.Tests.Unit
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
             var endpoint2 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
 
-            Assert.That(ReferenceEquals(endpoint1, endpoint2), Is.False, "Should not be the same reference.");
-            Assert.That(endpoint1, Is.EqualTo(endpoint2));
+            Assert.False(ReferenceEquals(endpoint1, endpoint2), "Should not be the same reference.");
+            Assert.Equal(endpoint1, endpoint2);
         }
 
         [Fact]

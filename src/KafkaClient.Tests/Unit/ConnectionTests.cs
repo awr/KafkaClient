@@ -31,7 +31,7 @@ namespace KafkaClient.Tests.Unit
             var endpoint = TestConfig.ServerEndpoint();
             using (var conn = new Connection(endpoint, log: TestConfig.Log))
             {
-                Assert.That(conn.Endpoint, Is.EqualTo(endpoint));
+                Assert.Equal(conn.Endpoint, endpoint);
             }
         }
 
@@ -93,7 +93,7 @@ namespace KafkaClient.Tests.Unit
             {
                 var task = conn.SendAsync(new MetadataRequest(), CancellationToken.None);
                 await Task.WhenAny(task, Task.Delay(1000)).ConfigureAwait(false);
-                Assert.That(task.IsCompleted, Is.False, "The send task should still be pending.");
+                Assert.False(task.IsCompleted, "The send task should still be pending.");
             }
         }
 
@@ -137,7 +137,7 @@ namespace KafkaClient.Tests.Unit
                     server.DropConnection();
                     await AssertAsync.ThatEventually(() => clientDisconnected == currentAttempt, () => $"client {clientDisconnected}, attempt {currentAttempt}");
 
-                    Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Info && e.Item2.Message.StartsWith("Disposing transport to")), Is.AtLeast(currentAttempt));
+                    Assert.True(log.LogEvents.Count(e => e.Item1 == LogLevel.Info && e.Item2.Message.StartsWith("Disposing transport to")) >= currentAttempt);
                 }
             }
         }
@@ -172,8 +172,8 @@ namespace KafkaClient.Tests.Unit
                 await server.SendDataAsync(new ArraySegment<byte>(bytes, 0, firstLength));
                 await AssertAsync.ThatEventually(() => bytesRead >= firstLength, () => $"read {bytesRead}, length {bytes.Length}");
 
-                Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), Is.EqualTo(1), log.ToString());
-                Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Debug && e.Item2.Message.StartsWith($"Received {size} bytes (id {correlationId})")), Is.EqualTo(0));
+                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), 1, log.ToString());
+                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Debug && e.Item2.Message.StartsWith($"Received {size} bytes (id {correlationId})")), 0);
 
                 // send half of payload should be skipped
                 while (!await server.SendDataAsync(new ArraySegment<byte>(bytes, firstLength, size - firstLength))) {
@@ -211,8 +211,8 @@ namespace KafkaClient.Tests.Unit
                 await server.SendDataAsync(new ArraySegment<byte>(bytes, 0, 99));
                 await AssertAsync.ThatEventually(() => bytesRead >= bytes.Length, () => $"read {bytesRead}, length {bytes.Length}");
 
-                Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), Is.EqualTo(1), log.ToString());
-                Assert.That(log.LogEvents.Count(e => e.Item1 == LogLevel.Debug && e.Item2.Message.StartsWith($"Received {size} bytes (id {correlationId})")), Is.EqualTo(0));
+                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), 1); //, log.ToString());
+                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Debug && e.Item2.Message.StartsWith($"Received {size} bytes (id {correlationId})")), 0);
 
                 server.DropConnection();
 
@@ -268,8 +268,8 @@ namespace KafkaClient.Tests.Unit
                 token.Cancel();
 
                 semaphore.Wait(TimeSpan.FromSeconds(1));
-                Assert.That(count, Is.GreaterThanOrEqualTo(1), "Read should have cancelled and incremented count.");
-                Assert.That(taskResult.IsCanceled, Is.True);
+                Assert.True(count >= 1, "Read should have cancelled and incremented count.");
+                Assert.True(taskResult.IsCanceled);
             }
         }
 
@@ -282,7 +282,7 @@ namespace KafkaClient.Tests.Unit
                 using (var conn = new Connection(endpoint, config, TestConfig.Log)) {
                     var taskResult = conn.SendAsync(new FetchRequest(), token.Token);
                     await Task.WhenAny(taskResult, Task.Delay(500));
-                    Assert.That(taskResult.IsCanceled, Is.True);
+                    Assert.True(taskResult.IsCanceled);
                 }
             }
         }
@@ -331,7 +331,7 @@ namespace KafkaClient.Tests.Unit
                     server.DropConnection();
 
                     await AssertAsync.ThatEventually(() => clientDisconnects > 0, TimeSpan.FromSeconds(10), () => $"disconnects {clientDisconnects}");
-                    Assert.That(clientBytesRead, Is.EqualTo(0), "client should not have received any bytes.");
+                    Assert.Equal(clientBytesRead, 0); // client should not have received any bytes
 
                     await AssertAsync.ThatEventually(() => serverConnects == 2, TimeSpan.FromSeconds(6), () => $"connects {serverConnects}");
 
@@ -359,7 +359,7 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAny(sendTask, Task.Delay(100));
 
-                Assert.That(sendTask.IsFaulted, Is.True, "Task should have reported an exception.");
+                Assert.True(sendTask.IsFaulted, "Task should have reported an exception.");
                 Assert.That(sendTask.Exception.InnerException, Is.TypeOf<TimeoutException>());
             }
         }
@@ -377,7 +377,7 @@ namespace KafkaClient.Tests.Unit
 
                 await Task.WhenAny(sendTask, Task.Delay(100));
 
-                Assert.That(sendTask.IsFaulted, Is.False);
+                Assert.False(sendTask.IsFaulted);
                 Assert.That(sendTask.IsCompleted);
             }
         }
@@ -392,8 +392,8 @@ namespace KafkaClient.Tests.Unit
                 var taskResult = conn.SendAsync(new MetadataRequest(), CancellationToken.None);
 
                 // Task result should be WaitingForActivation
-                Assert.That(taskResult.IsFaulted, Is.False);
-                Assert.That(taskResult.Status, Is.EqualTo(TaskStatus.WaitingForActivation));
+                Assert.False(taskResult.IsFaulted);
+                Assert.Equal(taskResult.Status, TaskStatus.WaitingForActivation);
 
                 // Starting server to establish connection
                 using (var server = new TcpServer(endpoint.Ip.Port, TestConfig.Log))
@@ -406,10 +406,10 @@ namespace KafkaClient.Tests.Unit
 
                     await Task.WhenAny(taskResult, Task.Delay(TimeSpan.FromSeconds(5)));
 
-                    Assert.That(taskResult.IsFaulted, Is.False);
-                    Assert.That(taskResult.IsCanceled, Is.False);
+                    Assert.False(taskResult.IsFaulted);
+                    Assert.False(taskResult.IsCanceled);
                     await taskResult;
-                    Assert.That(taskResult.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+                    Assert.Equal(taskResult.Status, TaskStatus.RanToCompletion);
                 }
             }
         }
@@ -420,7 +420,7 @@ namespace KafkaClient.Tests.Unit
             var dynamicVersion = VersionSupport.Kafka10.Dynamic();
             var staticVersion = VersionSupport.Kafka10;
             foreach (ApiKey apiKey in Enum.GetValues(typeof (ApiKey))) {
-                Assert.That(dynamicVersion.GetVersion(apiKey), Is.EqualTo(staticVersion.GetVersion(apiKey)));
+                Assert.Equal(dynamicVersion.GetVersion(apiKey), staticVersion.GetVersion(apiKey));
             }
         }
 
@@ -478,7 +478,7 @@ namespace KafkaClient.Tests.Unit
 
                 await conn.SendAsync(new FetchRequest(new FetchRequest.Topic("Foo", 0, 0)), CancellationToken.None);
                 await AssertAsync.ThatEventually(() => correlationId - firstCorrelation >= 1, () => $"first {firstCorrelation}, current {correlationId}");
-                Assert.That(sentVersion, Is.EqualTo(apiVersion));
+                Assert.Equal(sentVersion, apiVersion);
             }
         }
 
@@ -510,7 +510,7 @@ namespace KafkaClient.Tests.Unit
                     await conn.SendAsync(new FetchRequest(new FetchRequest.Topic("Foo", 0, 0)), CancellationToken.None);
                 }
 
-                Assert.That(versionRequests, Is.EqualTo(1));
+                Assert.Equal(versionRequests, 1);
             }
         }
 
@@ -531,7 +531,7 @@ namespace KafkaClient.Tests.Unit
 
                 await AssertAsync.ThatEventually(() => tasks.All(t => t.IsFaulted));
                 foreach (var task in tasks) {
-                    Assert.That(task.IsFaulted, Is.True, "Task should have faulted.");
+                    Assert.True(task.IsFaulted, "Task should have faulted.");
                     Assert.That(task.Exception.InnerException, Is.TypeOf<TimeoutException>(), "Task fault has wrong type.");
                 }
             }

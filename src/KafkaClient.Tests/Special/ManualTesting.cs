@@ -24,9 +24,9 @@ namespace KafkaClient.Tests.Special
             var response = router.GetMetadataAsync(new MetadataRequest(expectedTopic), CancellationToken.None);
             var topic = (await response).topic_metadata.FirstOrDefault();
 
-            Assert.That(topic, Is.Not.Null);
-            Assert.That(topic.topic, Is.EqualTo(expectedTopic));
-            Assert.That(topic.topic_error_code, Is.EqualTo((int)ErrorCode.NONE));
+            Assert.NotNull(topic);
+            Assert.Equal(topic.topic, expectedTopic);
+            Assert.Equal(topic.topic_error_code, (int)ErrorCode.NONE);
         }
 
         [Fact]

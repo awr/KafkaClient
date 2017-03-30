@@ -34,7 +34,7 @@ namespace KafkaClient.Tests.Unit
         [Fact]
         public void RetryAtMostRetriesWithNoDelay()
         {
-            Assert.That(Retry.AtMost(1).RetryDelay(0, TimeSpan.Zero), Is.EqualTo(TimeSpan.Zero));
+            Assert.Equal(Retry.AtMost(1).RetryDelay(0, TimeSpan.Zero), TimeSpan.Zero);
         }
 
         [Fact]
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Unit
         {
             var retry = Retry.AtMost(maxAttempts);
             for (var attempt = 0; attempt < maxAttempts; attempt++) {
-                Assert.That(retry.RetryDelay(attempt, TimeSpan.FromHours(1)), Is.EqualTo(TimeSpan.Zero));
+                Assert.Equal(retry.RetryDelay(attempt, TimeSpan.FromHours(1)), TimeSpan.Zero);
             }
             Assert.That(retry.RetryDelay(maxAttempts, TimeSpan.FromHours(1)), Is.Null);
             Assert.That(retry.RetryDelay(maxAttempts + 1, TimeSpan.FromHours(1)), Is.Null);
@@ -51,7 +51,7 @@ namespace KafkaClient.Tests.Unit
         [Fact]
         public void RetryUntilRetriesWithNoDelay()
         {
-            Assert.That(Retry.Until(TimeSpan.FromMinutes(1)).RetryDelay(10, TimeSpan.Zero), Is.EqualTo(TimeSpan.Zero));
+            Assert.Equal(Retry.Until(TimeSpan.FromMinutes(1)).RetryDelay(10, TimeSpan.Zero), TimeSpan.Zero);
         }
 
         [Fact]
@@ -59,8 +59,8 @@ namespace KafkaClient.Tests.Unit
         {
             foreach (var minDelay in new [] { TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(105) }) {
                 var maximum = TimeSpan.FromMinutes(1);
-                Assert.That(Retry.Until(maximum, minDelay).RetryDelay(0, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, Is.AtLeast(minDelay.TotalMilliseconds));
-                Assert.That(Retry.Until(maximum, minDelay).RetryDelay(9, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, Is.EqualTo(10 * minDelay.TotalMilliseconds));
+                Assert.True(Retry.Until(maximum, minDelay).RetryDelay(0, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds >= minDelay.TotalMilliseconds);
+                Assert.Equal(Retry.Until(maximum, minDelay).RetryDelay(9, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, 10 * minDelay.TotalMilliseconds);
             }
         }
 
@@ -80,8 +80,8 @@ namespace KafkaClient.Tests.Unit
         {
             foreach (var maximum in new[] { TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1), TimeSpan.FromHours(1), TimeSpan.FromDays(1) }) {
                 var retry = Retry.Until(maximum);
-                Assert.That(retry.RetryDelay(10, TimeSpan.Zero), Is.Not.Null);
-                Assert.That(retry.RetryDelay(10, TimeSpan.FromTicks(maximum.Ticks / 2)), Is.Not.Null);
+                Assert.NotNull(retry.RetryDelay(10, TimeSpan.Zero));
+                Assert.NotNull(retry.RetryDelay(10, TimeSpan.FromTicks(maximum.Ticks / 2)));
                 Assert.That(retry.RetryDelay(10, maximum), Is.Null);
                 Assert.That(retry.RetryDelay(10, TimeSpan.FromMilliseconds(maximum.TotalMilliseconds * 1.01)), Is.Null);
             }
@@ -99,7 +99,7 @@ namespace KafkaClient.Tests.Unit
         [Fact]
         public void RetryWithBackoffRetriesWithNoDelay()
         {
-            Assert.That(Retry.Until(TimeSpan.FromMinutes(1)).RetryDelay(10, TimeSpan.Zero), Is.EqualTo(TimeSpan.Zero));
+            Assert.Equal(Retry.Until(TimeSpan.FromMinutes(1)).RetryDelay(10, TimeSpan.Zero), TimeSpan.Zero);
         }
 
         [Fact]
@@ -107,8 +107,8 @@ namespace KafkaClient.Tests.Unit
         {
             foreach (var minDelay in new [] { TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(105) }) {
                 var maximum = TimeSpan.FromMinutes(1);
-                Assert.That(Retry.WithBackoff(100, maximum, minDelay).RetryDelay(0, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, Is.AtLeast(minDelay.TotalMilliseconds));
-                Assert.That(Retry.WithBackoff(100, maximum, minDelay).RetryDelay(9, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, Is.EqualTo(10 * minDelay.TotalMilliseconds));
+                Assert.True(Retry.WithBackoff(100, maximum, minDelay).RetryDelay(0, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds >= minDelay.TotalMilliseconds);
+                Assert.Equal(Retry.WithBackoff(100, maximum, minDelay).RetryDelay(9, TimeSpan.Zero).GetValueOrDefault().TotalMilliseconds, 10 * minDelay.TotalMilliseconds);
             }
         }
 
@@ -127,7 +127,7 @@ namespace KafkaClient.Tests.Unit
         {
             var retry = Retry.WithBackoff(maxAttempts, TimeSpan.FromMinutes(1));
             for (var attempt = 0; attempt < maxAttempts; attempt++) {
-                Assert.That(retry.RetryDelay(attempt, TimeSpan.FromSeconds(1)), Is.Not.Null);
+                Assert.NotNull(retry.RetryDelay(attempt, TimeSpan.FromSeconds(1)));
             }
             Assert.That(retry.RetryDelay(maxAttempts, TimeSpan.FromSeconds(1)), Is.Null);
             Assert.That(retry.RetryDelay(maxAttempts + 1, TimeSpan.FromSeconds(1)), Is.Null);
@@ -138,8 +138,8 @@ namespace KafkaClient.Tests.Unit
         {
             foreach (var maximum in new[] { TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1), TimeSpan.FromHours(1), TimeSpan.FromDays(1) }) {
                 var retry = Retry.WithBackoff(100, maximum);
-                Assert.That(retry.RetryDelay(10, TimeSpan.Zero), Is.Not.Null);
-                Assert.That(retry.RetryDelay(10, TimeSpan.FromTicks(maximum.Ticks / 2)), Is.Not.Null);
+                Assert.NotNull(retry.RetryDelay(10, TimeSpan.Zero));
+                Assert.NotNull(retry.RetryDelay(10, TimeSpan.FromTicks(maximum.Ticks / 2)));
                 Assert.That(retry.RetryDelay(10, maximum), Is.Null);
                 Assert.That(retry.RetryDelay(10, TimeSpan.FromMilliseconds(maximum.TotalMilliseconds * 1.01)), Is.Null);
             }
@@ -162,8 +162,8 @@ namespace KafkaClient.Tests.Unit
                 TimeSpan lastDelay = TimeSpan.Zero;
                 for (var attempt = 0; attempt < 10; attempt++) {
                     var delay = retry.RetryDelay(attempt, lastDelay);
-                    Assert.That(delay, Is.Not.Null);
-                    Assert.That(delay.Value.TotalMilliseconds, Is.AtLeast(lastDelay.TotalMilliseconds));
+                    Assert.NotNull(delay);
+                    Assert.True(delay.Value.TotalMilliseconds >= lastDelay.TotalMilliseconds);
                     lastDelay = delay.Value;
                 }
             }
@@ -177,8 +177,8 @@ namespace KafkaClient.Tests.Unit
                 TimeSpan lastDelay = TimeSpan.Zero;
                 for (var attempt = 0; attempt < 10; attempt++) {
                     var delay = retry.RetryDelay(attempt, lastDelay);
-                    Assert.That(delay, Is.Not.Null);
-                    Assert.That(delay.Value.TotalMilliseconds, Is.AtLeast(lastDelay.TotalMilliseconds));
+                    Assert.NotNull(delay);
+                    Assert.True(delay.Value.TotalMilliseconds >= lastDelay.TotalMilliseconds);
                     lastDelay = delay.Value;
                 }
             }

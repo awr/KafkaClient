@@ -400,7 +400,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
+        [Theory]
         [InlineData(1000)]
         [InlineData(5000)]
         public async Task WriteShouldHandleLargeVolumeSendAsynchronously(int requests)

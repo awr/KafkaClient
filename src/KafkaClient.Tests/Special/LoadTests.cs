@@ -34,9 +34,9 @@ namespace KafkaClient.Tests.Special
 
                         //Because of how responses are batched up and sent to servers, we will usually get multiple responses per requested message batch
                         //So this assertion will never pass
-                        //Assert.That(results.Count, Is.EqualTo(amount));
+                        //Assert.Equal(results.Count, amount);
 
-                        Assert.That(results.Any(x => x.error_code != ErrorCode.NONE), Is.False,
+                        Assert.False(results.Any(x => x.error_code != ErrorCode.NONE),
                             "Should not have received any results as failures.");
                     }
                 });
@@ -142,7 +142,7 @@ namespace KafkaClient.Tests.Special
                             stopwatch.Stop();
                             TestConfig.Log.Info(() => LogEvent.Create($">> done Consume, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
 
-                            Assert.That(fetched, Is.AtLeast(totalMessages));
+                            Assert.True(fetched >= totalMessages);
                         }
                     }
                 });

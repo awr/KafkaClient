@@ -28,7 +28,7 @@ namespace KafkaClient.Tests.Unit
             var actualValue = binaryReader.ReadInt32();
 
             // assert
-            Assert.That(actualValue, Is.EqualTo(expectedValue));
+            Assert.Equal(actualValue, expectedValue);
         }
 
         private ArraySegment<byte> OffsetBytes(byte[] bytes, int offset)
@@ -56,7 +56,7 @@ namespace KafkaClient.Tests.Unit
                 var actualValue = binaryReader.ReadInt16();
 
                 // assert
-                Assert.That(actualValue, Is.EqualTo(expectedValue));
+                Assert.Equal(actualValue, expectedValue);
             }
         }
 
@@ -79,7 +79,7 @@ namespace KafkaClient.Tests.Unit
                 var actualValue = binaryReader.ReadInt32();
 
                 // assert
-                Assert.That(actualValue, Is.EqualTo(expectedValue));
+                Assert.Equal(actualValue, expectedValue);
             }
         }
 
@@ -101,7 +101,7 @@ namespace KafkaClient.Tests.Unit
                 var actualValue = binaryReader.ReadInt64();
 
                 // assert
-                Assert.That(actualValue, Is.EqualTo(expectedValue));
+                Assert.Equal(actualValue, expectedValue);
             }
         }
 
@@ -121,7 +121,7 @@ namespace KafkaClient.Tests.Unit
 
                 // assert
 
-                Assert.That(actualValue, Is.EqualTo(expectedValue));
+                Assert.Equal(actualValue, expectedValue);
             }
         }
 
@@ -140,7 +140,7 @@ namespace KafkaClient.Tests.Unit
                 var actualValue = binaryReader.ReadString();
 
                 // assert
-                Assert.That(expectedValue, Is.EqualTo(actualValue));
+                Assert.Equal(expectedValue, actualValue);
             }
         }
     }

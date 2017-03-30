@@ -67,8 +67,11 @@ namespace KafkaClient.Tests.Unit
             router.DidNotReceive().Dispose();
         }
 
-        [Fact]
-        public async Task ConsumerThowsArgumentExceptionWhenMemberMetadataIsNotKnownByConsumer([Values(null, "", "unknown")] string protocolType)
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("unknown")]
+        public async Task ConsumerThowsArgumentExceptionWhenMemberMetadataIsNotKnownByConsumer(string protocolType)
         {
             var router = Substitute.For<IRouter>();
 
@@ -281,7 +284,7 @@ namespace KafkaClient.Tests.Unit
                 Arg.Any<IRequestContext>());
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-            Assert.That(conn.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(Connection.SendAsync) && (c.GetArguments()[0] as HeartbeatRequest) != null), Is.AtLeast(2));
+            Assert.True(conn.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(Connection.SendAsync) && (c.GetArguments()[0] as HeartbeatRequest) != null) >= 2);
         }
 
         // design unit TESTS to write:
