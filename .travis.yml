@@ -12,6 +12,8 @@ addons:
     - libsnappy1 
     - libsnappy-dev
 
+env:
+  - VERSION: 0.2.$TRAVIS_BUILD_NUMBER
 os: linux
 dist: trusty
 sudo: required
@@ -31,13 +33,11 @@ before_install:
 
 install:
   - dotnet restore -v Minimal
-  # - nuget restore solution-name.sln
-  # - nuget install xunit.runners -Version 2.0.0 -OutputDirectory testrunner 
 
 script:
-  - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental --version-suffix $VERSION
+  - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
   - dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "FullyQualifiedName~KafkaClient.Tests.Unit"
 
 after_success:
-  - dotnet pack -c Release -f netcoreapp1.0 src/KafkaClient/KafkaClient.csproj --version-suffix $VERSION -o artifacts 
+  - dotnet pack -c Release -f netcoreapp1.0 src/KafkaClient/KafkaClient.csproj-o artifacts 
 
