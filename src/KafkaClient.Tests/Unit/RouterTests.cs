@@ -18,10 +18,10 @@ namespace KafkaClient.Tests.Unit
     {
         #region SendAsync
 
-        [TestCase(ErrorCode.NOT_LEADER_FOR_PARTITION)]
-        [TestCase(ErrorCode.LEADER_NOT_AVAILABLE)]
-        [TestCase(ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE)]
-        [TestCase(ErrorCode.UNKNOWN_TOPIC_OR_PARTITION)]
+        [InlineData(ErrorCode.NOT_LEADER_FOR_PARTITION)]
+        [InlineData(ErrorCode.LEADER_NOT_AVAILABLE)]
+        [InlineData(ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE)]
+        [InlineData(ErrorCode.UNKNOWN_TOPIC_OR_PARTITION)]
         [Fact]
         public async Task ShouldTryToRefreshMataDataIfCanRecoverByRefreshMetadata(ErrorCode code)
         {
@@ -38,10 +38,10 @@ namespace KafkaClient.Tests.Unit
             Assert.Equal(scenario.Connection1[ApiKey.Fetch], 2);
         }
 
-        [Fact]
-        [TestCase(typeof(ConnectionException))]
-        [TestCase(typeof(FetchOutOfRangeException))]
-        [TestCase(typeof(RoutingException))]
+        [Theory]
+        [InlineData(typeof(ConnectionException))]
+        [InlineData(typeof(FetchOutOfRangeException))]
+        [InlineData(typeof(RoutingException))]
         public async Task ShouldTryToRefreshMataDataIfOnExceptions(Type exceptionType)
         {
             var scenario = new RoutingScenario();
@@ -57,8 +57,8 @@ namespace KafkaClient.Tests.Unit
             Assert.Equal(scenario.Connection1[ApiKey.Fetch], 2);
         }
 
-        [TestCase(typeof(Exception))]
-        [TestCase(typeof(RequestException))]
+        [InlineData(typeof(Exception))]
+        [InlineData(typeof(RequestException))]
         public async Task SendProtocolRequestShouldThrowException(Type exceptionType)
         {
             var scenario = new RoutingScenario();
@@ -70,14 +70,14 @@ namespace KafkaClient.Tests.Unit
             Assert.ThrowsAsync(exceptionType, async () => await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None));
         }
 
-        [Fact]
-        [TestCase(ErrorCode.INVALID_FETCH_SIZE)]
-        [TestCase(ErrorCode.MESSAGE_TOO_LARGE)]
-        [TestCase(ErrorCode.OFFSET_METADATA_TOO_LARGE)]
-        [TestCase(ErrorCode.OFFSET_OUT_OF_RANGE)]
-        [TestCase(ErrorCode.UNKNOWN)]
-        [TestCase(ErrorCode.STALE_CONTROLLER_EPOCH)]
-        [TestCase(ErrorCode.REPLICA_NOT_AVAILABLE)]
+        [Theory]
+        [InlineData(ErrorCode.INVALID_FETCH_SIZE)]
+        [InlineData(ErrorCode.MESSAGE_TOO_LARGE)]
+        [InlineData(ErrorCode.OFFSET_METADATA_TOO_LARGE)]
+        [InlineData(ErrorCode.OFFSET_OUT_OF_RANGE)]
+        [InlineData(ErrorCode.UNKNOWN)]
+        [InlineData(ErrorCode.STALE_CONTROLLER_EPOCH)]
+        [InlineData(ErrorCode.REPLICA_NOT_AVAILABLE)]
         public async Task SendProtocolRequestShouldNotTryToRefreshMataDataIfCanNotRecoverByRefreshMetadata(
             ErrorCode code)
         {
@@ -198,9 +198,8 @@ namespace KafkaClient.Tests.Unit
 
             await Task.WhenAll(tasks);
             Assert.True(numberOfErrorSend > 1, "numberOfErrorSend");
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], numberOfCall + numberOfErrorSend,
-                "RequestCallCount(ApiKey.Fetch)");
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2, "RequestCallCount(ApiKey.Metadata)");
+            Assert.Equal(scenario.Connection1[ApiKey.Fetch], numberOfCall + numberOfErrorSend); // RequestCallCount(ApiKey.Fetch)
+            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2); // RequestCallCount(ApiKey.Metadata)
         }
 
         [Fact]
@@ -233,9 +232,9 @@ namespace KafkaClient.Tests.Unit
             //Send Successful Message
             await router.SendAsync(fetchRequest, RoutingScenario.TestTopic, partitionId, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1, "RequestCallCount(ApiKey.Fetch)");
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1, "RequestCallCount(ApiKey.Metadata)");
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 0, "RequestCallCount(ApiKey.Metadata)");
+            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
+            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 0); // "RequestCallCount(ApiKey.Metadata)"
 
             scenario.Connection1.Add(ApiKey.Fetch, fetchResponse);
             //triger to update metadata
@@ -251,11 +250,11 @@ namespace KafkaClient.Tests.Unit
             //Send Successful Message that was recover from exception
             await router.SendAsync(fetchRequest, RoutingScenario.TestTopic, partitionId, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1, "RequestCallCount(ApiKey.Fetch)");
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1, "RequestCallCount(ApiKey.Metadata)");
+            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
 
-            Assert.Equal(scenario.Connection2[ApiKey.Fetch], 1, "RequestCallCount(ApiKey.Fetch)");
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 1, "RequestCallCount(ApiKey.Metadata)");
+            Assert.Equal(scenario.Connection2[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
         }
 
 
@@ -504,10 +503,10 @@ namespace KafkaClient.Tests.Unit
 
         #region Topic Metadata
 
-        [Fact]
-        [TestCase(ErrorCode.LEADER_NOT_AVAILABLE)]
-        [TestCase(ErrorCode.GROUP_LOAD_IN_PROGRESS)]
-        [TestCase(ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE)]
+        [Theory]
+        [InlineData(ErrorCode.LEADER_NOT_AVAILABLE)]
+        [InlineData(ErrorCode.GROUP_LOAD_IN_PROGRESS)]
+        [InlineData(ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE)]
         public async Task ShouldRetryWhenReceiveAnRetryErrorCode(ErrorCode errorCode)
         {
             var conn = Substitute.For<IConnection>();
@@ -529,8 +528,8 @@ namespace KafkaClient.Tests.Unit
                 conn.SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>());
             });
 
-            Assert.That(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in 00:00:00")));
-            Assert.That(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 1: Will retry in 00:00:00")));
+            Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in 00:00:00")));
+            Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 1: Will retry in 00:00:00")));
             Assert.False(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 2: Will retry in 00:00:00")));
             Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")), 3);
         }
@@ -563,7 +562,7 @@ namespace KafkaClient.Tests.Unit
                 conn.SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>());
             });
 
-            Assert.That(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in")));
+            Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in")));
             Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")), 1);
         }
 
@@ -599,10 +598,10 @@ namespace KafkaClient.Tests.Unit
             conn.Received(1).SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>());
         }
 
-        [Fact]
-        [TestCase(ErrorCode.UNKNOWN)]
-        [TestCase(ErrorCode.INVALID_TOPIC_EXCEPTION)]
-        [TestCase(ErrorCode.INVALID_REQUIRED_ACKS)]
+        [Theory]
+        [InlineData(ErrorCode.UNKNOWN)]
+        [InlineData(ErrorCode.INVALID_TOPIC_EXCEPTION)]
+        [InlineData(ErrorCode.INVALID_REQUIRED_ACKS)]
         public async Task ShouldThrowExceptionWhenNotARetriableErrorCode(ErrorCode errorCode)
         {
             var conn = Substitute.For<IConnection>();
@@ -613,9 +612,9 @@ namespace KafkaClient.Tests.Unit
             Assert.ThrowsAsync<RequestException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
         }
 
-        [Fact]
-        [TestCase(null)]
-        [TestCase("")]
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
         public void ShouldThrowExceptionWhenHostIsMissing(string host)
         {
             var conn = Substitute.For<IConnection>();
@@ -626,9 +625,9 @@ namespace KafkaClient.Tests.Unit
             Assert.ThrowsAsync<ConnectionException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
         }
 
-        [Fact]
-        [TestCase(0)]
-        [TestCase(-1)]
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
         public void ShouldThrowExceptionWhenPortIsMissing(int port)
         {
             var conn = Substitute.For<IConnection>();
@@ -712,7 +711,7 @@ namespace KafkaClient.Tests.Unit
             var result1 = router.GetTopicMetadata(testTopic);
             var result2 = router.GetTopicMetadata(testTopic);
 
-            Assert.AreEqual(1, router.GetTopicMetadata().Count);
+            Assert.Equal(1, router.GetTopicMetadata().Count);
             Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
             Assert.Equal(result1.topic, testTopic);
             Assert.Equal(result2.topic, testTopic);
@@ -727,7 +726,7 @@ namespace KafkaClient.Tests.Unit
 
             var router = scenario.CreateRouter();
             await AssertAsync.Throws<RoutingException>(() => router.GetTopicMetadataAsync(RoutingScenario.TestTopic, CancellationToken.None));
-            Assert.AreEqual(0, router.GetTopicMetadata().Count);
+            Assert.Equal(0, router.GetTopicMetadata().Count);
         }
 
         [Fact]
@@ -809,7 +808,7 @@ namespace KafkaClient.Tests.Unit
             Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
             Assert.Equal(router1.Connection.Endpoint, scenario.Connection1.Endpoint);
             Assert.Equal(router2.Connection.Endpoint, scenario.Connection2.Endpoint);
-            Assert.That(router1.Connection.Endpoint, Is.Not.EqualTo(router2.Connection.Endpoint));
+            Assert.NotEqual(router1.Connection.Endpoint, router2.Connection.Endpoint);
         }
 
         [Fact]

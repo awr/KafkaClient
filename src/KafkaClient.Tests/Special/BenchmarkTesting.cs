@@ -11,7 +11,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
-    [Category("Benchmark")]
+    [Trait("Category", "Benchmark")]
     internal class BenchmarkTesting
     {
         [Fact]

@@ -10,6 +10,8 @@ namespace KafkaClient.Tests.Unit
 {
     public class ProtocolTests
     {
+        private readonly Random _randomizer = new Random();
+
         [Fact]
         public void HeaderShouldCorrectPackByteLengths()
         {
@@ -146,7 +148,7 @@ namespace KafkaClient.Tests.Unit
 
                     // assert
                     var expectedPayload = new byte[] { 1, 2, 3, 4 };
-                    CollectionAssert.AreEqual(expectedPayload, actualPayload);
+                    Assert.True(actualPayload.HasEqualElementsInOrder(expectedPayload));
                 }
             }
         }
@@ -322,13 +324,13 @@ namespace KafkaClient.Tests.Unit
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
              )] ErrorCode errorCode)
         {
-            var brokers = new List<KafkaClient.Protocol.Server>();
+            var brokers = new List<Server>();
             for (var b = 0; b < brokersPerRequest; b++) {
                 string rack = null;
                 if (version >= 1) {
                     rack = "Rack" + b;
                 }
-                brokers.Add(new KafkaClient.Protocol.Server(b, "broker-" + b, 9092 + b, rack));
+                brokers.Add(new Server(b, "broker-" + b, 9092 + b, rack));
             }
             var topics = new List<MetadataResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -707,7 +709,7 @@ namespace KafkaClient.Tests.Unit
         [Theory, CombinatorialData]
         public void DescribeGroupsRequest(
             [CombinatorialValues("test", "a groupId")] string groupId, 
-            [Range(1, 10)] int count)
+            [CombinatorialValues(1, 5, 10)] int count)
         {
             var groups = new string[count];
             for (var g = 0; g < count; g++) {
@@ -725,8 +727,8 @@ namespace KafkaClient.Tests.Unit
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
             [CombinatorialValues("test", "a groupId")] string groupId, 
-            [Range(2, 3)] int count,
-            [CombinatorialValues(KafkaClient.Protocol.DescribeGroupsResponse.Group.States.Stable, KafkaClient.Protocol.DescribeGroupsResponse.Group.States.Dead)] string state, 
+            [CombinatorialValues(2, 3)] int count,
+            [CombinatorialValues(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.Dead)] string state, 
             [CombinatorialValues("consumer", "unknown")] string protocolType,
             [CombinatorialValues("good", "bad", "ugly")] string protocol)
         {
@@ -755,8 +757,8 @@ namespace KafkaClient.Tests.Unit
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
             [CombinatorialValues("test", "a groupId")] string groupId, 
-            [Range(2, 3)] int count,
-            [CombinatorialValues(KafkaClient.Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.AwaitingSync)] string state, 
+            [CombinatorialValues(2, 3)] int count,
+            [CombinatorialValues(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.AwaitingSync)] string state, 
             [CombinatorialValues("consumer")] string protocolType,
             [CombinatorialValues("good", "bad", "ugly")] string protocol)
         {
@@ -799,7 +801,7 @@ namespace KafkaClient.Tests.Unit
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
             [CombinatorialValues("test", "a groupId")] string groupId, 
-            [Range(2, 3)] int count,
+            [CombinatorialValues(2, 3)] int count,
             [CombinatorialValues("consumer")] string protocolType)
         {
             var groups = new ListGroupsResponse.Group[count];
@@ -820,13 +822,13 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Theory, PairwiseData]
         public void SaslHandshakeResponse(
             [CombinatorialValues(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [Range(1, 11)] int count)
+            [CombinatorialValues(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)] int count)
         {
             var mechanisms = new[] { "EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER" };
             var response = new SaslHandshakeResponse(errorCode, mechanisms.Take(count));
@@ -837,7 +839,7 @@ namespace KafkaClient.Tests.Unit
         [Theory, CombinatorialData]
         public void DeleteTopicsRequest(
             [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [Range(2, 3)] int count,
+            [CombinatorialValues(2, 3)] int count,
             [CombinatorialValues(0, 1, 20000)] int timeoutMilliseconds)
         {
             var topics = new string[count];
@@ -856,7 +858,7 @@ namespace KafkaClient.Tests.Unit
                  ErrorCode.NOT_CONTROLLER
              )] ErrorCode errorCode,
             [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [Range(1, 11)] int count)
+            [CombinatorialValues(1, 5, 11)] int count)
         {
             var topics = new TopicsResponse.Topic[count];
             for (var t = 0; t < count; t++) {
@@ -882,7 +884,7 @@ namespace KafkaClient.Tests.Unit
                 for (var c = 0; c < configCount; c++) {
                     configs["config-" + c] = Guid.NewGuid().ToString("N");
                 }
-                if (configs.Count == 0 && _randomizer.NextBool()) {
+                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
                     configs = null;
                 }
                 topics.Add(new CreateTopicsRequest.Topic(topicName + t, partitionsPerTopic, replicationFactor, configs));
@@ -907,7 +909,7 @@ namespace KafkaClient.Tests.Unit
                 for (var c = 0; c < configCount; c++) {
                     configs["config-" + c] = Guid.NewGuid().ToString("N");
                 }
-                if (configs.Count == 0 && _randomizer.NextBool()) {
+                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
                     configs = null;
                 }
 
@@ -932,7 +934,7 @@ namespace KafkaClient.Tests.Unit
                 ErrorCode.INVALID_PARTITIONS
              )] ErrorCode errorCode,
             [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [Range(1, 11)] int count)
+            [CombinatorialValues(1, 5, 11)] int count)
         {
             var topics = new TopicsResponse.Topic[count];
             for (var t = 0; t < count; t++) {

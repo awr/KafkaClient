@@ -8,7 +8,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
-    [Category("Manual")]
+    [Trait("Category", "Manual")]
     internal class ManualTesting
     {
         /// <summary>
@@ -26,7 +26,7 @@ namespace KafkaClient.Tests.Special
 
             Assert.NotNull(topic);
             Assert.Equal(topic.topic, expectedTopic);
-            Assert.Equal(topic.topic_error_code, (int)ErrorCode.NONE);
+            Assert.Equal(topic.topic_error_code, ErrorCode.NONE);
         }
 
         [Fact]

@@ -172,7 +172,7 @@ namespace KafkaClient.Tests.Unit
                 await server.SendDataAsync(new ArraySegment<byte>(bytes, 0, firstLength));
                 await AssertAsync.ThatEventually(() => bytesRead >= firstLength, () => $"read {bytesRead}, length {bytes.Length}");
 
-                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), 1, log.ToString());
+                Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith($"Unexpected response (id {correlationId}, {size}? bytes) from")), 1);
                 Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Debug && e.Item2.Message.StartsWith($"Received {size} bytes (id {correlationId})")), 0);
 
                 // send half of payload should be skipped
@@ -360,7 +360,7 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(sendTask, Task.Delay(100));
 
                 Assert.True(sendTask.IsFaulted, "Task should have reported an exception.");
-                Assert.That(sendTask.Exception.InnerException, Is.TypeOf<TimeoutException>());
+                Assert.IsType<TimeoutException>(sendTask.Exception.InnerException);
             }
         }
 
@@ -378,7 +378,7 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(sendTask, Task.Delay(100));
 
                 Assert.False(sendTask.IsFaulted);
-                Assert.That(sendTask.IsCompleted);
+                Assert.True(sendTask.IsCompleted);
             }
         }
 
@@ -532,7 +532,7 @@ namespace KafkaClient.Tests.Unit
                 await AssertAsync.ThatEventually(() => tasks.All(t => t.IsFaulted));
                 foreach (var task in tasks) {
                     Assert.True(task.IsFaulted, "Task should have faulted.");
-                    Assert.That(task.Exception.InnerException, Is.TypeOf<TimeoutException>(), "Task fault has wrong type.");
+                    Assert.IsType<TimeoutException>(task.Exception.InnerException);
                 }
             }
         }

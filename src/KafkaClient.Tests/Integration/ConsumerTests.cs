@@ -32,7 +32,7 @@ namespace KafkaClient.Tests.Integration
                         var fetchRequest = new FetchRequest(fetch, minBytes: 10);
 
                         var r = await router.SendAsync(fetchRequest, TestConfig.TopicName(), partitionId, CancellationToken.None);
-                        Assert.IsTrue(r.responses.First().Messages.First().Value.ToUtf8String() == messageValue);
+                        Assert.Equal(r.responses.First().Messages.First().Value.ToUtf8String(), messageValue);
                     }
                 });
             }
@@ -122,7 +122,7 @@ namespace KafkaClient.Tests.Integration
 
                         // Now let's consume
                         var result = await consumer.FetchAsync(CancellationToken.None, 5);
-                        Assert.AreEqual(0, result.Messages.Count, "Should not get any messages");
+                        Assert.Equal(0, result.Messages.Count); // Should not get any messages
                     }
                 });
             }
@@ -299,7 +299,7 @@ namespace KafkaClient.Tests.Integration
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offset, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, 0, CancellationToken.None);
 
-                    Assert.AreEqual(offset, res.offset);
+                    Assert.Equal(offset, res.offset);
                 });
             }
         }
@@ -336,12 +336,12 @@ namespace KafkaClient.Tests.Integration
                     await router.GetOffsetsAsync(topicName, partitionId, CancellationToken.None);
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
-                    Assert.AreEqual(offest, res.offset);
+                    Assert.Equal(offest, res.offset);
 
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, newOffset, CancellationToken.None);
                     res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
 
-                    Assert.AreEqual(newOffset, res.offset);
+                    Assert.Equal(newOffset, res.offset);
                 });
             }
         }
@@ -423,7 +423,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
 
-                    Assert.AreNotEqual(-1, offset.offset);
+                    Assert.NotEqual(-1, offset.offset);
                 });
             }
         }
@@ -475,7 +475,7 @@ namespace KafkaClient.Tests.Integration
                     }
                     using (var consumer = new Consumer(new TopicOffset(topicName, 0, offsetResponse), router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero))) {
                         var result = await consumer.FetchAsync(CancellationToken.None, 1);
-                        Assert.AreEqual(messge.ToString(), result.Messages[0].Value.ToUtf8String());
+                        Assert.Equal(messge.ToString(), result.Messages[0].Value.ToUtf8String());
                     }
                 });
             }
@@ -517,7 +517,7 @@ namespace KafkaClient.Tests.Integration
 
                         Assert.Equal(results1.Messages.Count, results2.Messages.Count);
                         Assert.Equal(results1.Messages.Count, totalMessages);
-                        Assert.Equal(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), results2.Messages.Select(x => x.Value.ToUtf8String()).ToList(), "Expected the message list in the correct order.");
+                        Assert.Equal(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()); // Expected the message list in the correct order
                     }
                 });
             }
@@ -544,7 +544,7 @@ namespace KafkaClient.Tests.Integration
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
 
                             Assert.Equal(results.Messages.Count, totalMessages);
-                            Assert.Equal(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected, "Expected the message list in the correct order.");
+                            Assert.Equal(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
 
                             var newOffset = await producer.Router.GetOffsetsAsync(offset.topic, offset.partition_id, CancellationToken.None);
                             Assert.Equal(newOffset.offset - offset.offset, totalMessages);
@@ -554,9 +554,9 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
-        [TestCase(1, 200)]
-        [TestCase(1000, 500)]
+        [Theory]
+        [InlineData(1, 200)]
+        [InlineData(1000, 500)]
         public async Task ConsumerShouldConsumeInSameOrderAsProduced(int totalMessages, int timeoutInMs)
         {
             var expected = totalMessages.Repeat(i => i.ToString()).ToList();
@@ -601,7 +601,7 @@ namespace KafkaClient.Tests.Integration
                             stopwatch.Stop();
                             TestConfig.Log.Info(() => LogEvent.Create($">> done Consume, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
 
-                            Assert.Equal(fetched.Select(x => x.Value.ToUtf8String()).ToList(), expected, "Expected the message list in the correct order.");
+                            Assert.Equal(fetched.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
                             Assert.Equal(fetched.Count, totalMessages);
                         }
                     }
@@ -735,10 +735,10 @@ namespace KafkaClient.Tests.Integration
             });
         }
 
-        [Fact]
-        [TestCase(1, 100)]
-        [TestCase(2, 100)]
-        [TestCase(10, 500)]
+        [Theory]
+        [InlineData(1, 100)]
+        [InlineData(2, 100)]
+        [InlineData(10, 500)]
         public async Task CanConsumeFromGroup(int members, int batchSize)
         {
             var cancellation = new CancellationTokenSource();
@@ -782,9 +782,9 @@ namespace KafkaClient.Tests.Integration
             }
         }
         
-        [Fact]
-        [TestCase(2, 2)]
-        [TestCase(5, 5)]
+        [Theory]
+        [InlineData(2, 2)]
+        [InlineData(5, 5)]
         public async Task CanConsumeFromMultipleGroups(int groups, int members)
         {
             using (var timed = new TimedCancellation(CancellationToken.None, TimeSpan.FromMinutes(1))) {
@@ -841,11 +841,11 @@ namespace KafkaClient.Tests.Integration
 
         private void CheckMessages(List<Message> expected, IMessageBatch actual)
         {
-            Assert.AreEqual(expected.Count(), actual.Messages.Count(), "Didn't get all messages");
+            Assert.Equal(expected.Count(), actual.Messages.Count()); // Didn't get all messages
 
             foreach (var message in expected)
             {
-                Assert.IsTrue(actual.Messages.Any(m => m.Value.SequenceEqual(message.Value)), "Didn't get the same messages");
+                Assert.True(actual.Messages.Any(m => m.Value.SequenceEqual(message.Value)), "Didn't get the same messages");
             }
         }
 

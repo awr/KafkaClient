@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Unit
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
             var endpoint2 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:1"), TestConfig.Log);
 
-            Assert.That(endpoint1, Is.Not.EqualTo(endpoint2));
+            Assert.NotEqual(endpoint1, endpoint2);
         }
     }
 }

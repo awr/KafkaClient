@@ -10,15 +10,15 @@ using Xunit;
 
 namespace KafkaClient.Tests.Special
 {
-    [Category("Load")]
+    [Trait("Category", "Load")]
     public class LoadTests
     {
-        [Fact]
-        [TestCase(10, 1000)]
-        [TestCase(100, 1000)]
-        [TestCase(1000, 1000)]
-        [TestCase(10000, 5000)]
-        [TestCase(100000, 5000)]
+        [Theory]
+        [InlineData(10, 1000)]
+        [InlineData(100, 1000)]
+        [InlineData(1000, 1000)]
+        [InlineData(10000, 5000)]
+        [InlineData(100000, 5000)]
         public async Task SendAsyncShouldHandleHighVolumeOfMessages(int amount, int maxAsync)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -43,21 +43,21 @@ namespace KafkaClient.Tests.Special
             }
         }
 
-        [Fact]
-        [TestCase(1, 1, MessageCodec.None)]
-        [TestCase(1, 1, MessageCodec.Gzip)]
-        [TestCase(1000, 50, MessageCodec.None)]
-        [TestCase(1000, 50, MessageCodec.Gzip)]
-        [TestCase(10000, 100, MessageCodec.None)]
-        [TestCase(10000, 100, MessageCodec.Gzip)]
-        [TestCase(10000, 100, MessageCodec.Snappy)]
-        [TestCase(100000, 1000, MessageCodec.None)]
-        [TestCase(100000, 1000, MessageCodec.Gzip)]
-        [TestCase(1000000, 5000, MessageCodec.None)]
-        [TestCase(1000000, 5000, MessageCodec.Gzip)]
-        [TestCase(5000000, 5000, MessageCodec.None)]
-        [TestCase(5000000, 5000, MessageCodec.Gzip)]
-        [TestCase(5000000, 5000, MessageCodec.Snappy)]
+        [Theory]
+        [InlineData(1, 1, MessageCodec.None)]
+        [InlineData(1, 1, MessageCodec.Gzip)]
+        [InlineData(1000, 50, MessageCodec.None)]
+        [InlineData(1000, 50, MessageCodec.Gzip)]
+        [InlineData(10000, 100, MessageCodec.None)]
+        [InlineData(10000, 100, MessageCodec.Gzip)]
+        [InlineData(10000, 100, MessageCodec.Snappy)]
+        [InlineData(100000, 1000, MessageCodec.None)]
+        [InlineData(100000, 1000, MessageCodec.Gzip)]
+        [InlineData(1000000, 5000, MessageCodec.None)]
+        [InlineData(1000000, 5000, MessageCodec.Gzip)]
+        [InlineData(5000000, 5000, MessageCodec.None)]
+        [InlineData(5000000, 5000, MessageCodec.Gzip)]
+        [InlineData(5000000, 5000, MessageCodec.Snappy)]
         public async Task ProducerSpeed(int totalMessages, int batchSize, MessageCodec codec)
         {
             int timeoutInMs = Math.Max(100, totalMessages / 20);
@@ -90,12 +90,12 @@ namespace KafkaClient.Tests.Special
             }
         }
 
-        [Fact]
-        [TestCase(1, 1)]
-        [TestCase(1000, 50)]
-        [TestCase(50000, 100)]
-        [TestCase(100000, 1000)]
-        [TestCase(500000, 5000)]
+        [Theory]
+        [InlineData(1, 1)]
+        [InlineData(1000, 50)]
+        [InlineData(50000, 100)]
+        [InlineData(100000, 1000)]
+        [InlineData(500000, 5000)]
         public async Task ConsumerSpeed(int totalMessages, int batchSize)
         {
             int timeoutInMs = Math.Max(100, totalMessages / 20);

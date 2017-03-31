@@ -11,11 +11,10 @@ namespace KafkaClient.Tests.Unit
 {
     public class PartitionSelectorTests
     {
-        private MetadataResponse.Topic _topicA;
-        private MetadataResponse.Topic _topicB;
+        private readonly MetadataResponse.Topic _topicA;
+        private readonly MetadataResponse.Topic _topicB;
 
-        [SetUp]
-        public void Setup()
+        public PartitionSelectorTests()
         {
             _topicA = new MetadataResponse.Topic("a", ErrorCode.NONE, new [] {
                                             new MetadataResponse.Partition(0, 0),
@@ -89,7 +88,7 @@ namespace KafkaClient.Tests.Unit
 
             var eachPartitionHasThree = bag.GroupBy(x => x.partition_id).Count();
 
-            Assert.Equal(eachPartitionHasThree, TotalPartitions, "Each partition should have received three selections.");
+            Assert.Equal(eachPartitionHasThree, TotalPartitions); // Each partition should have received three selections.
         }
 
         [Fact]

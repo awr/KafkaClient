@@ -79,7 +79,7 @@ namespace KafkaClient.Tests.Unit
                 semaphore.Release();
                 await Task.WhenAny(sendTask, Task.Delay(2500));
                 Assert.True(sendTask.IsCompleted, "Send task should be marked as completed.");
-                Assert.Equal(producer.ActiveSenders, 0, "Async should now show zero count.");
+                Assert.Equal(producer.ActiveSenders, 0); // Async should now show zero count.
             }
         }
 
@@ -172,10 +172,10 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
-        [TestCase(1, 2, 100, 100, 2)]
-        [TestCase(1, 1, 100, 200, 2)]
-        [TestCase(1, 1, 100, 100, 1)]
+        [Theory]
+        [InlineData(1, 2, 100, 100, 2)]
+        [InlineData(1, 1, 100, 200, 2)]
+        [InlineData(1, 1, 100, 100, 1)]
         public async Task ProducesShouldSendExpectedProduceRequestForEachAckLevelAndTimeoutCombination(short ack1, short ack2, int time1, int time2, int expected)
         {
             var scenario = new RoutingScenario();
@@ -195,10 +195,10 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
-        [TestCase(MessageCodec.Gzip, MessageCodec.None, 2)]
-        [TestCase(MessageCodec.Gzip, MessageCodec.Gzip, 1)]
-        [TestCase(MessageCodec.None, MessageCodec.None, 1)]
+        [Theory]
+        [InlineData(MessageCodec.Gzip, MessageCodec.None, 2)]
+        [InlineData(MessageCodec.Gzip, MessageCodec.Gzip, 1)]
+        [InlineData(MessageCodec.None, MessageCodec.None, 1)]
         public async Task ProducesShouldSendExpectedProduceRequestForEachCodecCombination(MessageCodec codec1, MessageCodec codec2, int expected)
         {
             var scenario = new RoutingScenario();
@@ -236,7 +236,7 @@ namespace KafkaClient.Tests.Unit
                 await senderTask;
                 TestConfig.Log.Info(() => LogEvent.Create("Finished test send task"));
 
-                Assert.That(senderTask.IsCompleted);
+                Assert.True(senderTask.IsCompleted);
                 await AssertAsync.ThatEventually(() => producer.InFlightMessageCount + producer.BufferedMessageCount == count, () => $"in flight {producer.InFlightMessageCount}, buffered {producer.BufferedMessageCount}, total {count}");
             }
         }
@@ -267,8 +267,8 @@ namespace KafkaClient.Tests.Unit
                 TestConfig.Log.Info(() => LogEvent.Create("Waiting for the rest..."));
                 await Task.WhenAny(senderTask, Task.Delay(5000));
 
-                Assert.That(senderTask.IsCompleted);
-                Assert.Equal(producer.BufferedMessageCount, 1, "One message should be left in the buffer.");
+                Assert.True(senderTask.IsCompleted);
+                Assert.Equal(producer.BufferedMessageCount, 1); // One message should be left in the buffer.
             }
         }
 

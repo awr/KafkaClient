@@ -183,8 +183,9 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [TestCase(0, 100, 0)]
-        [TestCase(9, 100, 1000)]
+        [Theory]
+        [InlineData(0, 100, 0)]
+        [InlineData(9, 100, 1000)]
         public async Task ConsumerHeartbeatsAtDesiredIntervals(int expectedHeartbeats, int heartbeatMilliseconds, int totalMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -206,18 +207,19 @@ namespace KafkaClient.Tests.Unit
                 await Task.Delay(totalMilliseconds);
             }
 
-            Assert.That(conn.ReceivedCalls()
+            Assert.InRange(conn.ReceivedCalls()
                             .Count(c => {
                                 if (c.GetMethodInfo().Name != nameof(Connection.SendAsync)) return false;
                                 var s = c.GetArguments()[0] as HeartbeatRequest;
                                 if (s == null) return false;
                                 return s.group_id == request.group_id && s.member_id == memberId && s.generation_id == response.generation_id;
-                            }), Is.InRange(expectedHeartbeats - 1, expectedHeartbeats + 1));
+                            }), expectedHeartbeats - 1, expectedHeartbeats + 1);
         }
 
-        [TestCase(100, 700)]
-        [TestCase(150, 700)]
-        [TestCase(250, 700)]
+        [Theory]
+        [InlineData(100, 700)]
+        [InlineData(150, 700)]
+        [InlineData(250, 700)]
         public async Task ConsumerHeartbeatsWithinTimeLimit(int heartbeatMilliseconds, int totalMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -244,13 +246,14 @@ namespace KafkaClient.Tests.Unit
             }
 
             foreach (var interval in heartbeatIntervals) {
-                Assert.That((int)interval.TotalMilliseconds, Is.AtMost(heartbeatMilliseconds));
+                Assert.True((int)interval.TotalMilliseconds <= heartbeatMilliseconds);
             }
         }
 
-        [TestCase(100)]
-        [TestCase(150)]
-        [TestCase(250)]
+        [Theory]
+        [InlineData(100)]
+        [InlineData(150)]
+        [InlineData(250)]
         public async Task ConsumerHeartbeatsUntilDisposed(int heartbeatMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
