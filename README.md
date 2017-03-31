@@ -13,8 +13,7 @@ Native async C# client for Apache Kafka, supporting versions [0.9, 0.10.1]
 This library is still work in progress and has not yet been deployed to production. It is also undergoing significant development, and breaking changes will occour.
 This notice will be removed once it's been stabilized and used in production.
 
-The biggest missing piece at this point is [stress testing](https://github.com/awr/KafkaClient/issues/17); more [comprehensive automated tests](https://github.com/awr/KafkaClient/issues/18) are also needed. For the full set, see the [backlog]
-(https://github.com/awr/KafkaClient/projects/1).
+The biggest missing piece at this point is [stress testing](https://github.com/awr/KafkaClient/issues/17); more [comprehensive automated tests](https://github.com/awr/KafkaClient/issues/18) are also needed. For the full set, see the [backlog](https://github.com/awr/KafkaClient/projects/1).
 
 ## License
 Copyright 2016, Nudge Software Inc under Apache License, V2.0. See LICENSE file.
