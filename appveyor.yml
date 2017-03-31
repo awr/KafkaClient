@@ -5,33 +5,39 @@ skip_commits:
   message: /WIP/
 
 skip_branch_with_pr: true
+skip_tags: true
 
 # environment
-image: Visual Studio 2015
+image: Visual Studio 2017
 
 hosts:
   kafka1: 40.112.218.47
 
-environment:
-  # Don't report back to the mothership
-  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+cache:
+  - packages
+  
+configuration: Release
 
-# built-in goodness
-assembly_info:
-  patch: true
-  file: AssemblyInfo.*
-  assembly_version: "{version}"
-  assembly_file_version: "{version}"
-  assembly_informational_version: "{version}"
+os: Visual Studio 2017
 
-build_script:
-  - cmd: appveyor-retry dotnet restore -v Minimal
-  - cmd: dotnet build -c Release src\KafkaClient --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
-  - cmd: dotnet pack -c Release src\KafkaClient --version-suffix beta -o artifacts 
+before_build:
+  - dotnet --info
+  - dotnet restore  
+
+build:
+  parallel: true
+  project: KafkaClient.sln
+
+after_build:
+# build_script:
+#   - cmd: appveyor-retry dotnet restore -v Minimal
+#   - cmd: dotnet build -c Release src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
+  - dotnet pack -c Release src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
 
 test_script:
-  - cmd: dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests --test=KafkaClient.Tests.Unit --noheader --result=nunit3-unit.xml;format=nunit3
-  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./nunit3-unit.xml))
+  - cmd: dotnet test -c Release -f netcoreapp1.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "FullyQualifiedName~KafkaClient.Tests.Unit"  --logger:trx;LogFileName=tests-results.xml
+  #--noheader --result=nunit3-unit.xml;format=nunit3
+  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/xunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./tests-results.xml))
   # - cmd: dotnet test -c Release src/KafkaClient.Tests --test=KafkaClient.Tests.Integration --noheader --result=nunit3-integration.xml;format=nunit3
   # - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./nunit3-integration.xml))
 
