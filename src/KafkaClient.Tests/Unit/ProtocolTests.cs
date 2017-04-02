@@ -19,8 +19,8 @@ namespace KafkaClient.Tests.Unit
 
             var withoutLength = new byte[result.Count - 4];
             Buffer.BlockCopy(result.Array, 4, withoutLength, 0, result.Count - 4);
-            Assert.Equal(withoutLength.Length, 14);
-            Assert.Equal(withoutLength, new byte[] { 0, 18, 0, 0, 7, 91, 205, 21, 0, 4, 116, 101, 115, 116 });
+            Assert.Equal(14, withoutLength.Length);
+            Assert.Equal(new byte[] { 0, 18, 0, 0, 7, 91, 205, 21, 0, 4, 116, 101, 115, 116 }, withoutLength);
         }
 
         #region Messages
@@ -101,8 +101,8 @@ namespace KafkaClient.Tests.Unit
 
                 var message = result.First().Value.ToUtf8String();
 
-                Assert.Equal(message, "test");
-                Assert.Equal(result.Count, 529);
+                Assert.Equal("test", message);
+                Assert.Equal(529, result.Count);
             }
         }
 

@@ -34,8 +34,8 @@ namespace KafkaClient.Tests.Unit
 
             await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Fetch]);
         }
 
         [Theory]
@@ -53,8 +53,8 @@ namespace KafkaClient.Tests.Unit
 
             await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Fetch]);
         }
 
         [Theory]
@@ -114,8 +114,8 @@ namespace KafkaClient.Tests.Unit
             }
 
             await Task.WhenAll(tasks);
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], numberOfCall);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(numberOfCall, scenario.Connection1[ApiKey.Fetch]);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -147,8 +147,8 @@ namespace KafkaClient.Tests.Unit
             }
 
             await Task.WhenAll(tasks);
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], numberOfCall);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(numberOfCall, scenario.Connection1[ApiKey.Fetch]);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -199,8 +199,8 @@ namespace KafkaClient.Tests.Unit
 
             await Task.WhenAll(tasks);
             Assert.True(numberOfErrorSend > 1, "numberOfErrorSend");
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], numberOfCall + numberOfErrorSend); // RequestCallCount(ApiKey.Fetch)
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2); // RequestCallCount(ApiKey.Metadata)
+            Assert.Equal(numberOfCall + numberOfErrorSend, scenario.Connection1[ApiKey.Fetch]); // RequestCallCount(ApiKey.Fetch)
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]); // RequestCallCount(ApiKey.Metadata)
         }
 
         [Fact]
@@ -233,9 +233,9 @@ namespace KafkaClient.Tests.Unit
             //Send Successful Message
             await router.SendAsync(fetchRequest, RoutingScenario.TestTopic, partitionId, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 0); // "RequestCallCount(ApiKey.Metadata)"
+            Assert.Equal(1, scenario.Connection1[ApiKey.Fetch]); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]); // "RequestCallCount(ApiKey.Metadata)"
+            Assert.Equal(0, scenario.Connection2[ApiKey.Metadata]); // "RequestCallCount(ApiKey.Metadata)"
 
             scenario.Connection1.Add(ApiKey.Fetch, fetchResponse);
             //triger to update metadata
@@ -251,11 +251,11 @@ namespace KafkaClient.Tests.Unit
             //Send Successful Message that was recover from exception
             await router.SendAsync(fetchRequest, RoutingScenario.TestTopic, partitionId, CancellationToken.None);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
+            Assert.Equal(1, scenario.Connection1[ApiKey.Fetch]); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]); // "RequestCallCount(ApiKey.Metadata)"
 
-            Assert.Equal(scenario.Connection2[ApiKey.Fetch], 1); // "RequestCallCount(ApiKey.Fetch)"
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 1); // "RequestCallCount(ApiKey.Metadata)"
+            Assert.Equal(1, scenario.Connection2[ApiKey.Fetch]); // "RequestCallCount(ApiKey.Fetch)"
+            Assert.Equal(1, scenario.Connection2[ApiKey.Metadata]); // "RequestCallCount(ApiKey.Metadata)"
         }
 
 
@@ -427,8 +427,8 @@ namespace KafkaClient.Tests.Unit
             await router.GetGroupConnectionAsync(testTopic, CancellationToken.None);
             var result = router.GetGroupConnection(testTopic);
             Assert.NotNull(result);
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
-            Assert.Equal(scenario.Connection2[ApiKey.GroupCoordinator], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.GroupCoordinator]);
         }
 
         [Fact]
@@ -441,8 +441,8 @@ namespace KafkaClient.Tests.Unit
 
             await Assert.ThrowsAsync<RoutingException>(async () => await router.GetGroupConnectionAsync(RoutingScenario.TestTopic, CancellationToken.None));
 
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
-            Assert.Equal(scenario.Connection2[ApiKey.GroupCoordinator], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.GroupCoordinator]);
         }
 
         [Fact]
@@ -455,9 +455,9 @@ namespace KafkaClient.Tests.Unit
             var result1 = router.GetGroupConnection(testTopic);
             var result2 = router.GetGroupConnection(testTopic);
 
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
-            Assert.Equal(result1.GroupId, testTopic);
-            Assert.Equal(result2.GroupId, testTopic);
+            Assert.Equal(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.Equal(testTopic, result1.GroupId);
+            Assert.Equal(testTopic, result2.GroupId);
         }
 
         [Fact]
@@ -468,10 +468,10 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter(cacheExpiration);
             var testTopic = RoutingScenario.TestTopic;
             await router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.GroupCoordinator]);
             await Task.Delay(cacheExpiration.Add(TimeSpan.FromMilliseconds(1))); // After cache is expired
             await router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.GroupCoordinator]);
         }
 
         [Fact]
@@ -484,7 +484,7 @@ namespace KafkaClient.Tests.Unit
             await Task.WhenAll(
                 router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None),
                 router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None));
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.GroupCoordinator]);
         }
 
         [Fact]
@@ -497,7 +497,7 @@ namespace KafkaClient.Tests.Unit
             await Task.WhenAll(
                 router.GetGroupConnectionAsync(testTopic, CancellationToken.None), 
                 router.GetGroupConnectionAsync(testTopic, CancellationToken.None));
-            Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.GroupCoordinator]);
         }
 
         #endregion
@@ -532,7 +532,7 @@ namespace KafkaClient.Tests.Unit
             Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in 00:00:00")));
             Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 1: Will retry in 00:00:00")));
             Assert.False(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 2: Will retry in 00:00:00")));
-            Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")), 3);
+            Assert.Equal(3, log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")));
         }
 
         private static IRouter GetRouter(IConnection conn)
@@ -564,7 +564,7 @@ namespace KafkaClient.Tests.Unit
             });
 
             Assert.True(log.LogEvents.Any(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt 0: Will retry in")));
-            Assert.Equal(log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")), 1);
+            Assert.Equal(1, log.LogEvents.Count(e => e.Item1 == LogLevel.Warn && e.Item2.Message.StartsWith("Failed metadata request on attempt")));
         }
 
         [Fact]
@@ -663,8 +663,8 @@ namespace KafkaClient.Tests.Unit
             await router.GetTopicMetadataAsync(testTopic, CancellationToken.None);
             var result = router.GetTopicMetadata(testTopic);
             Assert.NotNull(result);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -678,8 +678,8 @@ namespace KafkaClient.Tests.Unit
             await AssertAsync.Throws<ConnectionException>(() => router.GetTopicMetadataAsync(RoutingScenario.TestTopic, CancellationToken.None));
 
             // 3 attempts total, round robin so 2 to connection1, 1 to connection2
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
-            Assert.Equal(scenario.Connection2[ApiKey.Metadata], 1);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -690,7 +690,7 @@ namespace KafkaClient.Tests.Unit
             await router.GetTopicMetadataAsync(RoutingScenario.TestTopic, CancellationToken.None);
 
             var result = router.GetTopicMetadata(RoutingScenario.TestTopic);
-            Assert.Equal(result.topic, RoutingScenario.TestTopic);
+            Assert.Equal(RoutingScenario.TestTopic, result.topic);
         }
 
         [Fact]
@@ -712,10 +712,10 @@ namespace KafkaClient.Tests.Unit
             var result1 = router.GetTopicMetadata(testTopic);
             var result2 = router.GetTopicMetadata(testTopic);
 
-            Assert.Equal(1, router.GetTopicMetadata().Count);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
-            Assert.Equal(result1.topic, testTopic);
-            Assert.Equal(result2.topic, testTopic);
+            Assert.Equal(router.GetTopicMetadata().Count, 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(testTopic, result1.topic);
+            Assert.Equal(testTopic, result2.topic);
         }
 
         [Fact]
@@ -739,12 +739,12 @@ namespace KafkaClient.Tests.Unit
             var result1 = router.GetTopicMetadata();
             var result2 = router.GetTopicMetadata();
 
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
-            Assert.Equal(result1.Count, 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(1, result1.Count);
             var testTopic = RoutingScenario.TestTopic;
-            Assert.Equal(result1[0].topic, testTopic);
-            Assert.Equal(result2.Count, 1);
-            Assert.Equal(result2[0].topic, testTopic);
+            Assert.Equal(testTopic, result1[0].topic);
+            Assert.Equal(1, result2.Count);
+            Assert.Equal(testTopic, result2[0].topic);
         }
 
         [Fact]
@@ -755,10 +755,10 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter(cacheExpiration);
             var testTopic = RoutingScenario.TestTopic;
             await router.RefreshTopicMetadataAsync(testTopic, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
             await Task.Delay(cacheExpiration.Add(TimeSpan.FromMilliseconds(1))); // After cache is expired
             await router.RefreshTopicMetadataAsync(testTopic, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -769,10 +769,10 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter(cacheExpiration);
             var testTopics = new [] { RoutingScenario.TestTopic, RoutingScenario.TestTopic2 };
             await router.RefreshTopicMetadataAsync(testTopics, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
             await Task.Delay(cacheExpiration.Add(TimeSpan.FromMilliseconds(1))); // After cache is expired
             await router.RefreshTopicMetadataAsync(testTopics, true, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -781,9 +781,9 @@ namespace KafkaClient.Tests.Unit
             var scenario = new RoutingScenario();
             var router = scenario.CreateRouter();
             await router.RefreshTopicMetadataAsync(CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
             await router.RefreshTopicMetadataAsync(CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -800,15 +800,15 @@ namespace KafkaClient.Tests.Unit
 
             var router1 = router.GetTopicConnection(testTopic, 0);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
             await Task.Delay(cacheExpiry.Add(TimeSpan.FromMilliseconds(1))); // After cache is expired
             scenario.MetadataResponse = RoutingScenario.MetadataResponseWithSingleBroker;
             await router.RefreshTopicMetadataAsync(testTopic, true, CancellationToken.None);
             var router2 = router.GetTopicConnection(testTopic, 0);
 
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
-            Assert.Equal(router1.Connection.Endpoint, scenario.Connection1.Endpoint);
-            Assert.Equal(router2.Connection.Endpoint, scenario.Connection2.Endpoint);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
+            Assert.Equal(scenario.Connection1.Endpoint, router1.Connection.Endpoint);
+            Assert.Equal(scenario.Connection2.Endpoint, router2.Connection.Endpoint);
             Assert.NotEqual(router1.Connection.Endpoint, router2.Connection.Endpoint);
         }
 
@@ -823,7 +823,7 @@ namespace KafkaClient.Tests.Unit
                 router.RefreshTopicMetadataAsync(testTopic, true, CancellationToken.None), 
                 router.RefreshTopicMetadataAsync(testTopic, true, CancellationToken.None)
                 ); //do not debug
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -837,7 +837,7 @@ namespace KafkaClient.Tests.Unit
                 router.RefreshTopicMetadataAsync(testTopics, true, CancellationToken.None), 
                 router.RefreshTopicMetadataAsync(testTopics, true, CancellationToken.None)
                 ); //do not debug
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 2);
+            Assert.Equal(2, scenario.Connection1[ApiKey.Metadata]);
         }
 
         [Fact]
@@ -851,7 +851,7 @@ namespace KafkaClient.Tests.Unit
                 router.GetTopicMetadataAsync(testTopic, CancellationToken.None), 
                 router.GetTopicMetadataAsync(testTopic, CancellationToken.None)
                 );
-            Assert.Equal(scenario.Connection1[ApiKey.Metadata], 1);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Metadata]);
         }
 
         #endregion
@@ -868,8 +868,8 @@ namespace KafkaClient.Tests.Unit
             var p0 = router.GetTopicConnection(testTopic, 0);
             var p1 = router.GetTopicConnection(testTopic, 1);
 
-            Assert.Equal(p0.PartitionId, 0);
-            Assert.Equal(p1.PartitionId, 1);
+            Assert.Equal(0, p0.PartitionId);
+            Assert.Equal(1, p1.PartitionId);
         }
 
         [Fact]
@@ -923,9 +923,9 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter();
 
             var results = await router.GetOffsetsAsync(RoutingScenario.TestTopic, 2, -1, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.Offsets], 1);
-            Assert.Equal(scenario.Connection2[ApiKey.Offsets], 1);
-            Assert.Equal(results.Count, 2);
+            Assert.Equal(1, scenario.Connection1[ApiKey.Offsets]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.Offsets]);
+            Assert.Equal(2, results.Count);
         }
 
         [Fact]
@@ -935,9 +935,9 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter();
 
             var results = await router.GetOffsetsAsync(RoutingScenario.TestTopic, RoutingScenario.TestGroup, CancellationToken.None);
-            Assert.Equal(scenario.Connection1[ApiKey.OffsetFetch], 1);
-            Assert.Equal(scenario.Connection2[ApiKey.OffsetFetch], 1);
-            Assert.Equal(results.Count, 2);
+            Assert.Equal(1, scenario.Connection1[ApiKey.OffsetFetch]);
+            Assert.Equal(1, scenario.Connection2[ApiKey.OffsetFetch]);
+            Assert.Equal(2, results.Count);
         }
 
         [Fact]

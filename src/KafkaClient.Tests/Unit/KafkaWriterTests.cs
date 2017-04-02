@@ -51,7 +51,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.Equal(actualBytes.ToArray(), expectedBytes);
+            Assert.Equal(expectedBytes, actualBytes.ToArray());
         }
 
         [Theory]
@@ -73,7 +73,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.Equal(actualBytes.ToArray(), expectedBytes);
+            Assert.Equal(expectedBytes, actualBytes.ToArray());
         }
 
         [Theory]
@@ -94,7 +94,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.Equal(actualBytes.ToArray(), expectedBytes);
+            Assert.Equal(expectedBytes, actualBytes.ToArray());
         }
 
         [Theory]
@@ -112,7 +112,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.Equal(actualBytes.ToArray(), expectedBytes);
+            Assert.Equal(expectedBytes, actualBytes.ToArray());
         }
 
         [Theory]
@@ -130,7 +130,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.Equal(actualBytes.ToArray(), expectedBytes);
+            Assert.Equal(expectedBytes, actualBytes.ToArray());
         }
     }
 }
