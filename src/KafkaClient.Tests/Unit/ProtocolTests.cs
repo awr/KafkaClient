@@ -469,7 +469,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Fact]
         public void ApiVersionsRequest()
         {
             var request = new ApiVersionsRequest();
@@ -787,7 +787,7 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Fact]
         public void ListGroupsRequest()
         {
             var request = new ListGroupsRequest();

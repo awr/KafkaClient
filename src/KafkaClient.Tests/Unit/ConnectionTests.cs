@@ -250,16 +250,15 @@ namespace KafkaClient.Tests.Unit
         {
             var count = 0;
             var semaphore = new SemaphoreSlim(0);
-            var config = new ConnectionConfiguration(onReadingBytes: (e, available) =>
-            {
+            var config = new ConnectionConfiguration(onReadingBytes: (e, available) => {
                 Interlocked.Increment(ref count);
                 semaphore.Release();
                 
             });
+
             var endpoint = TestConfig.ServerEndpoint();
-            using (var server = new TcpServer(endpoint.Ip.Port, TestConfig.Log))
-            using (var conn = new Connection(endpoint, config, log: TestConfig.Log))
-            {
+            using (new TcpServer(endpoint.Ip.Port, TestConfig.Log))
+            using (var conn = new Connection(endpoint, config, TestConfig.Log)) {
                 var token = new CancellationTokenSource();
 
                 var taskResult = conn.SendAsync(new FetchRequest(), token.Token);
@@ -269,7 +268,7 @@ namespace KafkaClient.Tests.Unit
 
                 semaphore.Wait(TimeSpan.FromSeconds(1));
                 Assert.True(count >= 1, "Read should have cancelled and incremented count.");
-                Assert.True(taskResult.IsCanceled);
+                await AssertAsync.ThatEventually(() => taskResult.IsCanceled);
             }
         }
 
