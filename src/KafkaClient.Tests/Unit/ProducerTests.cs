@@ -35,7 +35,7 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Fact]
-        public void ShouldSendAsyncToAllConnectionsEvenWhenExceptionOccursOnOne()
+        public async Task ShouldSendAsyncToAllConnectionsEvenWhenExceptionOccursOnOne()
         {
             var scenario = new RoutingScenario();
             scenario.Connection2.Add(ApiKey.Produce, _ => { throw new RequestException(ApiKey.Produce, ErrorCode.CORRUPT_MESSAGE, scenario.Connection2.Endpoint, "some exception"); });
@@ -46,7 +46,7 @@ namespace KafkaClient.Tests.Unit
                 var messages = new List<Message> { new Message("1"), new Message("2") };
 
                 var sendTask = producer.SendAsync(messages, "UnitTest", CancellationToken.None).ConfigureAwait(false);
-                Assert.ThrowsAsync<RequestException>(async () => await sendTask);
+                await Assert.ThrowsAsync<RequestException>(async () => await sendTask);
 
                 Assert.Equal(scenario.Connection1[ApiKey.Produce], 1);
                 Assert.Equal(scenario.Connection2[ApiKey.Produce], 1);
@@ -282,7 +282,7 @@ namespace KafkaClient.Tests.Unit
             var router = Substitute.For<IRouter>();
             var producer = new Producer(router);
             using (producer) { }
-            Assert.ThrowsAsync<ObjectDisposedException>(async () => await producer.SendAsync(new Message("1"), "Test", CancellationToken.None));
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await producer.SendAsync(new Message("1"), "Test", CancellationToken.None));
         }
 
         [Fact]

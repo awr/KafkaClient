@@ -317,7 +317,7 @@ namespace KafkaClient.Tests.Integration
                     var offset = 5;
 
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offset, CancellationToken.None);
-                    Assert.ThrowsAsync<ArgumentNullException>(async () => await router.GetOffsetsAsync(group, topicName, partitionId, CancellationToken.None));
+                    await Assert.ThrowsAsync<ArgumentNullException>(async () => await router.GetOffsetsAsync(group, topicName, partitionId, CancellationToken.None));
                 });
             }
         }
@@ -396,7 +396,7 @@ namespace KafkaClient.Tests.Integration
 
                     var offest = 5;
 
-                    Assert.ThrowsAsync<ArgumentNullException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, group, offest, CancellationToken.None));
+                    await Assert.ThrowsAsync<ArgumentNullException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, group, offest, CancellationToken.None));
                 });
             }
         }
@@ -411,7 +411,7 @@ namespace KafkaClient.Tests.Integration
 
                     var offest = -5;
 
-                    Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None));
+                    await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None));
                 });
             }
         }

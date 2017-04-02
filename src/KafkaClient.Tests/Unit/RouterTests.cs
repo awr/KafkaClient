@@ -67,7 +67,7 @@ namespace KafkaClient.Tests.Unit
 
             scenario.Connection1.Add(ApiKey.Fetch, FailedInFirstMessageException(exceptionType, cacheExpiration));
             scenario.Connection1.Add(ApiKey.Metadata, async _ => await RoutingScenario.DefaultMetadataResponse());
-            Assert.ThrowsAsync(exceptionType, async () => await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None));
+            await Assert.ThrowsAsync(exceptionType, async () => await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None));
         }
 
         [Theory]
@@ -87,7 +87,7 @@ namespace KafkaClient.Tests.Unit
 
             scenario.Connection1.Add(ApiKey.Fetch, FailedInFirstMessageError(code, cacheExpiration));
             scenario.Connection1.Add(ApiKey.Metadata, async _ => await RoutingScenario.DefaultMetadataResponse());
-            Assert.ThrowsAsync<RequestException>(async () => await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None));
+            await Assert.ThrowsAsync<RequestException>(async () => await router.SendAsync(new FetchRequest(), RoutingScenario.TestTopic, 0, CancellationToken.None));
         }
 
         [Fact]
@@ -438,7 +438,7 @@ namespace KafkaClient.Tests.Unit
             scenario.Connection2.Add(ApiKey.GroupCoordinator, _ => { throw new Exception("some error"); });
             var router = scenario.CreateRouter();
 
-            Assert.ThrowsAsync<RoutingException>(async () => await router.GetGroupConnectionAsync(RoutingScenario.TestTopic, CancellationToken.None));
+            await Assert.ThrowsAsync<RoutingException>(async () => await router.GetGroupConnectionAsync(RoutingScenario.TestTopic, CancellationToken.None));
 
             Assert.Equal(scenario.Connection1[ApiKey.GroupCoordinator], 1);
             Assert.Equal(scenario.Connection2[ApiKey.GroupCoordinator], 1);
@@ -609,33 +609,33 @@ namespace KafkaClient.Tests.Unit
             conn.SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>()).Returns(x => CreateMetadataResponse(errorCode));
 
             var router = GetRouter(conn);
-            Assert.ThrowsAsync<RequestException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
+            await Assert.ThrowsAsync<RequestException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
         }
 
         [Theory]
         [InlineData(null)]
         [InlineData("")]
-        public void ShouldThrowExceptionWhenHostIsMissing(string host)
+        public async Task ShouldThrowExceptionWhenHostIsMissing(string host)
         {
             var conn = Substitute.For<IConnection>();
 
             conn.SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>()).Returns(x => CreateMetadataResponse(1, host, 1));
 
             var router = GetRouter(conn);
-            Assert.ThrowsAsync<ConnectionException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
+            await Assert.ThrowsAsync<ConnectionException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
         }
 
         [Theory]
         [InlineData(0)]
         [InlineData(-1)]
-        public void ShouldThrowExceptionWhenPortIsMissing(int port)
+        public async Task ShouldThrowExceptionWhenPortIsMissing(int port)
         {
             var conn = Substitute.For<IConnection>();
 
             conn.SendAsync(Arg.Any<IRequest<MetadataResponse>>(), Arg.Any<CancellationToken>()).Returns(x => CreateMetadataResponse(1, "123", port));
 
             var router = GetRouter(conn);
-            Assert.ThrowsAsync<ConnectionException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
+            await Assert.ThrowsAsync<ConnectionException>(() => router.GetMetadataAsync(new MetadataRequest("Test"), CancellationToken.None));
         }
 
 #pragma warning disable 1998
