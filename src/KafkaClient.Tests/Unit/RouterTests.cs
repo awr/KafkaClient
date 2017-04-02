@@ -18,11 +18,11 @@ namespace KafkaClient.Tests.Unit
     {
         #region SendAsync
 
+        [Theory]
         [InlineData(ErrorCode.NOT_LEADER_FOR_PARTITION)]
         [InlineData(ErrorCode.LEADER_NOT_AVAILABLE)]
         [InlineData(ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE)]
         [InlineData(ErrorCode.UNKNOWN_TOPIC_OR_PARTITION)]
-        [Fact]
         public async Task ShouldTryToRefreshMataDataIfCanRecoverByRefreshMetadata(ErrorCode code)
         {
             var scenario = new RoutingScenario();
@@ -57,6 +57,7 @@ namespace KafkaClient.Tests.Unit
             Assert.Equal(scenario.Connection1[ApiKey.Fetch], 2);
         }
 
+        [Theory]
         [InlineData(typeof(Exception))]
         [InlineData(typeof(RequestException))]
         public async Task SendProtocolRequestShouldThrowException(Type exceptionType)

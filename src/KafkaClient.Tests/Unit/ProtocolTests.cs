@@ -106,7 +106,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory, CombinatorialData]
+        [Fact]
         public void WhenMessageIsTruncatedThenBufferUnderRunExceptionIsThrown()
         {
             // arrange
@@ -126,7 +126,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory, CombinatorialData]
+        [Fact]
         public void WhenMessageIsExactlyTheSizeOfBufferThenMessageIsDecoded()
         {
             // arrange
