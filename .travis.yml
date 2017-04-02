@@ -9,6 +9,12 @@ addons:
     - libssl-dev
     - libunwind8
     - zlib1g
+    - zlib1g-dev 
+    - libpcre3-dev 
+    - libxslt1-dev 
+    - libxml2-dev 
+    - libgd2-xpm-dev 
+    - libgeoip-dev 
     - libsnappy1 
     - libsnappy-dev
 
