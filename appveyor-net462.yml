@@ -1,0 +1,27 @@
+version: 0.2.{build}
+
+# branches / commits to build
+skip_commits:
+  message: /WIP/
+skip_branch_with_pr: true
+skip_tags: true
+
+# environment
+image: Visual Studio 2017
+cache:
+  - packages
+configuration: Release
+os: Visual Studio 2017
+
+before_build:
+  - nuget restore  
+
+build:
+  parallel: true
+  project: KafkaClient.sln
+  verbosity: minimal
+
+test:
+  assemblies:
+    only:
+    - src\KafkaClient.Tests\bin\*\net462\*.Tests.dll
