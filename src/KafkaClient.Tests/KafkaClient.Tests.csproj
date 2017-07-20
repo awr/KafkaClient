@@ -25,8 +25,8 @@
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="1.0.2" />
     <PackageReference Include="Nito.AsyncEx.Tasks" Version="1.1.0" />
-    <PackageReference Include="AgileObjects.ReadableExpressions" Version="1.8.3" />
-    <PackageReference Include="NSubstitute" Version="2.0.2" />
+    <PackageReference Include="AgileObjects.ReadableExpressions" Version="1.9.0" />
+    <PackageReference Include="NSubstitute" Version="2.0.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="Xunit.Combinatorial" Version="1.2.1" />
