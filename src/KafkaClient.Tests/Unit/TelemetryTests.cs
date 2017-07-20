@@ -111,6 +111,7 @@ namespace KafkaClient.Tests.Unit
                 }
             }
 
+            await AssertAsync.ThatEventually(() => total == telemetry.TcpConnections.Sum(t => t.Disconnects));
             Assert.Equal(1, telemetry.TcpConnections.Count);
             Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Connects));
             Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Disconnects));

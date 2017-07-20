@@ -159,29 +159,43 @@ namespace KafkaClient.Tests.Unit
 
 #if DOTNETSTANDARD
         [Theory, CombinatorialData]
-        public void ProduceRequest(
+        public void ProduceRequestSnappy(
             [CombinatorialValues(0, 1, 2)] short version,
             [CombinatorialValues(0, 2, -1)] short acks, 
             [CombinatorialValues(0, 1000)] int timeoutMilliseconds, 
             [CombinatorialValues("testTopic")] string topic, 
             [CombinatorialValues(1, 10)] int topicsPerRequest, 
             [CombinatorialValues(1, 5)] int totalPartitions, 
+            [CombinatorialValues(3)] int messagesPerSet)
+        {
+            ProduceRequest(version, acks, timeoutMilliseconds, topic, topicsPerRequest, totalPartitions, messagesPerSet, MessageCodec.Snappy);
+        }
+#endif
+
+        [Theory, CombinatorialData]
+        public void ProduceRequest(
+            [CombinatorialValues(0, 1, 2)] short version,
+            [CombinatorialValues(0, 2, -1)] short acks,
+            [CombinatorialValues(0, 1000)] int timeoutMilliseconds,
+            [CombinatorialValues("testTopic")] string topic,
+            [CombinatorialValues(1, 10)] int topicsPerRequest,
+            [CombinatorialValues(1, 5)] int totalPartitions,
             [CombinatorialValues(3)] int messagesPerSet,
-            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec)
+            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
         {
             var payloads = new List<ProduceRequest.Topic>();
-            for (var t = 0; t < topicsPerRequest; t++) {
-                var partition = 1 + t%totalPartitions;
-                payloads.Add(new ProduceRequest.Topic(topic + t, partition, GenerateMessages(messagesPerSet, (byte) (version >= 2 ? 1 : 0), codec), codec));
+            for (var t = 0; t < topicsPerRequest; t++)
+            {
+                var partition = 1 + t % totalPartitions;
+                payloads.Add(new ProduceRequest.Topic(topic + t, partition, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec));
             }
             var request = new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeoutMilliseconds), acks);
             var requestWithUpdatedAttribute = new ProduceRequest(request.topics.Select(t => new ProduceRequest.Topic(t.topic, t.partition_id,
-                t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)))),
+                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)))),
                 request.timeout, request.acks);
 
             request.AssertCanEncodeDecodeRequest(version, forComparison: requestWithUpdatedAttribute);
         }
-#endif
 
         [Theory, CombinatorialData]
         public void ProduceResponse(
@@ -223,7 +237,6 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-#if DOTNETSTANDARD
         [Theory, CombinatorialData]
         public void FetchResponse(
             [CombinatorialValues(0, 1, 2, 3)] short version,
@@ -231,7 +244,7 @@ namespace KafkaClient.Tests.Unit
             [CombinatorialValues("testTopic")] string topicName, 
             [CombinatorialValues(1, 10)] int topicsPerRequest, 
             [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec, 
+            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
             [CombinatorialValues(
                 ErrorCode.NONE,
                 ErrorCode.OFFSET_OUT_OF_RANGE
@@ -251,6 +264,24 @@ namespace KafkaClient.Tests.Unit
                 response.throttle_time_ms);
 
             response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
+        }
+
+#if DOTNETSTANDARD
+        [Theory, CombinatorialData]
+        public void FetchResponseSnappy(
+            [CombinatorialValues(0, 1, 2, 3)] short version,
+            [CombinatorialValues(0, 1234)] int throttleTime,
+            [CombinatorialValues("testTopic")] string topicName,
+            [CombinatorialValues(1, 10)] int topicsPerRequest,
+            [CombinatorialValues(1, 5)] int totalPartitions,
+            [CombinatorialValues(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_OUT_OF_RANGE
+            )] ErrorCode errorCode,
+            [CombinatorialValues(3)] int messagesPerSet
+        )
+        {
+            FetchResponse(version, throttleTime, topicName, topicsPerRequest, totalPartitions, MessageCodec.Snappy, errorCode, messagesPerSet);
         }
 #endif
 
@@ -962,6 +993,6 @@ namespace KafkaClient.Tests.Unit
             return messages;
         }
 
-        #endregion
+#endregion
     }
 }
