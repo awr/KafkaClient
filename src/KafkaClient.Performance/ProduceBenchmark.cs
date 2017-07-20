@@ -28,7 +28,7 @@ namespace KafkaClient.Performance
 
         private ProduceRequest _request;
 
-        [Setup]
+        [GlobalSetup]
         public void SetupData()
         {
             Common.Compression.ZipLevel = Level;

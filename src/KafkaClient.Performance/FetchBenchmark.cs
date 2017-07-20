@@ -30,7 +30,7 @@ namespace KafkaClient.Performance
 
         private ArraySegment<byte> _bytes;
 
-        [Setup]
+        [GlobalSetup]
         public void SetupData()
         {
             Common.Compression.ZipLevel = Level;

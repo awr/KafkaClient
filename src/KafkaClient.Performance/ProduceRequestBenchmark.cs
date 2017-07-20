@@ -37,7 +37,7 @@ namespace KafkaClient.Performance
         private TcpServer _server;
         private Connection _connection;
 
-        [Setup]
+        [GlobalSetup]
         public void SetupData()
         {
             Common.Compression.ZipLevel = Level;
