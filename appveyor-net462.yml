@@ -25,3 +25,10 @@ test:
   assemblies:
     only:
     - src\KafkaClient.Tests\bin\*\net462\*.Tests.dll
+
+test_script:
+ - .\packages\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -target:"%xunit20%\xunit.console.x86.exe" -targetargs:"src\KafkaClient.Tests\bin\*\net462\*.Tests.dll -noshadow" -output:"coverage.xml" -filter:"+[KafkaClient.*]* -[KafkaClient.Test*]*"
+after_test:
+ - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
+ - pip install codecov
+ - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
