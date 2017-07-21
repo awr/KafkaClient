@@ -18,7 +18,7 @@ configuration: Release
 os: Visual Studio 2017
 
 before_build:
-  - nuget restore  
+  - dotnet restore --packages packages
 
 build:
   parallel: true
