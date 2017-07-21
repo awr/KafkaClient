@@ -54,7 +54,7 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Fact]
-        [Flaky]
+        [Trait("Category", "Flaky")]
         public async Task ProducerShouldReportCorrectNumberOfAsyncRequests()
         {
             var semaphore = new SemaphoreSlim(0);

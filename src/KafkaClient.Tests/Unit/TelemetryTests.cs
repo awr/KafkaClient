@@ -20,7 +20,7 @@ namespace KafkaClient.Tests.Unit
         [Theory]
         [InlineData(1)]
         [InlineData(10)]
-        [Flaky]
+        [Trait("Category", "Flaky")]
         public async Task TracksConnectionAttemptsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
