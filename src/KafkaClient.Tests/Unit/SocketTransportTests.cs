@@ -5,6 +5,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
+    [Trait("Category", "Unit")]
     public class SocketTransportTests : TransportTests<SocketTransport>
     {
         [Fact]

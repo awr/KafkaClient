@@ -42,7 +42,7 @@ install:
 
 script:
   - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
-  - dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(FullyQualifiedName~KafkaClient.Tests.Unit) & (Category!=Flaky)"
+  - dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(Category=Unit) & (Category!=Flaky)"
 
 after_success:
   - dotnet pack -c Release -f netcoreapp1.0 src/KafkaClient/KafkaClient.csproj-o artifacts 

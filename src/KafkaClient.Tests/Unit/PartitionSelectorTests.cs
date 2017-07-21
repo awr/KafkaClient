@@ -9,6 +9,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
+    [Trait("Category", "Unit")]
     public class PartitionSelectorTests
     {
         private readonly MetadataResponse.Topic _topicA;

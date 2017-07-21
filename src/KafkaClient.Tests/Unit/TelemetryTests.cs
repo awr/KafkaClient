@@ -13,6 +13,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
+    [Trait("Category", "Unit")]
     public class TelemetryTests
     {
         #region ConnectionStatistics
@@ -83,6 +84,7 @@ namespace KafkaClient.Tests.Unit
         [Theory]
         [InlineData(1)]
         [InlineData(3)]
+        [Trait("Category", "Flaky")]
         public async Task TracksDisconnectsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);

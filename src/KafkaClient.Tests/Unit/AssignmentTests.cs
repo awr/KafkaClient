@@ -10,6 +10,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
+    [Trait("Category", "Unit")]
     public class AssignmentTests
     {
         [Fact]
