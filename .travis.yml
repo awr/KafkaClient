@@ -27,22 +27,22 @@ sudo: required
 language: csharp
 solution: KafkaClient.sln
 mono: none
-dotnet: 1.0.1
+dotnet: 1.0.3
 
-before_install:
-  # set up the apt-get feed
-  - sudo sh -c 'echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet-release/ trusty main" > /etc/apt/sources.list.d/dotnetdev.list'
-  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893
-  - sudo apt-get update
-  # Install .NET CLI
-  - sudo apt-get install dotnet-dev-1.0.1
+# before_install:
+#   # set up the apt-get feed
+#   - sudo sh -c 'echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet-release/ trusty main" > /etc/apt/sources.list.d/dotnetdev.list'
+#   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893
+#   - sudo apt-get update
+#   # Install .NET CLI
+#   - sudo apt-get install dotnet-dev-1.0.1
 
 install:
   - dotnet restore -v Minimal
 
 script:
   - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
-  - dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "FullyQualifiedName~KafkaClient.Tests.Unit"
+  - dotnet test -c Release -f netcoreapp1.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(FullyQualifiedName~KafkaClient.Tests.Unit) AND (Category!=Flaky)"
 
 after_success:
   - dotnet pack -c Release -f netcoreapp1.0 src/KafkaClient/KafkaClient.csproj-o artifacts 
