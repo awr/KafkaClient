@@ -200,6 +200,7 @@ namespace KafkaClient.Tests.Unit
         [InlineData(MessageCodec.Gzip, MessageCodec.None, 2)]
         [InlineData(MessageCodec.Gzip, MessageCodec.Gzip, 1)]
         [InlineData(MessageCodec.None, MessageCodec.None, 1)]
+        [Trait("Category", "Flaky")]
         public async Task ProducesShouldSendExpectedProduceRequestForEachCodecCombination(MessageCodec codec1, MessageCodec codec2, int expected)
         {
             var scenario = new RoutingScenario();
