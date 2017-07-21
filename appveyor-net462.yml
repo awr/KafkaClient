@@ -22,7 +22,7 @@ build:
   verbosity: minimal
 
 test_script:
- - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"%xunit20%\xunit.console.x86.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll -noshadow -notrait Category=Flaky -trait Category=Unit" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.Test*]*"
+ - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"%xunit20%\xunit.console.x86.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll -noshadow -appveyor -notrait Category=Flaky -trait Category=CI" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
 after_test:
  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
  - pip install codecov
