@@ -21,11 +21,6 @@ build:
   project: KafkaClient.sln
   verbosity: minimal
 
-test:
-  assemblies:
-    only:
-    - src\KafkaClient.Tests\bin\*\net462\*.Tests.dll
-
 test_script:
  - .\packages\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -target:"%xunit20%\xunit.console.x86.exe" -targetargs:"src\KafkaClient.Tests\bin\*\net462\*.Tests.dll -noshadow -notrait Category=Flaky" -output:"coverage.xml" -filter:"+[KafkaClient.*]* -[KafkaClient.Test*]*"
 after_test:

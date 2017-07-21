@@ -186,6 +186,7 @@ namespace KafkaClient.Tests.Unit
         [Theory]
         [InlineData(0, 100, 0)]
         [InlineData(9, 100, 1000)]
+        [Trait("Category", "Flaky")]
         public async Task ConsumerHeartbeatsAtDesiredIntervals(int expectedHeartbeats, int heartbeatMilliseconds, int totalMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
