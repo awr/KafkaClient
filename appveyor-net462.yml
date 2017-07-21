@@ -27,6 +27,3 @@ after_test:
  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
  - pip install codecov
  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
-
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

@@ -17,21 +17,13 @@ configuration: Release
 
 os: Visual Studio 2017
 
-before_build:
-  - dotnet restore --packages packages
-
-build:
-  parallel: true
-  project: KafkaClient.sln
-
-after_build:
-# build_script:
-#   - cmd: appveyor-retry dotnet restore -v Minimal
-#   - cmd: dotnet build -c Release src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
-  - dotnet pack -c Release src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
+build_script:
+  - cmd: appveyor-retry dotnet restore --packages packages
+  - cmd: dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
+  - cmd: dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
 
 test_script:
-  - cmd: dotnet test -c Release -f netcoreapp1.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(Category=Unit) & (Category!=Flaky)" --logger:trx;LogFileName=tests-results.xml
+  - cmd: dotnet test -c %CONFIGURATION% -f netcoreapp1.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(Category=Unit) & (Category!=Flaky)" --logger:trx;LogFileName=tests-results.xml
   # - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/xunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./tests-results.xml))
   # - cmd: dotnet test -c Release src/KafkaClient.Tests --test=KafkaClient.Tests.Integration --noheader --result=nunit3-integration.xml;format=nunit3
   # - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./nunit3-integration.xml))
