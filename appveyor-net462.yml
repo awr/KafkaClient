@@ -25,9 +25,9 @@ test_script:
  - nunit3-console src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --where "cat!=Flaky AND cat=CI" --result=test-results.xml;format=AppVeyor
  - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --noheader --where \"cat!=Flaky AND cat=CI\" --result=test-results.xml;format=AppVeyor" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
 after_test:
- - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\tests-results.xml))
+ - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\test-results.xml))
  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
  - pip install codecov
  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# on_finish:
+#   - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
