@@ -1,0 +1,82 @@
+version: '2'
+services:
+  zookeeper1:
+    image: zookeeper:3.4
+    restart: always
+    ports:
+     - "2181:2181"
+    networks:
+     - kafkaclient
+
+  kafka9:
+    image: ches/kafka:0.9.0.1
+    restart: always
+    ports:
+     - "9092:9092"
+    environment:
+     - "ZOOKEEPER_CONNECTION_STRING=zookeeper1:2181"
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafkalocal
+     - KAFKA_ADVERTISED_PORT=9092
+    links:
+      - zookeeper1
+    networks:
+     - kafkaclient
+
+  kafka10:
+    image: ches/kafka:0.10.0.1
+    restart: always
+    ports:
+     - "9093:9092"
+    environment:
+     - "ZOOKEEPER_CONNECTION_STRING=zookeeper1:2181"
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafkalocal
+     - KAFKA_ADVERTISED_PORT=9093
+    links:
+      - zookeeper1
+    networks:
+     - kafkaclient
+
+  kafka10_1:
+    image: ches/kafka:0.10.1.1
+    restart: always
+    ports:
+     - "9094:9092"
+    environment:
+     - "ZOOKEEPER_CONNECTION_STRING=zookeeper1:2181"
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafkalocal
+     - KAFKA_ADVERTISED_PORT=9094
+    links:
+      - zookeeper1
+    networks:
+     - kafkaclient
+
+  kafka10_2:
+    image: ches/kafka:0.10.2.1
+    restart: always
+    ports:
+     - "9095:9092"
+    environment:
+     - "ZOOKEEPER_CONNECTION_STRING=zookeeper1:2181"
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafkalocal
+     - KAFKA_ADVERTISED_PORT=9095
+    links:
+      - zookeeper1
+    networks:
+     - kafkaclient
+
+networks:
+  kafkaclient:
+    driver: bridge
+    driver_opts:
+      "com.docker.network.bridge.enable_icc": "true"
+      "com.docker.network.bridge.enable_ip_masquerade": "true"
+      "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0"
+      "com.docker.network.driver.mtu": "1500"
