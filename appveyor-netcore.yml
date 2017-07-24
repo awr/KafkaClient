@@ -29,7 +29,9 @@ build_script:
 test_script:
   - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
   - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
-  - docker-compose up -d
+  - docker network create kafka-net
+  - docker run -d --name zookeeper --network kafka-net --publish 2181:2181 zookeeper:3.4
+  - docker run -d --name kafka10_1 --network kafka-net --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env  KAFKA_BROKER_ID=0 --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafkalocal ches/kafka:0.10.1.1
   - docker ps
   - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=Integration) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
 
