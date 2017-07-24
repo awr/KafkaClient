@@ -8,7 +8,7 @@ using Xunit;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "Unit")]
+    [Trait("Category", "CI")]
     public class SslTransportTests : TransportTests<SslTransport>
     {
         private const string CertPassword = "password";

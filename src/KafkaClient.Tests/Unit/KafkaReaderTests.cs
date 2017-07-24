@@ -9,7 +9,7 @@ namespace KafkaClient.Tests.Unit
     /// BigEndianBinaryWriter code provided by Zoltu
     /// https://github.com/Zoltu/Zoltu.EndianAwareBinaryReaderWriter
     /// </summary>
-    [Trait("Category", "Unit")]
+    [Trait("Category", "CI")]
     public class KafkaReaderTests
     {
         // validates my assumptions about the default implementation doing the opposite of this implementation
