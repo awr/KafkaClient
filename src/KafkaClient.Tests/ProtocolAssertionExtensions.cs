@@ -10,6 +10,35 @@ namespace KafkaClient.Tests
 {
     public static class ProtocolAssertionExtensions
     {
+        public static void AssertNotEqual<T>(this T first, params T[] others) where T : IEquatable<T>
+        {
+            foreach (var other in others) {
+                Assert.AreNotEqual(first, other);
+            }
+        }
+
+        public static void AssertEqualToSelf<T>(this T self) where T : IEquatable<T>
+        {
+            Assert.AreEqual(self, self);
+            Assert.AreEqual(self.GetHashCode(), self.GetHashCode());
+        }
+
+        public static void AssertCanEncodeRequestDecodeResponse<T>(
+            this IRequest<T> request, short version, IMembershipEncoder encoder = null)
+            where T : class, IResponse
+        {
+            var encoders = ImmutableDictionary<string, IMembershipEncoder>.Empty;
+            if (encoder != null)
+            {
+                encoders = encoders.Add(encoder.ProtocolType, encoder);
+            }
+
+            var context = new RequestContext(17, version, "Test-Request", encoders, encoder?.ProtocolType);
+            var bytes = request.ToBytes(context);
+            var decoded = request.ToResponse(context, bytes.Skip(4));
+            Assert.NotNull(decoded);
+        }
+
         public static void AssertCanEncodeDecodeRequest<T>(this T request, short version, IMembershipEncoder encoder = null, T forComparison = null) where T : class, IRequest
         {
             var encoders = ImmutableDictionary<string, IMembershipEncoder>.Empty;
