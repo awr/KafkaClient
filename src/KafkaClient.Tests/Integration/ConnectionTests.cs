@@ -9,6 +9,7 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
+    [Category("Integration")]
     public class ConnectionTests
     {
         [Test]
