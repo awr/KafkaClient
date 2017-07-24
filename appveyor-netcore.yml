@@ -9,23 +9,27 @@ skip_tags: true
 
 # environment
 image: Visual Studio 2017
-
 cache:
   - packages
-  
 configuration: Release
+
+hosts:
+  localhost: 127.0.0.1
+  kafkalocal: 127.0.0.1  
 
 os: Visual Studio 2017
 install:
   - docker version
 
 build_script:
-  - cmd: appveyor-retry dotnet restore --packages packages
-  - cmd: dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
-  - cmd: dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
+  - appveyor-retry dotnet restore --packages packages
+  - dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
+  - dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
 
 test_script:
-  - cmd: dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
+  - docker-compose up -d
+  - docker ps
+  - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
   - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
 
 artifacts:
