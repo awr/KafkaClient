@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
     public class CompressionTests
     {
-        [Fact]
+        [Test]
         public async Task GzipCanCompressMessageAndSend()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -42,7 +42,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task GzipCanDecompressMessageFromKafka()
         {
             const int numberOfMessages = 3;
@@ -67,9 +67,9 @@ namespace KafkaClient.Tests.Integration
                         var results = await consumer.FetchAsync(CancellationToken.None, messages.Count);
                         TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
                         Assert.NotNull(results);
-                        Assert.Equal(results.Messages.Count, messages.Count);
+                        Assert.AreEqual(results.Messages.Count, messages.Count);
                         for (var i = 0; i < messages.Count; i++) {
-                            Assert.Equal(results.Messages[i].Value.ToUtf8String(), i.ToString());
+                            Assert.AreEqual(results.Messages[i].Value.ToUtf8String(), i.ToString());
                         }
                     }
                     TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCanDecompressMessageFromKafka"));
@@ -78,7 +78,7 @@ namespace KafkaClient.Tests.Integration
         }
 
 #if DOTNETSTANDARD
-        [Fact]
+        [Test]
         public async Task SnappyCanCompressMessageAndSend()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -109,7 +109,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        //[Fact]
+        //[Test]
         //[Ignore("Current Snappy lib has issues -- ignored until they are solved or alternative is found")]
         //public async Task SnappyCanDecompressMessageFromKafka()
         //{
@@ -135,9 +135,9 @@ namespace KafkaClient.Tests.Integration
         //                var results = await consumer.FetchAsync(CancellationToken.None, messages.Count);
         //                TestConfig.Log.Info(() => LogEvent.Create(">> End Consume"));
         //                Assert.NotNull(results);
-        //                Assert.Equal(results.Messages.Count, messages.Count);
+        //                Assert.AreEqual(results.Messages.Count, messages.Count);
         //                for (var i = 0; i < messages.Count; i++) {
-        //                    Assert.Equal(results.Messages[i].Value.ToUtf8String(), i.ToString());
+        //                    Assert.AreEqual(results.Messages[i].Value.ToUtf8String(), i.ToString());
         //                }
         //            }
         //            TestConfig.Log.Info(() => LogEvent.Create(">> End EnsureGzipCanDecompressMessageFromKafka"));

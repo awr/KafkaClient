@@ -4,18 +4,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Special
 {
-    [Trait("Category", "Manual")]
+    [Category("Manual")]
     internal class ManualTesting
     {
         /// <summary>
         /// These tests are for manual run. You need to stop the partition leader and then start it again and let it became the leader.        
         /// </summary>
 
-        [Fact]
+        [Test]
         public async Task NewlyCreatedTopicShouldRetryUntilBrokerIsAssigned()
         {
             // Disable auto topic create in our server
@@ -25,11 +25,11 @@ namespace KafkaClient.Tests.Special
             var topic = (await response).topic_metadata.FirstOrDefault();
 
             Assert.NotNull(topic);
-            Assert.Equal(topic.topic, expectedTopic);
-            Assert.Equal(topic.topic_error_code, ErrorCode.NONE);
+            Assert.AreEqual(topic.topic, expectedTopic);
+            Assert.AreEqual(topic.topic_error_code, ErrorCode.NONE);
         }
 
-        [Fact]
+        [Test]
         public async Task ManualConsumerFailure()
         {
             var topicName = "TestTopicIssue13-3R-1P";

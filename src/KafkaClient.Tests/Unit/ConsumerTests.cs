@@ -8,14 +8,14 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class ConsumerTests
     {
-//        [Fact]
+//        [Test]
 //        public async Task CancellationShouldInterruptConsumption()
 //        {
 //            var scenario = new RoutingScenario();
@@ -44,7 +44,7 @@ namespace KafkaClient.Tests.Unit
 //            }
 //        }
 
-        [Fact]
+        [Test]
         public async Task EnsureConsumerDisposesRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -56,7 +56,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureConsumerDoesNotDisposeRouter()
         {
             var router = Substitute.For<IRouter>();
@@ -68,10 +68,9 @@ namespace KafkaClient.Tests.Unit
             router.DidNotReceive().Dispose();
         }
 
-        [Theory]
-        [InlineData(null)]
-        [InlineData("")]
-        [InlineData("unknown")]
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("unknown")]
         public async Task ConsumerThowsArgumentExceptionWhenMemberMetadataIsNotKnownByConsumer(string protocolType)
         {
             var router = Substitute.For<IRouter>();
@@ -81,7 +80,7 @@ namespace KafkaClient.Tests.Unit
                 ex => ex.Message.StartsWith($"ProtocolType {protocolType} is unknown"));
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerDoesNotThowArgumentExceptionWhenMemberMetadataIsKnownByConsumer()
         {
             var router = Substitute.For<IRouter>();
@@ -96,7 +95,7 @@ namespace KafkaClient.Tests.Unit
                 () => router.CreateGroupConsumerAsync("group", ConsumerEncoder.Protocol, new ByteTypeMetadata("mine", new ArraySegment<byte>()), configuration, encoders, CancellationToken.None));
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerSyncsGroupAfterJoining()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -128,7 +127,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerLeaderSyncsGroupWithAssignment()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -156,7 +155,7 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerFollowerSyncsGroupWithoutAssignment()
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -184,10 +183,9 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [Theory]
-        [InlineData(0, 100, 0)]
-        [InlineData(9, 100, 1000)]
-        [Trait("Category", "Flaky")]
+        [TestCase(0, 100, 0)]
+        [TestCase(9, 100, 1000)]
+        [Category("Flaky")]
         public async Task ConsumerHeartbeatsAtDesiredIntervals(int expectedHeartbeats, int heartbeatMilliseconds, int totalMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -209,19 +207,19 @@ namespace KafkaClient.Tests.Unit
                 await Task.Delay(totalMilliseconds);
             }
 
-            Assert.InRange(conn.ReceivedCalls()
+            Assert.That(conn.ReceivedCalls()
                             .Count(c => {
                                 if (c.GetMethodInfo().Name != nameof(Connection.SendAsync)) return false;
                                 var s = c.GetArguments()[0] as HeartbeatRequest;
                                 if (s == null) return false;
                                 return s.group_id == request.group_id && s.member_id == memberId && s.generation_id == response.generation_id;
-                            }), expectedHeartbeats - 1, expectedHeartbeats + 1);
+                            }),
+                            Is.InRange(expectedHeartbeats - 1, expectedHeartbeats + 1));
         }
 
-        [Theory]
-        [InlineData(100, 700)]
-        [InlineData(150, 700)]
-        [InlineData(250, 700)]
+        [TestCase(100, 700)]
+        [TestCase(150, 700)]
+        [TestCase(250, 700)]
         public async Task ConsumerHeartbeatsWithinTimeLimit(int heartbeatMilliseconds, int totalMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
@@ -252,10 +250,9 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory]
-        [InlineData(100)]
-        [InlineData(150)]
-        [InlineData(250)]
+        [TestCase(100)]
+        [TestCase(150)]
+        [TestCase(250)]
         public async Task ConsumerHeartbeatsUntilDisposed(int heartbeatMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));

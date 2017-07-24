@@ -4,7 +4,7 @@ using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests
 {
@@ -24,11 +24,11 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = request;
             }
-            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
-            Assert.Equal(forComparison.ShortString(), decoded.ShortString()); // ShortString equality
+            Assert.AreEqual(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
+            Assert.AreEqual(forComparison.ShortString(), decoded.ShortString()); // ShortString equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.Equal(original, final); // ToString equality
+            Assert.AreEqual(original, final); // ToString equality
             Assert.False(decoded.Equals(final)); // general equality test for sanity
             Assert.True(decoded.Equals(decoded)); // general equality test for sanity
             Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
@@ -48,10 +48,10 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = response;
             }
-            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
+            Assert.AreEqual(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.Equal(original, final); // ToString equality
+            Assert.AreEqual(original, final); // ToString equality
             Assert.False(decoded.Equals(final)); // general test for equality
             Assert.True(decoded.Equals(decoded)); // general equality test for sanity
             Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");

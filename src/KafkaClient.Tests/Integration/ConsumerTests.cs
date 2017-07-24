@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 #pragma warning disable 1998
 
@@ -16,7 +16,7 @@ namespace KafkaClient.Tests.Integration
 {
     public class ConsumerTests
     {
-        [Fact]
+        [Test]
         public async Task CanFetch()
         {
             const int partitionId = 0;
@@ -32,13 +32,13 @@ namespace KafkaClient.Tests.Integration
                         var fetchRequest = new FetchRequest(fetch, minBytes: 10);
 
                         var r = await router.SendAsync(fetchRequest, TestConfig.TopicName(), partitionId, CancellationToken.None);
-                        Assert.Equal(r.responses.First().Messages.First().Value.ToUtf8String(), messageValue);
+                        Assert.AreEqual(r.responses.First().Messages.First().Value.ToUtf8String(), messageValue);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesSimpleTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -60,7 +60,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesCacheContainsAllRequestTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -86,7 +86,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesCacheContainsPartOfRequestTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -112,7 +112,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesNoNewMessagesInQueueTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -122,13 +122,13 @@ namespace KafkaClient.Tests.Integration
 
                         // Now let's consume
                         var result = await consumer.FetchAsync(CancellationToken.None, 5);
-                        Assert.Equal(0, result.Messages.Count); // Should not get any messages
+                        Assert.AreEqual(0, result.Messages.Count); // Should not get any messages
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesOffsetBiggerThanLastOffsetInQueueTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -144,7 +144,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesInvalidOffsetTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -158,7 +158,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesTopicDoesntExist()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -173,7 +173,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesPartitionDoesntExist()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -187,7 +187,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesBufferUnderRunNoMultiplier()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -212,7 +212,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchMessagesBufferUnderRunWithMultiplier()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -238,7 +238,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchOffsetConsumerGroupDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -251,7 +251,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -269,7 +269,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -286,7 +286,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchOffsetConsumerGroupExistsTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -299,14 +299,13 @@ namespace KafkaClient.Tests.Integration
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offset, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, 0, CancellationToken.None);
 
-                    Assert.Equal(offset, res.offset);
+                    Assert.AreEqual(offset, res.offset);
                 });
             }
         }
 
-        [Theory]
-        [InlineData(null)]
-        [InlineData("")]
+        [TestCase(null)]
+        [TestCase("")]
         public async Task FetchOffsetConsumerGroupArgumentNull(string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -317,12 +316,12 @@ namespace KafkaClient.Tests.Integration
                     var offset = 5;
 
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offset, CancellationToken.None);
-                    await Assert.ThrowsAsync<ArgumentNullException>(async () => await router.GetOffsetsAsync(group, topicName, partitionId, CancellationToken.None));
+                    Assert.ThrowsAsync<ArgumentNullException>(async () => await router.GetOffsetsAsync(group, topicName, partitionId, CancellationToken.None));
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task UpdateOrCreateOffsetConsumerGroupExistsTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -336,17 +335,17 @@ namespace KafkaClient.Tests.Integration
                     await router.GetOffsetsAsync(topicName, partitionId, CancellationToken.None);
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
-                    Assert.Equal(offest, res.offset);
+                    Assert.AreEqual(offest, res.offset);
 
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, newOffset, CancellationToken.None);
                     res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
 
-                    Assert.Equal(newOffset, res.offset);
+                    Assert.AreEqual(newOffset, res.offset);
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task UpdateOrCreateOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -365,7 +364,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task UpdateOrCreateOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -385,9 +384,8 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Theory]
-        [InlineData(null)]
-        [InlineData("")]
+        [TestCase(null)]
+        [TestCase("")]
         public async Task UpdateOrCreateOffsetConsumerGroupArgumentNull(string group)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -396,12 +394,12 @@ namespace KafkaClient.Tests.Integration
 
                     var offest = 5;
 
-                    await Assert.ThrowsAsync<ArgumentNullException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, group, offest, CancellationToken.None));
+                    Assert.ThrowsAsync<ArgumentNullException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, group, offest, CancellationToken.None));
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task UpdateOrCreateOffsetNegativeOffsetTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -411,24 +409,24 @@ namespace KafkaClient.Tests.Integration
 
                     var offest = -5;
 
-                    await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None));
+                    Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None));
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchLastOffsetSimpleTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
 
-                    Assert.NotEqual(-1, offset.offset);
+                    Assert.AreNotEqual(-1, offset.offset);
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchLastOffsetPartitionDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -445,7 +443,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task FetchLastOffsetTopicDoesntExistTest()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -461,7 +459,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumeByOffsetShouldGetSameMessageProducedAtSameOffset()
         {
             long offsetResponse;
@@ -475,15 +473,14 @@ namespace KafkaClient.Tests.Integration
                     }
                     using (var consumer = new Consumer(new TopicOffset(topicName, 0, offsetResponse), router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero))) {
                         var result = await consumer.FetchAsync(CancellationToken.None, 1);
-                        Assert.Equal(messge.ToString(), result.Messages[0].Value.ToUtf8String());
+                        Assert.AreEqual(messge.ToString(), result.Messages[0].Value.ToUtf8String());
                     }
                 });
             }
         }
 
-        [Theory]
-        [InlineData(20, 1)]
-        [InlineData(20, 10)]
+        [TestCase(20, 1)]
+        [TestCase(20, 10)]
         public async Task ConsumerShouldBeAbleToSeekBackToEarlierOffset(int sends, int messagesPerSend)
         {
             var totalMessages = sends * messagesPerSend;
@@ -515,15 +512,15 @@ namespace KafkaClient.Tests.Integration
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results2.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
                         }
 
-                        Assert.Equal(results1.Messages.Count, results2.Messages.Count);
-                        Assert.Equal(results1.Messages.Count, totalMessages);
-                        Assert.Equal(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()); // Expected the message list in the correct order
+                        Assert.AreEqual(results1.Messages.Count, results2.Messages.Count);
+                        Assert.AreEqual(results1.Messages.Count, totalMessages);
+                        Assert.AreEqual(results1.Messages.Select(x => x.Value.ToUtf8String()).ToList(), results2.Messages.Select(x => x.Value.ToUtf8String()).ToList()); // Expected the message list in the correct order
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerShouldBeAbleToGetCurrentOffsetInformation()
         {
             var totalMessages = 20;
@@ -543,20 +540,19 @@ namespace KafkaClient.Tests.Integration
                             var results = await consumer.FetchAsync(CancellationToken.None, totalMessages);
                             TestConfig.Log.Info(() => LogEvent.Create($"Message order:  {string.Join(", ", results.Messages.Select(x => x.Value.ToUtf8String()).ToList())}"));
 
-                            Assert.Equal(results.Messages.Count, totalMessages);
-                            Assert.Equal(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
+                            Assert.AreEqual(results.Messages.Count, totalMessages);
+                            Assert.AreEqual(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
 
                             var newOffset = await producer.Router.GetOffsetsAsync(offset.topic, offset.partition_id, CancellationToken.None);
-                            Assert.Equal(newOffset.offset - offset.offset, totalMessages);
+                            Assert.AreEqual(newOffset.offset - offset.offset, totalMessages);
                         }
                     }
                 });
             }
         }
 
-        [Theory]
-        [InlineData(1, 200)]
-        [InlineData(1000, 500)]
+        [TestCase(1, 200)]
+        [TestCase(1000, 500)]
         public async Task ConsumerShouldConsumeInSameOrderAsProduced(int totalMessages, int timeoutInMs)
         {
             var expected = totalMessages.Repeat(i => i.ToString()).ToList();
@@ -601,15 +597,15 @@ namespace KafkaClient.Tests.Integration
                             stopwatch.Stop();
                             TestConfig.Log.Info(() => LogEvent.Create($">> done Consume, time Milliseconds:{stopwatch.ElapsedMilliseconds}"));
 
-                            Assert.Equal(fetched.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
-                            Assert.Equal(fetched.Count, totalMessages);
+                            Assert.AreEqual(fetched.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
+                            Assert.AreEqual(fetched.Count, totalMessages);
                         }
                     }
                 });
             }
         }
 
-        //[Fact]
+        //[Test]
         //public async Task ConsumerShouldNotLoseMessageWhenBlocked()
         //{
         //    var testId = Guid.NewGuid().ToString();
@@ -631,8 +627,8 @@ namespace KafkaClient.Tests.Integration
         //                    for (var i = 0; i < 20; i++)
         //                    {
         //                        var result = consumer.Consume().Take(1).First();
-        //                        Assert.Equal(result.Key.ToUtf8String(), testId);
-        //                        Assert.Equal(result.Value.ToUtf8String(), i.ToString());
+        //                        Assert.AreEqual(result.Key.ToUtf8String(), testId);
+        //                        Assert.AreEqual(result.Value.ToUtf8String(), i.ToString());
         //                    }
         //                }
         //            }
@@ -640,7 +636,7 @@ namespace KafkaClient.Tests.Integration
         //    }
         //}
 
-        //[Fact]
+        //[Test]
         //public async Task ConsumerShouldMoveToNextAvailableOffsetWhenQueryingForNextMessage()
         //{
         //    const int expectedCount = 1000;
@@ -673,15 +669,15 @@ namespace KafkaClient.Tests.Integration
         //                        .OrderBy(x => x.PartitionId)
         //                        .ToList();
 
-        //                    Assert.Equal(consumerOffset, positionOffset, "The consumerOffset position should match the server offset position.");
-        //                    Assert.Equal(data.Count, expectedCount, "We should have received 2000 messages from the server.");
+        //                    Assert.AreEqual(consumerOffset, positionOffset, "The consumerOffset position should match the server offset position.");
+        //                    Assert.AreEqual(data.Count, expectedCount, "We should have received 2000 messages from the server.");
         //                }
         //            }
         //        });
         //    }
         //}
 
-        [Fact]
+        [Test]
         public async Task JoiningConsumerGroupOnMissingTopicFails()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -689,20 +685,20 @@ namespace KafkaClient.Tests.Integration
                     var groupId = TestConfig.GroupId();
 
                     using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(topicName), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
-                        Assert.Equal(consumer.GroupId, groupId);
+                        Assert.AreEqual(consumer.GroupId, groupId);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ConsumerCanJoinConsumerGroup()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var groupId = TestConfig.GroupId();
                     using (var consumer = await router.CreateGroupConsumerAsync(groupId, new ConsumerProtocolMetadata(TestConfig.TopicName()), TestConfig.IntegrationOptions.ConsumerConfiguration, TestConfig.IntegrationOptions.Encoders, CancellationToken.None)) {
-                        Assert.Equal(consumer.GroupId, groupId);
+                        Assert.AreEqual(consumer.GroupId, groupId);
                         Assert.True(consumer.IsLeader);
                     }
                 });
@@ -735,10 +731,9 @@ namespace KafkaClient.Tests.Integration
             });
         }
 
-        [Theory]
-        [InlineData(1, 100)]
-        [InlineData(2, 100)]
-        [InlineData(10, 500)]
+        [TestCase(1, 100)]
+        [TestCase(2, 100)]
+        [TestCase(10, 500)]
         public async Task CanConsumeFromGroup(int members, int batchSize)
         {
             var cancellation = new CancellationTokenSource();
@@ -782,9 +777,8 @@ namespace KafkaClient.Tests.Integration
             }
         }
         
-        [Theory]
-        [InlineData(2, 2)]
-        [InlineData(5, 5)]
+        [TestCase(2, 2)]
+        [TestCase(5, 5)]
         public async Task CanConsumeFromMultipleGroups(int groups, int members)
         {
             using (var timed = new TimedCancellation(CancellationToken.None, TimeSpan.FromMinutes(1))) {
@@ -841,7 +835,7 @@ namespace KafkaClient.Tests.Integration
 
         private void CheckMessages(List<Message> expected, IMessageBatch actual)
         {
-            Assert.Equal(expected.Count(), actual.Messages.Count()); // Didn't get all messages
+            Assert.AreEqual(expected.Count(), actual.Messages.Count()); // Didn't get all messages
 
             foreach (var message in expected)
             {

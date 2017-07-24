@@ -2,14 +2,14 @@
 using System.Net;
 using System.Threading.Tasks;
 using KafkaClient.Connections;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class EndpointTests
     {
-        [Fact]
+        [Test]
         public void ThrowsExceptionIfIpNull()
         {
             Assert.Throws<ArgumentNullException>(
@@ -18,32 +18,32 @@ namespace KafkaClient.Tests.Unit
                 });
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureEndpointCanBeResolved()
         {
             var expected = IPAddress.Parse("127.0.0.1");
             var endpoint = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
-            Assert.Equal(expected, endpoint.Ip.Address);
-            Assert.Equal(8888, endpoint.Ip.Port);
+            Assert.AreEqual(expected, endpoint.Ip.Address);
+            Assert.AreEqual(8888, endpoint.Ip.Port);
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureTwoEndpointNotOfTheSameReferenceButSameIPAreEqual()
         {
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
             var endpoint2 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
 
             Assert.False(ReferenceEquals(endpoint1, endpoint2), "Should not be the same reference.");
-            Assert.Equal(endpoint1, endpoint2);
+            Assert.AreEqual(endpoint1, endpoint2);
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureTwoEndointWithSameIPButDifferentPortsAreNotEqual()
         {
             var endpoint1 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:8888"), TestConfig.Log);
             var endpoint2 = await Endpoint.ResolveAsync(new Uri("tcp://localhost:1"), TestConfig.Log);
 
-            Assert.NotEqual(endpoint1, endpoint2);
+            Assert.AreNotEqual(endpoint1, endpoint2);
         }
     }
 }

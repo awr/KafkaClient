@@ -5,13 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
     public class ConnectionTests
     {
-        [Fact]
+        [Test]
         public async Task EnsureTwoRequestsCanCallOneAfterAnother()
         {
             await Async.Using(
@@ -19,12 +19,12 @@ namespace KafkaClient.Tests.Integration
                 async connection => {
                     var result1 = await connection.SendAsync(new MetadataRequest(), CancellationToken.None);
                     var result2 = await connection.SendAsync(new MetadataRequest(), CancellationToken.None);
-                    Assert.Equal(result1.Errors.Count(code => code != ErrorCode.NONE), 0);
-                    Assert.Equal(result2.Errors.Count(code => code != ErrorCode.NONE), 0);
+                    Assert.AreEqual(result1.Errors.Count(code => code != ErrorCode.NONE), 0);
+                    Assert.AreEqual(result2.Errors.Count(code => code != ErrorCode.NONE), 0);
                 });
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureAsyncRequestResponsesCorrelate()
         {
             await Async.Using(
@@ -36,18 +36,17 @@ namespace KafkaClient.Tests.Integration
 
                     await Task.WhenAll(result1, result2, result3);
 
-                    Assert.Equal(result1.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
-                    Assert.Equal(result2.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
-                    Assert.Equal(result3.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
+                    Assert.AreEqual(result1.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
+                    Assert.AreEqual(result2.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
+                    Assert.AreEqual(result3.Result.Errors.Count(code => code != ErrorCode.NONE), 0);
                 });
         }
 
-        [Theory]
-        [InlineData(1, 10)]
-        [InlineData(1, 50)]
-        [InlineData(5, 10)]
-        [InlineData(5, 10)]
-        [InlineData(5, 200)]
+        [TestCase(1, 10)]
+        [TestCase(1, 50)]
+        [TestCase(5, 10)]
+        [TestCase(5, 10)]
+        [TestCase(5, 200)]
         public async Task EnsureMultipleAsyncRequestsCanReadResponses(int senders, int totalRequests)
         {
             var requestsSoFar = 0;
@@ -74,12 +73,12 @@ namespace KafkaClient.Tests.Integration
                     await Task.WhenAll(requests);
 
                     var results = requests.Select(x => x.Result).ToList();
-                    Assert.Equal(results.Count, totalRequests);
+                    Assert.AreEqual(results.Count, totalRequests);
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task EnsureDifferentTypesOfResponsesCanBeReadAsync()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -92,16 +91,16 @@ namespace KafkaClient.Tests.Integration
 
                         await Task.WhenAll(result1, result2, result3, result4);
 
-                        Assert.Equal(result1.Result.responses.Count, 1);
+                        Assert.AreEqual(result1.Result.responses.Count, 1);
                         Assert.True(result1.Result.responses.First().topic == topicName, "ProduceRequest did not return expected topic.");
 
                         Assert.True(result2.Result.topic_metadata.Count > 0);
                         Assert.True(result2.Result.topic_metadata.Any(x => x.topic == topicName), "MetadataRequest did not return expected topic.");
 
-                        Assert.Equal(result3.Result.responses.Count, 1);
+                        Assert.AreEqual(result3.Result.responses.Count, 1);
                         Assert.True(result3.Result.responses.First().topic == topicName, "OffsetRequest did not return expected topic.");
 
-                        Assert.Equal(result4.Result.responses.Count, 1);
+                        Assert.AreEqual(result4.Result.responses.Count, 1);
                         Assert.True(result4.Result.responses.First().topic == topicName, "FetchRequest did not return expected topic.");
                     }
                 );

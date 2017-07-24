@@ -4,13 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Protocol;
 using NSubstitute;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
     public class ProducerTests
     {
-        [Fact]
+        [Test]
         public async Task ProducerShouldNotExpectResponseWhenAckIsZero()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -22,13 +22,13 @@ namespace KafkaClient.Tests.Integration
 
                         await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromMinutes(2)));
 
-                        Assert.Equal(sendTask.Status, TaskStatus.RanToCompletion);
+                        Assert.AreEqual(sendTask.Status, TaskStatus.RanToCompletion);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task SendAsyncShouldGetOneResultForMessage()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -36,13 +36,13 @@ namespace KafkaClient.Tests.Integration
                     using (var producer = new Producer(router)) {
                         var result = await producer.SendAsync(new[] { new Message(Guid.NewGuid().ToString()) }, topicName, 0, CancellationToken.None);
 
-                        Assert.Equal(result.topic, topicName);
+                        Assert.AreEqual(result.topic, topicName);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task SendAsyncShouldGetOneResultForEachPartitionThroughBatching()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -57,20 +57,20 @@ namespace KafkaClient.Tests.Integration
                         await Task.WhenAll(tasks);
 
                         var result = tasks.Select(x => x.Result).Distinct().ToList();
-                        Assert.Equal(result.Count, tasks.Length);
+                        Assert.AreEqual(result.Count, tasks.Length);
                     }
                 }, 3);
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ProducerAckLevel()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var responseAckLevel0 = await producer.SendAsync(new Message("Ack Level 0"), topicName, 0, new SendMessageConfiguration(acks: 0), CancellationToken.None);
-                        Assert.Equal(responseAckLevel0.base_offset, -1);
+                        Assert.AreEqual(responseAckLevel0.base_offset, -1);
                         var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         Assert.True(responseAckLevel1.base_offset > -1);
                     }
@@ -78,7 +78,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ProducerAckLevel1ResponseOffsetShouldBeEqualToLastOffset()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -87,13 +87,13 @@ namespace KafkaClient.Tests.Integration
                         var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         var offsetResponse = await producer.Router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.partition_id == 0);
-                        Assert.Equal(responseAckLevel1.base_offset, maxOffset.offset - 1);
+                        Assert.AreEqual(responseAckLevel1.base_offset, maxOffset.offset - 1);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ProducerLastResposeOffsetAckLevel1ShouldBeEqualToLastOffset()
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
@@ -103,13 +103,13 @@ namespace KafkaClient.Tests.Integration
                         var offsetResponse = await router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.partition_id == 0);
 
-                        Assert.Equal(responseAckLevel1.base_offset, maxOffset.offset - 1);
+                        Assert.AreEqual(responseAckLevel1.base_offset, maxOffset.offset - 1);
                     }
                 });
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ProducerShouldUsePartitionIdInsteadOfMessageKeyToChoosePartition()
         {
             var partitionSelector = Substitute.For<IPartitionSelector>();
@@ -131,7 +131,7 @@ namespace KafkaClient.Tests.Integration
                             var i = 0;
                             await consumer.ConsumeAsync(
                                 (message, token) => {
-                                    Assert.Equal(message.Value.ToUtf8String(), i++.ToString());
+                                    Assert.AreEqual(message.Value.ToUtf8String(), i++.ToString());
                                     if (i >= 20) {
                                         source.Cancel();
                                     }
