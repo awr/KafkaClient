@@ -9,7 +9,7 @@ Native async C# client for Apache Kafka, supporting versions [0.9, 0.10.1]
 | Windows | .net standard 1.6 | [![Build status](https://ci.appveyor.com/api/projects/status/e7ej2g9q77if8mkf?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkanetclient) |
 | Linux   | .net standard 1.6 | [![Build status](https://api.travis-ci.org/awr/KafkaClient.svg?branch=master)](https://travis-ci.org/awr/KafkaClient) |
 
-[![NuGet Badge](https://buildstats.info/nuget/KafkaClient)](https://www.nuget.org/packages/KafkaClient/)
+[![NuGet Badge](https://buildstats.info/nuget/KafkaClient)](https://www.nuget.org/packages/KafkaClient)
 
 ###  *** WARNING ***
 This library is still work in progress and has not yet been deployed to production. It is also undergoing significant development, and breaking changes will occour.
