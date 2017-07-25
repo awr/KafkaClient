@@ -20,7 +20,7 @@ build_script:
 
 test_script:
   - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
-  - .\packages\opencover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"C:\Program Files\dotnet\dotnet.exe" -targetargs:"test --filter \"(TestCategory=CI) & (TestCategory!=Flaky)\" --logger:trx;LogFileName=test-results.xml;format=AppVeyor /p:DebugType=full -c %CONFIGURATION% -f netcoreapp1.1 %APPVEYOR_BUILD_FOLDER%\src\KafkaClient.Tests\KafkaClient.Tests.csproj" -filter:"+[KafkaClient]*" -output:"coverage.xml" -oldstyle 
+  - .\packages\opencover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"C:\Program Files\dotnet\dotnet.exe" -targetargs:"test --filter ""(TestCategory=CI) & (TestCategory!=Flaky)"" --logger:trx;LogFileName=test-results.xml;format=AppVeyor /p:DebugType=full -c %CONFIGURATION% -f netcoreapp1.1 %APPVEYOR_BUILD_FOLDER%\src\KafkaClient.Tests\KafkaClient.Tests.csproj" -filter:"+[KafkaClient]*" -output:"coverage.xml" -oldstyle 
 
 after_test:
   - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
