@@ -9,19 +9,18 @@ using KafkaClient.Telemetry;
 using KafkaClient.Testing;
 using KafkaClient.Common;
 using System.IO;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class TelemetryTests
     {
         #region ConnectionStatistics
 
-        [Theory]
-        [InlineData(1)]
-        [InlineData(10)]
-        [Trait("Category", "Flaky")]
+        [TestCase(1)]
+        [TestCase(10)]
+        [Category("Flaky")]
         public async Task TracksConnectionAttemptsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
@@ -36,9 +35,9 @@ namespace KafkaClient.Tests.Unit
             var requestTasks = Task.WhenAll(tasks);
             await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
 
-            Assert.Equal(1, telemetry.TcpConnections.Count);
-            Assert.Equal(0, telemetry.TcpConnections.Sum(t => t.Connects));
-            Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Attempts));
+            Assert.AreEqual(1, telemetry.TcpConnections.Count);
+            Assert.AreEqual(0, telemetry.TcpConnections.Sum(t => t.Connects));
+            Assert.AreEqual(total, telemetry.TcpConnections.Sum(t => t.Attempts));
         }
 
         private async Task FetchAsync(Endpoint endpoint, IConnectionConfiguration config)
@@ -48,9 +47,8 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory]
-        [InlineData(1)]
-        [InlineData(10)]
+        [TestCase(1)]
+        [TestCase(10)]
         public async Task TracksConnectionSuccessCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
@@ -67,9 +65,9 @@ namespace KafkaClient.Tests.Unit
                 await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
             }
 
-            Assert.Equal(1, telemetry.TcpConnections.Count);
-            Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Connects));
-            Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Attempts));
+            Assert.AreEqual(1, telemetry.TcpConnections.Count);
+            Assert.AreEqual(total, telemetry.TcpConnections.Sum(t => t.Connects));
+            Assert.AreEqual(total, telemetry.TcpConnections.Sum(t => t.Attempts));
         }
 
         private static byte[] CreateCorrelationMessage(int id)
@@ -81,10 +79,9 @@ namespace KafkaClient.Tests.Unit
             return buffer;
         }
 
-        [Theory]
-        [InlineData(1)]
-        [InlineData(3)]
-        [Trait("Category", "Flaky")]
+        [TestCase(1)]
+        [TestCase(3)]
+        [Category("Flaky")]
         public async Task TracksDisconnectsCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
@@ -115,9 +112,9 @@ namespace KafkaClient.Tests.Unit
             }
 
             await AssertAsync.ThatEventually(() => total == telemetry.TcpConnections.Sum(t => t.Disconnects));
-            Assert.Equal(1, telemetry.TcpConnections.Count);
-            Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Connects));
-            Assert.Equal(total, telemetry.TcpConnections.Sum(t => t.Disconnects));
+            Assert.AreEqual(1, telemetry.TcpConnections.Count);
+            Assert.AreEqual(total, telemetry.TcpConnections.Sum(t => t.Connects));
+            Assert.AreEqual(total, telemetry.TcpConnections.Sum(t => t.Disconnects));
         }
 
 
@@ -133,8 +130,8 @@ namespace KafkaClient.Tests.Unit
         #region ApiStatistics
 
         //[Theory]
-        //[InlineData(1)]
-        //[InlineData(10)]
+        //[TestCase(1)]
+        //[TestCase(10)]
         public async Task TracksRequestFailuresCorrectly(int total)
         {
             var aggregationPeriod = TimeSpan.FromMilliseconds(50);
@@ -159,13 +156,13 @@ namespace KafkaClient.Tests.Unit
             //    await Task.WhenAny(requestTasks, Task.Delay(aggregationPeriod.Times(5)));
             //}
 
-            Assert.Equal(1, telemetry.Requests.Count);
-            Assert.Equal(0, telemetry.Requests.Sum(t => t.Successes.GetOrDefault(ApiKey.Fetch)));
-            Assert.Equal(total, telemetry.Requests.Sum(t => t.Attempts.GetOrDefault(ApiKey.Fetch)));
-            Assert.Equal(total, telemetry.Requests.Sum(t => t.Failures.GetOrDefault(ApiKey.Fetch)));
-            Assert.Equal(0, telemetry.Requests.Sum(t => t.Successes.Sum(p => p.Value)));
-            Assert.Equal(total, telemetry.Requests.Sum(t => t.Attempts.Sum(p => p.Value)));
-            Assert.Equal(total, telemetry.Requests.Sum(t => t.Failures.Sum(p => p.Value)));
+            Assert.AreEqual(1, telemetry.Requests.Count);
+            Assert.AreEqual(0, telemetry.Requests.Sum(t => t.Successes.GetOrDefault(ApiKey.Fetch)));
+            Assert.AreEqual(total, telemetry.Requests.Sum(t => t.Attempts.GetOrDefault(ApiKey.Fetch)));
+            Assert.AreEqual(total, telemetry.Requests.Sum(t => t.Failures.GetOrDefault(ApiKey.Fetch)));
+            Assert.AreEqual(0, telemetry.Requests.Sum(t => t.Successes.Sum(p => p.Value)));
+            Assert.AreEqual(total, telemetry.Requests.Sum(t => t.Attempts.Sum(p => p.Value)));
+            Assert.AreEqual(total, telemetry.Requests.Sum(t => t.Failures.Sum(p => p.Value)));
         }
 
         // success

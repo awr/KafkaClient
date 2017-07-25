@@ -3,30 +3,26 @@ version: 0.2.{build}
 # branches / commits to build
 skip_commits:
   message: /WIP/
-
 skip_branch_with_pr: true
 skip_tags: true
 
 # environment
 image: Visual Studio 2017
-
 cache:
   - packages
-  
 configuration: Release
-
 os: Visual Studio 2017
 
 build_script:
-  - cmd: appveyor-retry dotnet restore --packages packages
-  - cmd: dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
-  - cmd: dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --version-suffix beta -o artifacts 
+  - appveyor-retry dotnet restore --packages packages
+  - dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
+  - dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj -o artifacts 
 
 test_script:
-  - cmd: dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(Category=CI) & (Category!=Flaky)" --logger:trx;LogFileName=tests-results.xml
-  # - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/xunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./tests-results.xml))
-  # - cmd: dotnet test -c Release src/KafkaClient.Tests --test=KafkaClient.Tests.Integration --noheader --result=nunit3-integration.xml;format=nunit3
-  # - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path ./nunit3-integration.xml))
+  - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
+
+after_test:
+  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
 
 artifacts:
-  - path: artifacts\**\*.*
+  - path: src\KafkaClient\artifacts\**\*.*

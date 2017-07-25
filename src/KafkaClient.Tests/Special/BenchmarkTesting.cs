@@ -7,14 +7,14 @@ using System.Text;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Special
 {
-    [Trait("Category", "Benchmark")]
+    [Category("Benchmark")]
     internal class BenchmarkTesting
     {
-        [Fact]
+        [Test]
         public void FetchSize()
         {
             int partitions = 1;
@@ -39,7 +39,7 @@ namespace KafkaClient.Tests.Special
                                           )));
                             var bytes = KafkaDecoder.EncodeResponseBytes(new RequestContext(1, version), response);
                             var decoded = FetchResponse.FromBytes(new RequestContext(1, version), bytes.Skip(Request.IntegerByteSize + Request.CorrelationSize));
-                            Assert.Equal(decoded.responses.Sum(t => t.Messages.Count), response.responses.Sum(t => t.Messages.Count));
+                            Assert.AreEqual(decoded.responses.Sum(t => t.Messages.Count), response.responses.Sum(t => t.Messages.Count));
                             var result = new {
                                 Codec = codec.ToString(),
                                 Level = codec == MessageCodec.None ? "-" : level.ToString(),
@@ -56,7 +56,7 @@ namespace KafkaClient.Tests.Special
             WriteResults(results);
         }
 
-        [Fact]
+        [Test]
         public void ProduceSize()
         {
             int partitions = 1;

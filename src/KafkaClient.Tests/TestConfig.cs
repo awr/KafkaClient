@@ -35,7 +35,7 @@ namespace KafkaClient.Tests
             }
         }
 
-        public static Uri IntegrationUri { get; } = new Uri("tcp://kafka1:9092");
+        public static Uri IntegrationUri { get; } = new Uri("tcp://kafkalocal:9092");
 
         public static KafkaOptions Options { get; } = new KafkaOptions(
             IntegrationUri,

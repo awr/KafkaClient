@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests
 {

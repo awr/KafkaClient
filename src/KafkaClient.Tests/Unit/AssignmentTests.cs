@@ -6,14 +6,14 @@ using KafkaClient.Common;
 using KafkaClient.Connections;
 using KafkaClient.Protocol;
 using NSubstitute;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class AssignmentTests
     {
-        [Fact]
+        [Test]
         public async Task AssignmentThrowsExceptionWhenStrategyNotFound()
         {
             var metadata = new ConsumerProtocolMetadata("mine", "unknown");
@@ -38,9 +38,8 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory]
-        [InlineData("type1")]
-        [InlineData("type2")]
+        [TestCase("type1")]
+        [TestCase("type2")]
         public async Task AssignmentFoundWhenStrategyExists(string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
@@ -66,9 +65,8 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory]
-        [InlineData("type1")]
-        [InlineData("type2")]
+        [TestCase("type1")]
+        [TestCase("type2")]
         public async Task AssignorFoundWhenStrategyExists(string strategy)
         {
             var metadata = new ConsumerProtocolMetadata("mine", strategy);
@@ -93,7 +91,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
+        [Test]
         public async Task AssigmentSucceedsWhenStrategyExists()
         {
             var metadata = new ConsumerProtocolMetadata("mine");
@@ -115,7 +113,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
+        [Test]
         public void InterfacesAreFormattedWithinProtocol()
         {
             var request = new SyncGroupRequest("group", 5, "member", new[] { new SyncGroupRequest.GroupAssignment("member", new ConsumerMemberAssignment(new[] { new TopicPartition("topic-foo", 0), new TopicPartition("topic", 1) })) });

@@ -4,12 +4,41 @@ using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
 using KafkaClient.Testing;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests
 {
     public static class ProtocolAssertionExtensions
     {
+        public static void AssertNotEqual<T>(this T first, params T[] others) where T : IEquatable<T>
+        {
+            foreach (var other in others) {
+                Assert.AreNotEqual(first, other);
+            }
+        }
+
+        public static void AssertEqualToSelf<T>(this T self) where T : IEquatable<T>
+        {
+            Assert.AreEqual(self, self);
+            Assert.AreEqual(self.GetHashCode(), self.GetHashCode());
+        }
+
+        public static void AssertCanEncodeRequestDecodeResponse<T>(
+            this IRequest<T> request, short version, IMembershipEncoder encoder = null)
+            where T : class, IResponse
+        {
+            var encoders = ImmutableDictionary<string, IMembershipEncoder>.Empty;
+            if (encoder != null)
+            {
+                encoders = encoders.Add(encoder.ProtocolType, encoder);
+            }
+
+            var context = new RequestContext(17, version, "Test-Request", encoders, encoder?.ProtocolType);
+            var bytes = request.ToBytes(context);
+            var decoded = request.ToResponse(context, bytes.Skip(4));
+            Assert.NotNull(decoded);
+        }
+
         public static void AssertCanEncodeDecodeRequest<T>(this T request, short version, IMembershipEncoder encoder = null, T forComparison = null) where T : class, IRequest
         {
             var encoders = ImmutableDictionary<string, IMembershipEncoder>.Empty;
@@ -24,11 +53,11 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = request;
             }
-            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
-            Assert.Equal(forComparison.ShortString(), decoded.ShortString()); // ShortString equality
+            Assert.AreEqual(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
+            Assert.AreEqual(forComparison.ShortString(), decoded.ShortString()); // ShortString equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.Equal(original, final); // ToString equality
+            Assert.AreEqual(original, final); // ToString equality
             Assert.False(decoded.Equals(final)); // general equality test for sanity
             Assert.True(decoded.Equals(decoded)); // general equality test for sanity
             Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");
@@ -48,10 +77,10 @@ namespace KafkaClient.Tests
             if (forComparison == null) {
                 forComparison = response;
             }
-            Assert.Equal(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
+            Assert.AreEqual(forComparison.GetHashCode(), decoded.GetHashCode()); // HashCode equality
             var original = forComparison.ToString();
             var final = decoded.ToString();
-            Assert.Equal(original, final); // ToString equality
+            Assert.AreEqual(original, final); // ToString equality
             Assert.False(decoded.Equals(final)); // general test for equality
             Assert.True(decoded.Equals(decoded)); // general equality test for sanity
             Assert.True(forComparison.Equals(decoded), $"Original\n{original}\nFinal\n{final}");

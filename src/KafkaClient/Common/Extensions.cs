@@ -243,10 +243,11 @@ namespace KafkaClient.Common
             return dictionary.AddRange(items);
         }
 
-        public static bool HasEqualElementsInOrder<T>(this IEnumerable<T> self, IEnumerable<T> other)
+        public static bool HasEqualElementsInOrder<T>(this IReadOnlyCollection<T> self, IReadOnlyCollection<T> other)
         {
             if (ReferenceEquals(self, other)) return true;
             if (ReferenceEquals(null, other)) return false;
+            if (self.Count != other.Count) return false;
 
             return self.Zip(other, (s, o) => Equals(s, o)).All(_ => _);
         }

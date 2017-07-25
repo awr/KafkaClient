@@ -5,7 +5,7 @@
     <AssemblyName>KafkaClient.Performance</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>KafkaClient.Performance</PackageId>
-    <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>1.1.2</RuntimeFrameworkVersion>
     <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
   </PropertyGroup>
 

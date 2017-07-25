@@ -1,21 +1,21 @@
 using System;
 using KafkaClient.Common;
 using KafkaClient.Connections;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class SocketTransportTests : TransportTests<SocketTransport>
     {
-        [Fact]
+        [Test]
         public void CreatingWithNullEndpointThrowsException()
         {
             var config = new ConnectionConfiguration(sslConfiguration: new SslConfiguration());
             Assert.Throws<ArgumentNullException>(() => new ReconnectingSocket(null, config, TestConfig.Log, false));
         }
 
-        [Fact]
+        [Test]
         public void CreatingWithSslConfigurationThrowsException()
         {
             var config = new ConnectionConfiguration(sslConfiguration: new SslConfiguration());

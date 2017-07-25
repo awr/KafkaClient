@@ -4,29 +4,29 @@ using System.Linq;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using Xunit;
+using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
 {
-    [Trait("Category", "CI")]
+    [Category("CI")]
     public class ProtocolTests
     {
         private readonly Random _randomizer = new Random();
 
-        [Fact]
+        [Test]
         public void HeaderShouldCorrectPackByteLengths()
         {
             var result = new ApiVersionsRequest().ToBytes(new RequestContext(123456789, clientId: "test"));
 
             var withoutLength = new byte[result.Count - 4];
             Buffer.BlockCopy(result.Array, 4, withoutLength, 0, result.Count - 4);
-            Assert.Equal(14, withoutLength.Length);
-            Assert.Equal(new byte[] { 0, 18, 0, 0, 7, 91, 205, 21, 0, 4, 116, 101, 115, 116 }, withoutLength);
+            Assert.AreEqual(14, withoutLength.Length);
+            Assert.AreEqual(new byte[] { 0, 18, 0, 0, 7, 91, 205, 21, 0, 4, 116, 101, 115, 116 }, withoutLength);
         }
 
         #region Messages
 
-        [Fact]
+        [Test]
         public void DecodeMessageShouldThrowWhenCrcFails()
         {
             var testMessage = new Message(value: "kafka test message.", key: "test");
@@ -43,11 +43,26 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Theory]
-        [InlineData("test key", "test message")]
-        [InlineData(null, "test message")]
-        [InlineData("test key", null)]
-        [InlineData(null, null)]
+        [Test]
+        public void NullMessageIsNotEqualToNotNullMessage()
+        {
+            var m = new Message(null);
+            Assert.AreNotEqual(m, null);
+        }
+
+        [Test]
+        public void NullAndEmptyStringMessageAreEqual()
+        {
+            var m1 = new Message(null);
+            var m2 = new Message("");
+            Assert.AreEqual(m1.GetHashCode(), m2.GetHashCode());
+            Assert.AreEqual(m1, m2);
+        }
+
+        [TestCase("test key", "test message")]
+        [TestCase(null, "test message")]
+        [TestCase("test key", null)]
+        [TestCase(null, null)]
         public void EnsureMessageEncodeAndDecodeAreCompatible(string key, string value)
         {
             var testMessage = new Message(key: key, value: value);
@@ -60,13 +75,13 @@ namespace KafkaClient.Tests.Unit
                 {
                     var result = reader.ReadMessage(encoded.Count, 0).First();
 
-                    Assert.Equal(testMessage.Key, result.Key);
-                    Assert.Equal(testMessage.Value, result.Value);
+                    Assert.AreEqual(testMessage.Key, result.Key);
+                    Assert.AreEqual(testMessage.Value, result.Value);
                 }
             }
         }
 
-        [Fact]
+        [Test]
         public void EncodeMessageSetEncodesMultipleMessages()
         {
             //expected generated from python library
@@ -88,11 +103,11 @@ namespace KafkaClient.Tests.Unit
             {
                 writer.Write(messages);
                 var result = writer.ToSegment(false);
-                Assert.Equal(expected, result);
+                Assert.AreEqual(expected, result);
             }
         }
 
-        [Fact]
+        [Test]
         public void DecodeMessageSetShouldHandleResponseWithMaxBufferSizeHit()
         {
             using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow))
@@ -102,12 +117,12 @@ namespace KafkaClient.Tests.Unit
 
                 var message = result.First().Value.ToUtf8String();
 
-                Assert.Equal("test", message);
-                Assert.Equal(529, result.Count);
+                Assert.AreEqual("test", message);
+                Assert.AreEqual(529, result.Count);
             }
         }
 
-        [Fact]
+        [Test]
         public void WhenMessageIsTruncatedThenBufferUnderRunExceptionIsThrown()
         {
             // arrange
@@ -127,7 +142,7 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
-        [Fact]
+        [Test]
         public void WhenMessageIsExactlyTheSizeOfBufferThenMessageIsDecoded()
         {
             // arrange
@@ -159,30 +174,30 @@ namespace KafkaClient.Tests.Unit
         #region Request / Response
 
 #if DOTNETSTANDARD
-        [Theory, CombinatorialData]
+        [Test]
         public void ProduceRequestSnappy(
-            [CombinatorialValues(0, 1, 2)] short version,
-            [CombinatorialValues(0, 2, -1)] short acks, 
-            [CombinatorialValues(0, 1000)] int timeoutMilliseconds, 
-            [CombinatorialValues("testTopic")] string topic, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(3)] int messagesPerSet)
+            [Values(0, 1, 2)] short version,
+            [Values(0, 2, -1)] short acks, 
+            [Values(0, 1000)] int timeoutMilliseconds, 
+            [Values("testTopic")] string topic, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(1, 5)] int totalPartitions, 
+            [Values(3)] int messagesPerSet)
         {
             ProduceRequest(version, acks, timeoutMilliseconds, topic, topicsPerRequest, totalPartitions, messagesPerSet, MessageCodec.Snappy);
         }
 #endif
 
-        [Theory, CombinatorialData]
+        [Test]
         public void ProduceRequest(
-            [CombinatorialValues(0, 1, 2)] short version,
-            [CombinatorialValues(0, 2, -1)] short acks,
-            [CombinatorialValues(0, 1000)] int timeoutMilliseconds,
-            [CombinatorialValues("testTopic")] string topic,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int totalPartitions,
-            [CombinatorialValues(3)] int messagesPerSet,
-            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
+            [Values(0, 1, 2)] short version,
+            [Values(0, 2, -1)] short acks,
+            [Values(0, 1000)] int timeoutMilliseconds,
+            [Values("testTopic")] string topic,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int totalPartitions,
+            [Values(3)] int messagesPerSet,
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
         {
             var payloads = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++)
@@ -198,18 +213,35 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version, forComparison: requestWithUpdatedAttribute);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
+        public void ProduceRequestTopic(
+            [Values(0, 1, 2)] short version,
+            [Values("testTopic")] string topic,
+            [Values(1, 5)] int totalPartitions,
+            [Values(3)] int messagesPerSet,
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
+        {
+            var topic0 = new ProduceRequest.Topic(
+                topic, totalPartitions, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec);
+            topic0.AssertEqualToSelf();
+            topic0.AssertNotEqual(null,
+                new ProduceRequest.Topic(topic + 1, totalPartitions, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec),
+                new ProduceRequest.Topic(topic, totalPartitions + 1, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec),
+                new ProduceRequest.Topic(topic, totalPartitions, GenerateMessages(messagesPerSet + 1, (byte)(version >= 2 ? 1 : 0), codec), codec));
+        }
+
+        [Test]
         public void ProduceResponse(
-            [CombinatorialValues(0, 1, 2)] short version,
-            [CombinatorialValues(-1, 0, 10000000)] long timestampMilliseconds, 
-            [CombinatorialValues("testTopic")] string topicName, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(
+            [Values(0, 1, 2)] short version,
+            [Values(-1, 0, 10000000)] long timestampMilliseconds, 
+            [Values("testTopic")] string topicName, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(1, 5)] int totalPartitions, 
+            [Values(
                 ErrorCode.NONE,
                 ErrorCode.CORRUPT_MESSAGE
             )] ErrorCode errorCode,
-            [CombinatorialValues(0, 100000)] int throttleTime)
+            [Values(0, 100000)] int throttleTime)
         {
             var topics = new List<ProduceResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -220,15 +252,15 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void FetchRequest(
-            [CombinatorialValues(0, 1, 2, 3)] short version,
-            [CombinatorialValues(0, 100)] int maxWaitMilliseconds, 
-            [CombinatorialValues(0, 64000)] int minBytes, 
-            [CombinatorialValues("testTopic")] string topic, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(25600000)] int maxBytes)
+            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 100)] int maxWaitMilliseconds, 
+            [Values(0, 64000)] int minBytes, 
+            [Values("testTopic")] string topic, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(1, 5)] int totalPartitions, 
+            [Values(25600000)] int maxBytes)
         {
             var fetches = new List<FetchRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -238,19 +270,19 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void FetchResponse(
-            [CombinatorialValues(0, 1, 2, 3)] short version,
-            [CombinatorialValues(0, 1234)] int throttleTime,
-            [CombinatorialValues("testTopic")] string topicName, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
-            [CombinatorialValues(
+            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1234)] int throttleTime,
+            [Values("testTopic")] string topicName, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(1, 5)] int totalPartitions, 
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
+            [Values(
                 ErrorCode.NONE,
                 ErrorCode.OFFSET_OUT_OF_RANGE
             )] ErrorCode errorCode, 
-            [CombinatorialValues(3)] int messagesPerSet
+            [Values(3)] int messagesPerSet
             )
         {
             var topics = new List<FetchResponse.Topic>();
@@ -268,32 +300,32 @@ namespace KafkaClient.Tests.Unit
         }
 
 #if DOTNETSTANDARD
-        [Theory, CombinatorialData]
+        [Test]
         public void FetchResponseSnappy(
-            [CombinatorialValues(0, 1, 2, 3)] short version,
-            [CombinatorialValues(0, 1234)] int throttleTime,
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int totalPartitions,
-            [CombinatorialValues(
+            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1234)] int throttleTime,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int totalPartitions,
+            [Values(
                 ErrorCode.NONE,
                 ErrorCode.OFFSET_OUT_OF_RANGE
             )] ErrorCode errorCode,
-            [CombinatorialValues(3)] int messagesPerSet
+            [Values(3)] int messagesPerSet
         )
         {
             FetchResponse(version, throttleTime, topicName, topicsPerRequest, totalPartitions, MessageCodec.Snappy, errorCode, messagesPerSet);
         }
 #endif
 
-        [Theory, CombinatorialData]
+        [Test]
         public void OffsetsRequest(
-            [CombinatorialValues(0, 1)] short version,
-            [CombinatorialValues("testTopic")] string topic, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(1, 5)] int totalPartitions, 
-            [CombinatorialValues(-2, -1, 123456, 10000000)] long time,
-            [CombinatorialValues(1, 10)] int maxOffsets)
+            [Values(0, 1)] short version,
+            [Values("testTopic")] string topic, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(1, 5)] int totalPartitions, 
+            [Values(-2, -1, 123456, 10000000)] long time,
+            [Values(1, 10)] int maxOffsets)
         {
             var topics = new List<OffsetsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -305,18 +337,34 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
+        public void OffsetsRequestTopic(
+            [Values(0, 1)] short version,
+            [Values("testTopic")] string topic,
+            [Values(1, 5)] int totalPartitions,
+            [Values(-2, -1, 123456, 10000000)] long time,
+            [Values(1, 10)] int maxOffsets)
+        {
+            var offset = new OffsetsRequest.Topic(topic, totalPartitions, time, version == 0 ? maxOffsets : 1);
+            offset.AssertEqualToSelf();
+            offset.AssertNotEqual(null,
+                new OffsetsRequest.Topic(topic + 1, totalPartitions, time, version == 0 ? maxOffsets : 1),
+                new OffsetsRequest.Topic(topic, totalPartitions + 1, time, version == 0 ? maxOffsets : 1),
+                new OffsetsRequest.Topic(topic, totalPartitions, time + 1, version == 0 ? maxOffsets : 1));
+        }
+
+        [Test]
         public void OffsetsResponse(
-            [CombinatorialValues(0, 1)] short version,
-            [CombinatorialValues("testTopic")] string topicName, 
-            [CombinatorialValues(1, 10)] int topicsPerRequest, 
-            [CombinatorialValues(5)] int totalPartitions, 
-            [CombinatorialValues(
+            [Values(0, 1)] short version,
+            [Values("testTopic")] string topicName, 
+            [Values(1, 10)] int topicsPerRequest, 
+            [Values(5)] int totalPartitions, 
+            [Values(
                 ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                 ErrorCode.NOT_LEADER_FOR_PARTITION,
                 ErrorCode.UNKNOWN
             )] ErrorCode errorCode, 
-            [CombinatorialValues(1, 5)] int offsetsPerPartition)
+            [Values(1, 5)] int offsetsPerPartition)
         {
             var topics = new List<OffsetsResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -330,10 +378,29 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
+        public void OffsetsResponseTopic(
+            [Values(0, 1)] short version,
+            [Values("testTopic")] string topicName,
+            [Values(
+                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
+                ErrorCode.NOT_LEADER_FOR_PARTITION,
+                ErrorCode.UNKNOWN
+            )] ErrorCode errorCode)
+        {
+            var topic = new OffsetsResponse.Topic(topicName, 0, errorCode, _randomizer.Next(-1, int.MaxValue), version >= 1 ? (DateTimeOffset?) DateTimeOffset.UtcNow : null);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new OffsetsResponse.Topic(topicName + 1, 0, errorCode, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 1, errorCode, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 0, errorCode + 1, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 0, errorCode, topic.offset + 1, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null));
+        }
+
+        [Test]
         public void MetadataRequest(
-            [CombinatorialValues("testTopic")] string topic,
-            [CombinatorialValues(0, 1, 10)] int topicsPerRequest)
+            [Values("testTopic")] string topic,
+            [Values(0, 1, 10)] int topicsPerRequest)
         {
             var topics = new List<string>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -344,14 +411,14 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void MetadataResponse(
-            [CombinatorialValues(0, 1, 2)] short version,
-            [CombinatorialValues(1, 15)] int brokersPerRequest,
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int partitionsPerTopic,
-            [CombinatorialValues(
+            [Values(0, 1, 2)] short version,
+            [Values(1, 15)] int brokersPerRequest,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
              )] ErrorCode errorCode)
@@ -382,17 +449,17 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void OffsetCommitRequest(
-            [CombinatorialValues(0, 1, 2)] short version,
-            [CombinatorialValues("group1", "group2")] string groupId,
-            [CombinatorialValues(0, 5)] int generation,
-            [CombinatorialValues(-1, 20000)] int retentionTime,
-            [CombinatorialValues("testTopic")] string topic,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(5)] int maxPartitions,
-            [CombinatorialValues(10)] int maxOffsets,
-            [CombinatorialValues(null, "something useful for the client")] string metadata)
+            [Values(0, 1, 2)] short version,
+            [Values("group1", "group2")] string groupId,
+            [Values(0, 5)] int generation,
+            [Values(-1, 20000)] int retentionTime,
+            [Values("testTopic")] string topic,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(5)] int maxPartitions,
+            [Values(10)] int maxOffsets,
+            [Values(null, "something useful for the client")] string metadata)
         {
             var timestamp = retentionTime;
             var offsetCommits = new List<OffsetCommitRequest.Topic>();
@@ -414,12 +481,12 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(version);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void OffsetCommitResponse(
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int partitionsPerTopic,
-            [CombinatorialValues(
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode)
@@ -435,12 +502,12 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void OffsetFetchRequest(
-            [CombinatorialValues("group1", "group2")] string groupId,
-            [CombinatorialValues("testTopic")] string topic,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(5)] int maxPartitions)
+            [Values("group1", "group2")] string groupId,
+            [Values("testTopic")] string topic,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(5)] int maxPartitions)
         {
             var topics = new List<TopicPartition>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -451,12 +518,12 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void OffsetFetchResponse(
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int partitionsPerTopic,
-            [CombinatorialValues(
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                  ErrorCode.GROUP_LOAD_IN_PROGRESS,
@@ -479,21 +546,22 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
-        public void GroupCoordinatorRequest([CombinatorialValues("group1", "group2")] string groupId)
+        [Test]
+        public void GroupCoordinatorRequest([Values("group1", "group2")] string groupId)
         {
             var request = new GroupCoordinatorRequest(groupId);
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void GroupCoordinatorResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE,
                  ErrorCode.GROUP_AUTHORIZATION_FAILED
              )] ErrorCode errorCode,
-            [CombinatorialValues(0, 1)] int coordinatorId
+            [Values(0, 1)] int coordinatorId
             )
         {
             var response = new GroupCoordinatorResponse(errorCode, coordinatorId, "broker-" + coordinatorId, 9092 + coordinatorId);
@@ -501,16 +569,17 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Fact]
+        [Test]
         public void ApiVersionsRequest()
         {
             var request = new ApiVersionsRequest();
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void ApiVersionsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.BROKER_NOT_AVAILABLE
              )] ErrorCode errorCode
@@ -525,14 +594,14 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void JoinGroupRequest(
-            [CombinatorialValues(0, 1)] short version,
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(1, 20000)] int sessionTimeout,
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues("consumer", "other")] string protocolType, 
-            [CombinatorialValues(1, 10)] int protocolsPerRequest)
+            [Values(0, 1)] short version,
+            [Values("test", "a groupId")] string groupId, 
+            [Values(1, 20000)] int sessionTimeout,
+            [Values("", "an existing member")] string memberId, 
+            [Values("consumer", "other")] string protocolType, 
+            [Values(1, 10)] int protocolsPerRequest)
         {
             var protocols = new List<JoinGroupRequest.GroupProtocol>();
             for (var p = 0; p < protocolsPerRequest; p++) {
@@ -542,20 +611,21 @@ namespace KafkaClient.Tests.Unit
             }
             var request = new JoinGroupRequest(groupId, TimeSpan.FromMilliseconds(sessionTimeout), memberId, protocolType, protocols, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(sessionTimeout * 2) : null);
 
-            request.AssertCanEncodeDecodeRequest(version, new ByteMembershipEncoder(protocolType));
+            var encoder = new ByteMembershipEncoder(protocolType);
+            request.AssertCanEncodeDecodeRequest(version, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void JoinGroupResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues(0, 1, 20000)] int generationId,
-            [CombinatorialValues("consumer", "other")] string protocol, 
-            [CombinatorialValues("test", "a groupId")] string leaderId, 
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues(1, 10)] int memberCount)
+            [Values(0, 1, 20000)] int generationId,
+            [Values("consumer", "other")] string protocol, 
+            [Values("test", "a groupId")] string leaderId, 
+            [Values("", "an existing member")] string memberId, 
+            [Values(1, 10)] int memberCount)
         {
             var members = new List<JoinGroupResponse.Member>();
             for (var m = 0; m < memberCount; m++) {
@@ -568,13 +638,13 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocol));
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void JoinConsumerGroupRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(1, 20000)] int sessionTimeout,
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues("mine", "yours")] string protocol, 
-            [CombinatorialValues(1, 10)] int protocolsPerRequest)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(1, 20000)] int sessionTimeout,
+            [Values("", "an existing member")] string memberId, 
+            [Values("mine", "yours")] string protocol, 
+            [Values(1, 10)] int protocolsPerRequest)
         {
             var encoder = new ConsumerEncoder();
             var protocols = new List<JoinGroupRequest.GroupProtocol>();
@@ -589,17 +659,17 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void JoinConsumerGroupResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues(0, 1, 20000)] int generationId,
-            [CombinatorialValues("consumer")] string protocol, 
-            [CombinatorialValues("test", "a groupId")] string leaderId, 
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues(1, 10)] int memberCount)
+            [Values(0, 1, 20000)] int generationId,
+            [Values("consumer")] string protocol, 
+            [Values("test", "a groupId")] string leaderId, 
+            [Values("", "an existing member")] string memberId, 
+            [Values(1, 10)] int memberCount)
         {
             var encoder = new ConsumerEncoder();
             var members = new List<JoinGroupResponse.Member>();
@@ -614,20 +684,21 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void HeartbeatRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(0, 1, 20000)] int generationId,
-            [CombinatorialValues("", "an existing member")] string memberId)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(0, 1, 20000)] int generationId,
+            [Values("", "an existing member")] string memberId)
         {
             var request = new HeartbeatRequest(groupId, generationId, memberId);
 
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void HeartbeatResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode)
@@ -637,19 +708,20 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void LeaveGroupRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues("", "an existing member")] string memberId)
+            [Values("test", "a groupId")] string groupId, 
+            [Values("", "an existing member")] string memberId)
         {
             var request = new LeaveGroupRequest(groupId, memberId);
 
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void LeaveGroupResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode)
@@ -659,13 +731,13 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void SyncGroupRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(0, 1, 20000)] int generationId,
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues("consumer", "other")] string protocolType, 
-            [CombinatorialValues(1, 10)] int assignmentsPerRequest)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(0, 1, 20000)] int generationId,
+            [Values("", "an existing member")] string memberId, 
+            [Values("consumer", "other")] string protocolType, 
+            [Values(1, 10)] int assignmentsPerRequest)
         {
             var assignments = new List<SyncGroupRequest.GroupAssignment>();
             for (var a = 0; a < assignmentsPerRequest; a++) {
@@ -675,12 +747,14 @@ namespace KafkaClient.Tests.Unit
             }
             var request = new SyncGroupRequest(groupId, generationId, memberId, assignments);
 
-            request.AssertCanEncodeDecodeRequest(0, new ByteMembershipEncoder(protocolType));
+            var encoder = new ByteMembershipEncoder(protocolType);
+            request.AssertCanEncodeDecodeRequest(0, encoder);
+            request.AssertCanEncodeRequestDecodeResponse(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void SyncGroupResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode)
@@ -692,13 +766,13 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder("protocolType"));
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void SyncConsumerGroupRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(0, 1, 20000)] int generationId,
-            [CombinatorialValues("", "an existing member")] string memberId, 
-            [CombinatorialValues("consumer")] string protocolType, 
-            [CombinatorialValues(1, 10)] int assignmentsPerRequest)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(0, 1, 20000)] int generationId,
+            [Values("", "an existing member")] string memberId, 
+            [Values("consumer")] string protocolType, 
+            [Values(1, 10)] int assignmentsPerRequest)
         {
             var encoder = new ConsumerEncoder();
             var assignments = new List<SyncGroupRequest.GroupAssignment>();
@@ -715,15 +789,16 @@ namespace KafkaClient.Tests.Unit
             var request = new SyncGroupRequest(groupId, generationId, memberId, assignments);
 
             request.AssertCanEncodeDecodeRequest(0, encoder);
+            request.AssertCanEncodeRequestDecodeResponse(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void SyncConsumerGroupResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues(1, 10)] int memberCount)
+            [Values(1, 10)] int memberCount)
         {
             var encoder = new ConsumerEncoder();
             var topics = new List<TopicPartition>();
@@ -738,10 +813,10 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void DescribeGroupsRequest(
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(1, 5, 10)] int count)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(1, 5, 10)] int count)
         {
             var groups = new string[count];
             for (var g = 0; g < count; g++) {
@@ -752,17 +827,17 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void DescribeGroupsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(2, 3)] int count,
-            [CombinatorialValues(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.Dead)] string state, 
-            [CombinatorialValues("consumer", "unknown")] string protocolType,
-            [CombinatorialValues("good", "bad", "ugly")] string protocol)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(2, 3)] int count,
+            [Values(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.Dead)] string state, 
+            [Values("consumer", "unknown")] string protocolType,
+            [Values("good", "bad", "ugly")] string protocol)
         {
             var groups = new DescribeGroupsResponse.Group[count];
             for (var g = 0; g < count; g++) {
@@ -782,17 +857,70 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocolType));
         }
 
-        [Theory, CombinatorialData]
+        [Test]
+        public void DescribeGroupsResponseMember(
+            [Values(2, 3)] int count,
+            [Values("good", "bad", "ugly")] string protocol)
+        {
+            var metadata = new byte[count * 100];
+            var assignment = new byte[count * 10];
+            _randomizer.NextBytes(metadata);
+            _randomizer.NextBytes(assignment);
+
+            var member = new DescribeGroupsResponse.Member("member", "client", "host-", new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment)));
+            member.AssertEqualToSelf();
+            member.AssertNotEqual(null,
+                new DescribeGroupsResponse.Member("member", "client", "host-", new ByteTypeMetadata(protocol + "other", new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))),
+                new DescribeGroupsResponse.Member("member-other", "client", "host-", new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))),
+                new DescribeGroupsResponse.Member("member", "client-other", "host-other", new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))),
+                new DescribeGroupsResponse.Member("member", "client", "host-", new ByteTypeMetadata(protocol, new ArraySegment<byte>(assignment)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))),
+                new DescribeGroupsResponse.Member("member", "client", "host-", new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(metadata))));
+        }
+
+        [Test]
+        public void DescribeGroupsResponseGroup(
+            [Values(2, 3)] int count,
+            [Values("good", "bad", "ugly")] string protocol,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode,
+            [Values(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.Dead)] string state,
+            [Values("consumer", "unknown")] string protocolType,
+            [Values("test", "a groupId")] string groupId)
+        {
+            var members = new List<DescribeGroupsResponse.Member>();
+            for (var m = 0; m < count; m++)
+            {
+                var metadata = new byte[count * 100];
+                var assignment = new byte[count * 10];
+                _randomizer.NextBytes(metadata);
+                _randomizer.NextBytes(assignment);
+
+                members.Add(new DescribeGroupsResponse.Member("member" + m, "client" + m, "host-" + m, new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))));
+            }
+            var group = new DescribeGroupsResponse.Group(errorCode, groupId, state, protocolType, protocol, members);
+            group.AssertEqualToSelf();
+            group.AssertNotEqual(null,
+                new DescribeGroupsResponse.Group(errorCode + 1, groupId, state, protocolType, protocol, members),
+                new DescribeGroupsResponse.Group(errorCode, groupId + 1, state, protocolType, protocol, members),
+                new DescribeGroupsResponse.Group(errorCode, groupId, state + 1, protocolType, protocol, members),
+                new DescribeGroupsResponse.Group(errorCode, groupId, state, protocolType + 1, protocol, members),
+                new DescribeGroupsResponse.Group(errorCode, groupId, state, protocolType, protocol + 1, members),
+                new DescribeGroupsResponse.Group(errorCode, groupId, state, protocolType, protocol, members.Skip(1)));
+        }
+
+        [Test]
         public void DescribeConsumerGroupsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(2, 3)] int count,
-            [CombinatorialValues(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.AwaitingSync)] string state, 
-            [CombinatorialValues("consumer")] string protocolType,
-            [CombinatorialValues("good", "bad", "ugly")] string protocol)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(2, 3)] int count,
+            [Values(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.AwaitingSync)] string state, 
+            [Values("consumer")] string protocolType,
+            [Values("good", "bad", "ugly")] string protocol)
         {
             var encoder = new ConsumerEncoder();
             var groups = new DescribeGroupsResponse.Group[count];
@@ -819,22 +947,23 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0, encoder);
         }
 
-        [Fact]
+        [Test]
         public void ListGroupsRequest()
         {
             var request = new ListGroupsRequest();
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void ListGroupsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues("test", "a groupId")] string groupId, 
-            [CombinatorialValues(2, 3)] int count,
-            [CombinatorialValues("consumer")] string protocolType)
+            [Values("test", "a groupId")] string groupId, 
+            [Values(2, 3)] int count,
+            [Values("consumer")] string protocolType)
         {
             var groups = new ListGroupsResponse.Group[count];
             for (var g = 0; g < count; g++) {
@@ -845,22 +974,23 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void SaslHandshakeRequest(
-            [CombinatorialValues("EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER")] string mechanism)
+            [Values("EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER")] string mechanism)
         {
             var request = new SaslHandshakeRequest(mechanism);
 
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
-        [Theory, PairwiseData]
+        [Test]
         public void SaslHandshakeResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [CombinatorialValues(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)] int count)
+            [Values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)] int count)
         {
             var mechanisms = new[] { "EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER" };
             var response = new SaslHandshakeResponse(errorCode, mechanisms.Take(count));
@@ -868,11 +998,11 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void DeleteTopicsRequest(
-            [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [CombinatorialValues(2, 3)] int count,
-            [CombinatorialValues(0, 1, 20000)] int timeoutMilliseconds)
+            [Values("test", "anotherNameForATopic")] string topicName, 
+            [Values(2, 3)] int count,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
         {
             var topics = new string[count];
             for (var t = 0; t < count; t++) {
@@ -883,14 +1013,14 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void DeleteTopicsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.NOT_CONTROLLER
              )] ErrorCode errorCode,
-            [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [CombinatorialValues(1, 5, 11)] int count)
+            [Values("test", "anotherNameForATopic")] string topicName, 
+            [Values(1, 5, 11)] int count)
         {
             var topics = new TopicsResponse.Topic[count];
             for (var t = 0; t < count; t++) {
@@ -901,14 +1031,14 @@ namespace KafkaClient.Tests.Unit
             response.AssertCanEncodeDecodeResponse(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void CreateTopicsRequest(
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int partitionsPerTopic,
-            [CombinatorialValues(1, 3)] short replicationFactor,
-            [CombinatorialValues(0, 3)] int configCount,
-            [CombinatorialValues(0, 1, 20000)] int timeoutMilliseconds)
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(1, 3)] short replicationFactor,
+            [Values(0, 3)] int configCount,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -926,14 +1056,39 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
+        public void CreateTopicsRequestTopic(
+            [Values("testTopic")] string topicName,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(1, 3)] short replicationFactor,
+            [Values(1, 3)] int configCount)
+        {
+            var configs = new Dictionary<string, string>();
+            for (var c = 0; c < configCount; c++)
+            {
+                configs["config-" + c] = Guid.NewGuid().ToString("N");
+            }
+            if (configs.Count == 0 && _randomizer.Next() % 2 == 0)
+            {
+                configs = null;
+            }
+            var topic = new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, replicationFactor, configs);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new CreateTopicsRequest.Topic(topicName + 1, partitionsPerTopic, replicationFactor, configs),
+                new CreateTopicsRequest.Topic(topicName, partitionsPerTopic + 1, replicationFactor, configs),
+                new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, (short)(replicationFactor + 1), configs),
+                new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, replicationFactor, configs.Skip(1)));
+        }
+
+        [Test]
         public void CreateTopicsExplicitRequest(
-            [CombinatorialValues("testTopic")] string topicName,
-            [CombinatorialValues(1, 10)] int topicsPerRequest,
-            [CombinatorialValues(1, 5)] int partitionsPerTopic,
-            [CombinatorialValues(1, 3)] short replicationFactor,
-            [CombinatorialValues(0, 3)] int configCount,
-            [CombinatorialValues(0, 1, 20000)] int timeoutMilliseconds)
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(1, 3)] short replicationFactor,
+            [Values(0, 3)] int configCount,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -958,15 +1113,15 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeDecodeRequest(0);
         }
 
-        [Theory, CombinatorialData]
+        [Test]
         public void CreateTopicsResponse(
-            [CombinatorialValues(
+            [Values(
                  ErrorCode.NONE,
                  ErrorCode.INVALID_TOPIC_EXCEPTION,
                 ErrorCode.INVALID_PARTITIONS
              )] ErrorCode errorCode,
-            [CombinatorialValues("test", "anotherNameForATopic")] string topicName, 
-            [CombinatorialValues(1, 5, 11)] int count)
+            [Values("test", "anotherNameForATopic")] string topicName, 
+            [Values(1, 5, 11)] int count)
         {
             var topics = new TopicsResponse.Topic[count];
             for (var t = 0; t < count; t++) {
@@ -976,6 +1131,24 @@ namespace KafkaClient.Tests.Unit
 
             response.AssertCanEncodeDecodeResponse(0);
         }
+
+        [Test]
+        public void CreateTopicsResponseTopic(
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.INVALID_TOPIC_EXCEPTION,
+                ErrorCode.INVALID_PARTITIONS
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topic = new TopicsResponse.Topic(topicName, errorCode);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new TopicsResponse.Topic(topicName + 1, errorCode),
+                new TopicsResponse.Topic(topicName, errorCode + 1));
+        }
+
 
         private IEnumerable<Message> GenerateMessages(int count, byte version, MessageCodec codec = MessageCodec.None)
         {
