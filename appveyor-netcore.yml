@@ -20,9 +20,23 @@ build_script:
 
 test_script:
   - dotnet test -c %CONFIGURATION% -f netcoreapp1.1 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
+  - cmd: >-
+    .\packages\opencover\4.6.519\tools\OpenCover.Console.exe 
+      -register:user 
+      -target:"C:\Program Files\dotnet\dotnet.exe" 
+      -targetargs:"test --filter \"(TestCategory=CI) & (TestCategory!=Flaky)\" --logger:trx;LogFileName=test-results.xml;format=AppVeyor /p:DebugType=full -c %CONFIGURATION% -f netcoreapp1.1 %APPVEYOR_BUILD_FOLDER%\src\KafkaClient.Tests\KafkaClient.Tests.csproj" 
+      -filter:"+[KafkaClient]* -[KafkaClient.*]*" 
+      -output:"coverage.xml" 
+      -oldstyle 
 
 after_test:
   - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
+  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
+  - pip install codecov
+  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
 
 artifacts:
   - path: src\KafkaClient\artifacts\**\*.*
+
+on_finish:
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
