@@ -92,17 +92,17 @@ namespace KafkaClient.Tests.Integration
 
                         await Task.WhenAll(result1, result2, result3, result4);
 
-                        Assert.AreEqual(result1.Result.responses.Count, 1);
-                        Assert.True(result1.Result.responses.First().topic == topicName, "ProduceRequest did not return expected topic.");
+                        Assert.AreEqual(result1.Result.Responses.Count, 1);
+                        Assert.True(result1.Result.Responses.First().TopicName == topicName, "ProduceRequest did not return expected topic.");
 
                         Assert.True(result2.Result.topic_metadata.Count > 0);
                         Assert.True(result2.Result.topic_metadata.Any(x => x.topic == topicName), "MetadataRequest did not return expected topic.");
 
-                        Assert.AreEqual(result3.Result.responses.Count, 1);
-                        Assert.True(result3.Result.responses.First().topic == topicName, "OffsetRequest did not return expected topic.");
+                        Assert.AreEqual(result3.Result.Responses.Count, 1);
+                        Assert.True(result3.Result.Responses.First().TopicName == topicName, "OffsetRequest did not return expected topic.");
 
-                        Assert.AreEqual(result4.Result.responses.Count, 1);
-                        Assert.True(result4.Result.responses.First().topic == topicName, "FetchRequest did not return expected topic.");
+                        Assert.AreEqual(result4.Result.Responses.Count, 1);
+                        Assert.True(result4.Result.Responses.First().TopicName == topicName, "FetchRequest did not return expected topic.");
                     }
                 );
             }

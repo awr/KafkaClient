@@ -26,14 +26,14 @@ namespace KafkaClient.Tests.Integration
                     using (var producer = new Producer(router)) {
                         var messageValue = Guid.NewGuid().ToString();
                         var response = await producer.SendAsync(new Message(messageValue), TestConfig.TopicName(), partitionId, CancellationToken.None);
-                        var offset = response.base_offset;
+                        var offset = response.BaseOffset;
 
                         var fetch = new FetchRequest.Topic(TestConfig.TopicName(), partitionId, offset, 32000);
 
                         var fetchRequest = new FetchRequest(fetch, minBytes: 10);
 
                         var r = await router.SendAsync(fetchRequest, TestConfig.TopicName(), partitionId, CancellationToken.None);
-                        Assert.AreEqual(r.responses.First().Messages.First().Value.ToUtf8String(), messageValue);
+                        Assert.AreEqual(r.Responses.First().Messages.First().Value.ToUtf8String(), messageValue);
                     }
                 });
             }
@@ -135,7 +135,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(TestConfig.TopicName(), 0, CancellationToken.None);
-                    using (var consumer = new Consumer(new TopicOffset(offset.topic, offset.partition_id, offset.offset + 1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
+                    using (var consumer = new Consumer(new TopicOffset(offset.TopicName, offset.PartitionId, offset.offset + 1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
 
                         await AssertAsync.Throws<FetchOutOfRangeException>(
                             () => consumer.FetchAsync(CancellationToken.None, 5),
@@ -470,7 +470,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var responseAckLevel1 = await producer.SendAsync(new Message(messge.ToString()), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
-                        offsetResponse = responseAckLevel1.base_offset;
+                        offsetResponse = responseAckLevel1.BaseOffset;
                     }
                     using (var consumer = new Consumer(new TopicOffset(topicName, 0, offsetResponse), router, new ConsumerConfiguration(maxServerWait: TimeSpan.Zero))) {
                         var result = await consumer.FetchAsync(CancellationToken.None, 1);
@@ -544,7 +544,7 @@ namespace KafkaClient.Tests.Integration
                             Assert.AreEqual(results.Messages.Count, totalMessages);
                             Assert.AreEqual(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
 
-                            var newOffset = await producer.Router.GetOffsetsAsync(offset.topic, offset.partition_id, CancellationToken.None);
+                            var newOffset = await producer.Router.GetOffsetsAsync(offset.TopicName, offset.PartitionId, CancellationToken.None);
                             Assert.AreEqual(newOffset.offset - offset.offset, totalMessages);
                         }
                     }
@@ -567,7 +567,7 @@ namespace KafkaClient.Tests.Integration
                         stopwatch.Start();
                         var sendList = new List<Task>(totalMessages);
                         for (var i = 0; i < totalMessages; i++) {
-                            var sendTask = producer.SendAsync(new Message(i.ToString()), offset.topic, offset.partition_id, CancellationToken.None);
+                            var sendTask = producer.SendAsync(new Message(i.ToString()), offset.TopicName, offset.PartitionId, CancellationToken.None);
                             sendList.Add(sendTask);
                         }
                         var maxTimeToRun = TimeSpan.FromMilliseconds(timeoutInMs);
@@ -714,8 +714,8 @@ namespace KafkaClient.Tests.Integration
                 var groupOffsets = await router.GetOffsetsAsync(groupId, topicName, CancellationToken.None);
                 await router.GetGroupServerIdAsync(groupId, CancellationToken.None);
                 foreach (var partitionId in partitionIds ?? new [] { 0 }) {
-                    var offset = offsets.SingleOrDefault(o => o.partition_id == partitionId);
-                    var groupOffset = groupOffsets.SingleOrDefault(o => o.partition_id == partitionId);
+                    var offset = offsets.SingleOrDefault(o => o.PartitionId == partitionId);
+                    var groupOffset = groupOffsets.SingleOrDefault(o => o.PartitionId == partitionId);
                     //await router.SendAsync(new GroupCoordinatorRequest(groupId), topicName, partitionId, CancellationToken.None).ConfigureAwait(false);
                     //var groupOffset = await router.GetOffsetAsync(groupId, topicName, partitionId, CancellationToken.None);
 

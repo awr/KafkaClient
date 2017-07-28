@@ -50,7 +50,7 @@ namespace KafkaClient
                 MarkSuccessful(this.Last());
             }
             var offset = await CommitMarkedAsync(cancellationToken).ConfigureAwait(false);
-            var messages = await _router.FetchMessagesAsync(_allMessages, _partition.topic, _partition.partition_id, offset, _configuration, cancellationToken, _batchSize).ConfigureAwait(false);
+            var messages = await _router.FetchMessagesAsync(_allMessages, _partition.TopicName, _partition.PartitionId, offset, _configuration, cancellationToken, _batchSize).ConfigureAwait(false);
             return new MessageBatch(messages, _partition, offset, _router, _configuration, _autoConsume, _batchSize);
         }
 
@@ -74,8 +74,8 @@ namespace KafkaClient
             if (offset <= committed) return committed;
 
             if (_groupId != null && _memberId != null) {
-                var request = new OffsetCommitRequest(_groupId, new[] { new OffsetCommitRequest.Topic(_partition.topic, _partition.partition_id, offset) }, _memberId, _generationId);
-                await _router.SendAsync(request, _partition.topic, _partition.partition_id, cancellationToken).ConfigureAwait(false);
+                var request = new OffsetCommitRequest(_groupId, new[] { new OffsetCommitRequest.Topic(_partition.TopicName, _partition.PartitionId, offset) }, _memberId, _generationId);
+                await _router.SendAsync(request, _partition.TopicName, _partition.PartitionId, cancellationToken).ConfigureAwait(false);
             }
             _offsetCommitted = offset;
             return offset;

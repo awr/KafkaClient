@@ -19,7 +19,7 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class OffsetCommitResponse : IResponse<TopicResponse>, IEquatable<OffsetCommitResponse>
     {
-        public override string ToString() => $"{{responses:[{responses.ToStrings()}]}}";
+        public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetCommitResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -44,13 +44,13 @@ namespace KafkaClient.Protocol
 
         public OffsetCommitResponse(IEnumerable<TopicResponse> topics = null)
         {
-            responses = ImmutableList<TopicResponse>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(responses.Select(t => t.error_code));
+            Responses = ImmutableList<TopicResponse>.Empty.AddNotNullRange(topics);
+            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<TopicResponse> responses { get; }
+        public IImmutableList<TopicResponse> Responses { get; }
 
         #region Equality
 
@@ -65,13 +65,13 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return responses.HasEqualElementsInOrder(other.responses);
+            return Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return responses?.Count.GetHashCode() ?? 0;
+            return Responses?.Count.GetHashCode() ?? 0;
         }
 
         #endregion

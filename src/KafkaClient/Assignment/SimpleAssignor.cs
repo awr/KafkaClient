@@ -41,7 +41,7 @@ namespace KafkaClient.Assignment
 
             var memberIds = assignments.OrderBy(a => a.Value.Count).Select(a => a.Key).ToImmutableArray();
             var memberIndex = 0;
-            foreach (var partition in partitions.OrderBy(_ => _.partition_id)) {
+            foreach (var partition in partitions.OrderBy(_ => _.PartitionId)) {
                  var memberId = memberIds[memberIndex++ % memberIds.Length];
                 if (assignments[memberId].Count == 0) {
                     assignments[memberId].Add(partition);

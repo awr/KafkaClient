@@ -13,6 +13,6 @@ namespace KafkaClient.Protocol
     public interface IResponse<T> : IResponse
     {
         // ReSharper disable once InconsistentNaming
-        IImmutableList<T> responses { get; }
+        IImmutableList<T> Responses { get; }
     }
 }

@@ -60,7 +60,7 @@ namespace KafkaClient.Assignment
         /// <inheritdoc />
         protected override void EncodeAssignment(IKafkaWriter writer, ConsumerMemberAssignment value)
         {
-            var topicGroups = value.PartitionAssignments.GroupBy(x => x.topic).ToList();
+            var topicGroups = value.PartitionAssignments.GroupBy(x => x.TopicName).ToList();
 
             writer.Write(value.Version)
                   .Write(topicGroups.Count);
@@ -71,7 +71,7 @@ namespace KafkaClient.Assignment
                         .Write(partitions.Count);
 
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id);
+                    writer.Write(partition.PartitionId);
                 }
             }
             writer.Write(value.UserData);

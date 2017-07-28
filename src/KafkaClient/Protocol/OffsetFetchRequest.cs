@@ -23,23 +23,23 @@ namespace KafkaClient.Protocol
     {
         public override string ToString() => $"{{Api:{ApiKey},group_id:{group_id},topics:[{topics.ToStrings()}]}}";
 
-        public override string ShortString() => topics.Count == 1 ? $"{ApiKey} {group_id} {topics[0].topic}" : $"{ApiKey} {group_id}";
+        public override string ShortString() => topics.Count == 1 ? $"{ApiKey} {group_id} {topics[0].TopicName}" : $"{ApiKey} {group_id}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            var topicGroups = topics.GroupBy(x => x.topic).ToList();
+            var topicGroups = topics.GroupBy(x => x.TopicName).ToList();
 
             writer.Write(group_id)
                   .Write(topicGroups.Count);
 
             foreach (var topicGroup in topicGroups) {
-                var partitions = topicGroup.GroupBy(x => x.partition_id).ToList();
+                var partitions = topicGroup.GroupBy(x => x.PartitionId).ToList();
                 writer.Write(topicGroup.Key)
                       .Write(partitions.Count);
 
                 foreach (var partition in partitions) {
                     foreach (var offset in partition) {
-                        writer.Write(offset.partition_id);
+                        writer.Write(offset.PartitionId);
                     }
                 }
             }

@@ -51,11 +51,11 @@ namespace KafkaClient.Protocol
                 }
             }
 
-            var topicGroups = topics.GroupBy(x => x.topic).ToList();
+            var topicGroups = topics.GroupBy(x => x.TopicName).ToList();
             writer.Write(topicGroups.Count);
 
             foreach (var topicGroup in topicGroups) {
-                var partitions = topicGroup.GroupBy(x => x.partition_id).ToList();
+                var partitions = topicGroup.GroupBy(x => x.PartitionId).ToList();
                 writer.Write(topicGroup.Key)
                         .Write(partitions.Count);
 
@@ -121,7 +121,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},timeStamp:{timeStamp},offset:{offset},metadata:{metadata}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},timeStamp:{timeStamp},offset:{offset},metadata:{metadata}}}";
 
             public Topic(string topicName, int partitionId, long offset, string metadata = null, long? timeStamp = null) 
                 : base(topicName, partitionId)

@@ -41,7 +41,7 @@ namespace KafkaClient.Performance
                               partitionId, 
                               500,
                               ErrorCode.NONE,
-                              Enumerable.Range(1, Messages)
+                              messages: Enumerable.Range(1, Messages)
                                         .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec, version: MessageVersion))
                           )));
             _bytes = KafkaDecoder.EncodeResponseBytes(new RequestContext(1, Version), response);

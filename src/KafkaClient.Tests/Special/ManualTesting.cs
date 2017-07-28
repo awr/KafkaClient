@@ -38,7 +38,7 @@ namespace KafkaClient.Tests.Special
                 var consumer = new Consumer(offset, await TestConfig.IntegrationOptions.CreateRouterAsync(), new ConsumerConfiguration(maxPartitionFetchBytes: 10000));
 
                 var producer = new Producer(router);
-                var send = SandMessageForever(producer, offset.topic, offset.partition_id);
+                var send = SandMessageForever(producer, offset.TopicName, offset.PartitionId);
                 var read = consumer.ConsumeAsync(
                     message => TestConfig.Log.Info(() => LogEvent.Create($"Offset{message.Offset}")), 
                     CancellationToken.None);

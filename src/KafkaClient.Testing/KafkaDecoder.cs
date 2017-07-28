@@ -98,8 +98,9 @@ namespace KafkaClient.Testing
         private static IRequest ProduceRequest(IRequestContext context, ArraySegment<byte> data)
         {
             using (var reader = ReadHeader(data)) {
+                string transaction_id = null;
                 if (context.ApiVersion >= 3) {
-                    var transactional_id = reader.ReadString();
+                    transaction_id = reader.ReadString();
                 }
                 var acks = reader.ReadInt16();
                 var timeout = reader.ReadInt32();
@@ -117,7 +118,7 @@ namespace KafkaClient.Testing
                         payloads.Add(new ProduceRequest.Topic(topicName, partitionId, messages));
                     }
                 }
-                return new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeout), acks);
+                return new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeout), acks, transaction_id);
             }
         }
 
@@ -130,8 +131,12 @@ namespace KafkaClient.Testing
                 var minBytes = reader.ReadInt32();
 
                 var totalMaxBytes = 0;
+                byte? isolationLevel = null;
                 if (context.ApiVersion >= 3) {
                     totalMaxBytes = reader.ReadInt32();
+                    if (context.ApiVersion >= 4) {
+                        isolationLevel = reader.ReadByte();
+                    }
                 }
 
                 var topics = new List<FetchRequest.Topic>();
@@ -143,12 +148,16 @@ namespace KafkaClient.Testing
                     for (var j = 0; j < partitionCount; j++) {
                         var partitionId = reader.ReadInt32();
                         var offset = reader.ReadInt64();
+                        long? log_start_offset = null;
+                        if (context.ApiVersion >= 5) {
+                            log_start_offset = reader.ReadInt64();
+                        }
                         var maxBytes = reader.ReadInt32();
 
-                        topics.Add(new FetchRequest.Topic(topicName, partitionId, offset, maxBytes));
+                        topics.Add(new FetchRequest.Topic(topicName, partitionId, offset, log_start_offset, maxBytes));
                     }
                 }
-                return new FetchRequest(topics, TimeSpan.FromMilliseconds(maxWaitTime), minBytes, totalMaxBytes);
+                return new FetchRequest(topics, TimeSpan.FromMilliseconds(maxWaitTime), minBytes, totalMaxBytes, isolationLevel);
             }
         }
 
@@ -448,7 +457,7 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            var groupedTopics = response.responses.GroupBy(t => t.topic).ToList();
+            var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
                 var partitions = topic.ToList();
@@ -456,16 +465,16 @@ namespace KafkaClient.Testing
                 writer.Write(topic.Key)
                     .Write(partitions.Count);
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id)
-                        .Write(partition.error_code)
-                        .Write(partition.base_offset);
+                    writer.Write(partition.PartitionId)
+                        .Write(partition.Error)
+                        .Write(partition.BaseOffset);
                     if (context.ApiVersion >= 2) {
-                        writer.Write(partition.timestamp?.ToUnixTimeMilliseconds() ?? -1L);
+                        writer.Write(partition.Timestamp?.ToUnixTimeMilliseconds() ?? -1L);
                     }
                 }
             }
             if (context.ApiVersion >= 1) {
-                writer.Write((int?)response.throttle_time_ms?.TotalMilliseconds ?? 0);
+                writer.Write((int?)response.ThrottleTime?.TotalMilliseconds ?? 0);
             }
             return true;
         }
@@ -477,7 +486,7 @@ namespace KafkaClient.Testing
             if (context.ApiVersion >= 1) {
                 writer.Write((int?)response.throttle_time_ms?.TotalMilliseconds ?? 0);
             }
-            var groupedTopics = response.responses.GroupBy(t => t.topic).ToList();
+            var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
                 var partitions = topic.ToList();
@@ -485,8 +494,8 @@ namespace KafkaClient.Testing
                 writer.Write(topic.Key)
                     .Write(partitions.Count); // partitionsPerTopic
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id)
-                        .Write(partition.error_code)
+                    writer.Write(partition.PartitionId)
+                        .Write(partition.Error)
                         .Write(partition.high_watermark);
 
                     if (partition.Messages.Count > 0) {
@@ -507,7 +516,7 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            var groupedTopics = response.responses.GroupBy(t => t.topic).ToList();
+            var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
                 var partitions = topic.ToList();
@@ -515,7 +524,7 @@ namespace KafkaClient.Testing
                 writer.Write(topic.Key)
                     .Write(partitions.Count);
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id)
+                    writer.Write(partition.PartitionId)
                         .Write(partition.error_code);
                     if (context.ApiVersion == 0) {
                         writer.Write(1)
@@ -576,15 +585,15 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            var groupedTopics = response.responses.GroupBy(t => t.topic).ToList();
+            var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
                 var partitions = topic.ToList();
                 writer.Write(topic.Key)
                     .Write(partitions.Count); // partitionsPerTopic
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id)
-                        .Write(partition.error_code);
+                    writer.Write(partition.PartitionId)
+                        .Write(partition.Error);
                 }
             }
             return true;
@@ -594,14 +603,14 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            var groupedTopics = response.responses.GroupBy(t => t.topic).ToList();
+            var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
                 var partitions = topic.ToList();
                 writer.Write(topic.Key)
                     .Write(partitions.Count); // partitionsPerTopic
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_id)
+                    writer.Write(partition.PartitionId)
                         .Write(partition.offset)
                         .Write(partition.metadata)
                         .Write(partition.error_code);

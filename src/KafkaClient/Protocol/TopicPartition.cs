@@ -7,19 +7,19 @@ namespace KafkaClient.Protocol
     {
         public TopicPartition(string topicName, int partitionId)
         {
-            topic = topicName;
-            partition_id = partitionId;
+            TopicName = topicName;
+            PartitionId = partitionId;
         }
 
         /// <summary>
         /// The topic name.
         /// </summary>
-        public string topic { get; }
+        public string TopicName { get; }
 
         /// <summary>
         /// The partition id.
         /// </summary>
-        public int partition_id { get; }
+        public int PartitionId { get; }
 
         #region Equality
 
@@ -32,21 +32,21 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(topic, other.topic) 
-                   && partition_id == other.partition_id;
+            return string.Equals(TopicName, other.TopicName) 
+                   && PartitionId == other.PartitionId;
         }
 
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = topic?.GetHashCode() ?? 0;
-                hashCode = (hashCode*397) ^ partition_id;
+                var hashCode = TopicName?.GetHashCode() ?? 0;
+                hashCode = (hashCode*397) ^ PartitionId;
                 return hashCode;
             }
         }
 
         #endregion
 
-        public override string ToString() => $"{{topic:{topic},partition_id:{partition_id}}}";
+        public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId}}}";
     }
 }

@@ -25,7 +25,7 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class OffsetsResponse : IResponse<OffsetsResponse.Topic>, IEquatable<OffsetsResponse>
     {
-        public override string ToString() => $"{{responses:[{responses.ToStrings()}]}}";
+        public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -64,13 +64,13 @@ namespace KafkaClient.Protocol
 
         public OffsetsResponse(IEnumerable<Topic> topics = null)
         {
-            responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(responses.Select(t => t.error_code));
+            Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.error_code));
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<Topic> responses { get; }
+        public IImmutableList<Topic> Responses { get; }
 
         #region Equality
 
@@ -85,20 +85,20 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return responses.HasEqualElementsInOrder(other.responses);
+            return Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return responses?.Count.GetHashCode() ?? 0;
+            return Responses?.Count.GetHashCode() ?? 0;
         }
 
         #endregion
 
         public class Topic : TopicOffset, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset},error_code:{error_code}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{offset},error_code:{error_code}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode = ErrorCode.NONE, long offset = -1, DateTimeOffset? timestamp = null) 
                 : base(topic, partitionId, offset)

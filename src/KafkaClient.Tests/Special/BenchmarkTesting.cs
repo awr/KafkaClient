@@ -34,12 +34,12 @@ namespace KafkaClient.Tests.Special
                                               partitionId, 
                                               500,
                                               ErrorCode.NONE,
-                                              Enumerable.Range(1, messages)
+                                              messages: Enumerable.Range(1, messages)
                                                         .Select(i => new Message(GenerateMessageBytes(messageSize), new ArraySegment<byte>(), (byte) codec, version: messageVersion))
                                           )));
                             var bytes = KafkaDecoder.EncodeResponseBytes(new RequestContext(1, version), response);
                             var decoded = FetchResponse.FromBytes(new RequestContext(1, version), bytes.Skip(Request.IntegerByteSize + Request.CorrelationSize));
-                            Assert.AreEqual(decoded.responses.Sum(t => t.Messages.Count), response.responses.Sum(t => t.Messages.Count));
+                            Assert.AreEqual(decoded.Responses.Sum(t => t.Messages.Count), response.Responses.Sum(t => t.Messages.Count));
                             var result = new {
                                 Codec = codec.ToString(),
                                 Level = codec == MessageCodec.None ? "-" : level.ToString(),

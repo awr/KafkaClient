@@ -484,7 +484,7 @@ namespace KafkaClient
         {
             var request = new OffsetsRequest(new OffsetsRequest.Topic(topicName, partitionId, offsetTime, maxOffsets));
             var response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
-            return response.responses.SingleOrDefault(t => t.topic == topicName && t.partition_id == partitionId);
+            return response.Responses.SingleOrDefault(t => t.TopicName == topicName && t.PartitionId == partitionId);
         }
 
         /// <summary>
@@ -507,7 +507,7 @@ namespace KafkaClient
         {
             var request = new OffsetFetchRequest(groupId, new TopicPartition(topicName, partitionId));
             var response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
-            return response.responses.SingleOrDefault(t => t.topic == topicName && t.partition_id == partitionId);
+            return response.Responses.SingleOrDefault(t => t.TopicName == topicName && t.PartitionId == partitionId);
         }
 
         /// <summary>
@@ -563,8 +563,8 @@ namespace KafkaClient
                     await Task.WhenAll(routedTopicRequests.Select(_ => _.SendAsync(router, cancellationToken))).ConfigureAwait(false);
                     var responses = routedTopicRequests.Select(_ => _.MetadataRetryResponse(retryAttempt, out metadataInvalid)).ToArray();
                     foreach (var response in responses.Where(_ => _.IsSuccessful)) {
-                        foreach (var offsetTopic in response.Value.responses) {
-                            offsets[offsetTopic.partition_id] = offsetTopic;
+                        foreach (var offsetTopic in response.Value.Responses) {
+                            offsets[offsetTopic.PartitionId] = offsetTopic;
                         }
                     }
 
@@ -615,10 +615,10 @@ namespace KafkaClient
                     if (configuration.FetchByteMultiplier <= 1) throw;
                     var maxBytes = topic.max_bytes * configuration.FetchByteMultiplier;
                     router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.max_bytes} -> {maxBytes}"));
-                    topic = new FetchRequest.Topic(topic.topic, topic.partition_id, topic.fetch_offset, maxBytes);
+                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.fetch_offset, maxBytes);
                 }
             }
-            return response?.responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;
+            return response?.Responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;
         }
 
         private static ImmutableList<Message> ExtractMessages(ImmutableList<Message> existingMessages, long offset)

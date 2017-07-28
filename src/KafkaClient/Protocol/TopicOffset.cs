@@ -5,7 +5,7 @@ namespace KafkaClient.Protocol
 {
     public class TopicOffset : TopicPartition, IEquatable<TopicOffset>
     {
-        public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset}}}";
+        public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{offset}}}";
 
         public TopicOffset(string topic, int partitionId, long offset = -1) 
             : base(topic, partitionId)

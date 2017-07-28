@@ -31,16 +31,16 @@ namespace KafkaClient.Protocol
     {
         public override string ToString() => $"{{Api:{ApiKey},topics:[{topics.ToStrings()}]}}";
 
-        public override string ShortString() => topics.Count == 1 ? $"{ApiKey} {topics[0].topic}" : ApiKey.ToString();
+        public override string ShortString() => topics.Count == 1 ? $"{ApiKey} {topics[0].TopicName}" : ApiKey.ToString();
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            var topicGroups = topics.GroupBy(x => x.topic).ToList();
+            var topicGroups = topics.GroupBy(x => x.TopicName).ToList();
             writer.Write(-1) // replica_id -- see above for rationale
                   .Write(topicGroups.Count);
 
             foreach (var topicGroup in topicGroups) {
-                var partitions = topicGroup.GroupBy(x => x.partition_id).ToList();
+                var partitions = topicGroup.GroupBy(x => x.PartitionId).ToList();
                 writer.Write(topicGroup.Key)
                       .Write(partitions.Count);
 
@@ -98,7 +98,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},timestamp:{timestamp},max_num_offsets:{max_num_offsets}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},timestamp:{timestamp},max_num_offsets:{max_num_offsets}}}";
 
             public Topic(string topicName, int partitionId, long timestamp = LatestTime, int maxOffsets = DefaultMaxOffsets) : base(topicName, partitionId)
             {
