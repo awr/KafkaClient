@@ -50,8 +50,8 @@ namespace KafkaClient.Protocol
 
         private static FetchOutOfRangeException ExtractFetchException(FetchRequest request, ErrorCode errorCode, Endpoint endpoint)
         {
-            if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && request?.topics?.Count == 1) {
-                return new FetchOutOfRangeException(request.topics.First(), errorCode, endpoint);
+            if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && request?.Topics?.Count == 1) {
+                return new FetchOutOfRangeException(request.Topics.First(), errorCode, endpoint);
             }
             return null;
         }        

@@ -613,9 +613,9 @@ namespace KafkaClient
                     response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
                 } catch (BufferUnderRunException ex) {
                     if (configuration.FetchByteMultiplier <= 1) throw;
-                    var maxBytes = topic.max_bytes * configuration.FetchByteMultiplier;
-                    router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.max_bytes} -> {maxBytes}"));
-                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.fetch_offset, maxBytes);
+                    var maxBytes = topic.MaxBytes * configuration.FetchByteMultiplier;
+                    router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.MaxBytes} -> {maxBytes}"));
+                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.FetchOffset, maxBytes);
                 }
             }
             return response?.Responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;

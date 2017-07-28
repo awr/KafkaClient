@@ -7,13 +7,13 @@ namespace KafkaClient
     public interface IConsumerConfiguration
     {
         /// <summary>
-        /// Maximum bytes to accumulate in the response to a a FetchRequest (<see cref="FetchRequest.max_bytes"/>). Note that this is not an absolute maximum, if the first message in the 
+        /// Maximum bytes to accumulate in the response to a a FetchRequest (<see cref="FetchRequest.MaxBytes"/>). Note that this is not an absolute maximum, if the first message in the 
         /// first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made.
         /// </summary>
         int? MaxFetchBytes { get; }
 
         /// <summary>
-        /// The maximum bytes to include in the message set for a particular partition in a FetchRequest (<see cref="FetchRequest.Topic.max_bytes"/>). This helps bound the size of the response.
+        /// The maximum bytes to include in the message set for a particular partition in a FetchRequest (<see cref="FetchRequest.Topic.MaxBytes"/>). This helps bound the size of the response.
         /// </summary>
         int? MaxPartitionFetchBytes { get; }
 
@@ -37,7 +37,7 @@ namespace KafkaClient
         int BatchSize { get; }
 
         /// <summary>
-        /// The max wait time is the maximum amount of time to block waiting if insufficient data is available at the time the request is issued in a FetchRequest (<see cref="FetchRequest.max_wait_time"/>).
+        /// The max wait time is the maximum amount of time to block waiting if insufficient data is available at the time the request is issued in a FetchRequest (<see cref="FetchRequest.MaxWaitTime"/>).
         /// </summary>
         TimeSpan? MaxFetchServerWait { get; }
 

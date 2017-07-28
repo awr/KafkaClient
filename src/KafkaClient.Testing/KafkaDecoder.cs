@@ -484,7 +484,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int?)response.throttle_time_ms?.TotalMilliseconds ?? 0);
+                writer.Write((int?)response.ThrottleTime?.TotalMilliseconds ?? 0);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -496,7 +496,19 @@ namespace KafkaClient.Testing
                 foreach (var partition in partitions) {
                     writer.Write(partition.PartitionId)
                         .Write(partition.Error)
-                        .Write(partition.high_watermark);
+                        .Write(partition.HighWatermark);
+
+                    if (context.ApiVersion >= 4) {
+                        writer.Write(partition.LastStableOffset.GetValueOrDefault());
+                        if (context.ApiVersion >= 5) {
+                            writer.Write(partition.LogStartOffset.GetValueOrDefault());
+                        }
+                        writer.Write(partition.AbortedTransactions.Count);
+                        foreach (var abortedTransaction in partition.AbortedTransactions) {
+                            writer.Write(abortedTransaction.ProducerId);
+                            writer.Write(abortedTransaction.FirstOffset);
+                        }
+                    }
 
                     if (partition.Messages.Count > 0) {
                         // assume all are the same codec

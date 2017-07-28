@@ -8,35 +8,33 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Fetch Response => *throttle_time_ms [responses]
-    ///  *throttle_time_ms is only version 1 (0.9.0) and above
-    ///  throttle_time_ms => int32 -- Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-    ///                            violate any quota.)
-    /// 
-    ///  responses => topic [partition_responses]
-    ///   topic => string          -- The topic this response entry corresponds to.
-    /// 
-    ///   partition_responses => partition_id error_code high_watermark *last_stable_offset *[aborted_transactions] record_set 
-    ///    *last_stable_offset is only version 4 and above 
-    ///    *aborted_transactions is only version 4 and above
-    ///    partition_id => int32       -- The partition this response entry corresponds to.
-    ///    error_code => int16         -- The error from this partition, if any. Errors are given on a per-partition basis because a given partition may 
-    ///                                   be unavailable or maintained on a different host, while others may have successfully accepted the produce request.
-    ///    high_watermark => int64     -- The offset at the end of the log for this partition. This can be used by the client to determine how many messages 
-    ///                                   behind the end of the log they are.
-    ///    last_stable_offset => INT64 -- The last stable offset (or LSO) of the partition. This is the last offset such that the state of all transactional 
-    ///                                   records prior to this offset have been decided (ABORTED or COMMITTED).
-    /// 
-    ///    aborted_transactions => producer_id first_offset
-    ///     producer_id => INT64       -- The producer id associated with the aborted transactions.
-    ///     first_offset => INT64      -- The first offset in the aborted transaction.
-    ///    record_set => BYTES         -- The size (and bytes) of the message set that follows.
-    /// 
-    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchResponse
+    /// Fetch Response => *throttle_time_ms [responses] 
     /// </summary>
+    /// <remarks>
+    /// Fetch Response => *throttle_time_ms [responses] 
+    ///   throttle_time_ms => INT32
+    ///   responses => topic [partition_responses] 
+    ///     topic => STRING
+    ///     partition_responses => partition_header record_set 
+    ///       partition_header => partition error_code high_watermark *last_stable_offset *log_start_offset *[aborted_transactions] 
+    ///         partition => INT32
+    ///         error_code => INT16
+    ///         high_watermark => INT64
+    ///         last_stable_offset => INT64
+    ///         log_start_offset => INT64
+    ///         aborted_transactions => producer_id first_offset 
+    ///           producer_id => INT64
+    ///           first_offset => INT64
+    ///       record_set => RECORDS
+    /// 
+    /// Version 1+: throttle_time_ms
+    /// Version 4+: last_stable_offset, aborted_transactions
+    /// Version 5+: log_start_offset
+    /// From http://kafka.apache.org/protocol.html#The_Messages_Fetch
+    /// </remarks>
     public class FetchResponse : IResponse<FetchResponse.Topic>, IEquatable<FetchResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{throttle_time_ms},responses:[{Responses.ToStrings()}]}}";
+        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},responses:[{Responses.ToStrings()}]}}";
 
         public static FetchResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -59,9 +57,13 @@ namespace KafkaClient.Protocol
                         var highWaterMarkOffset = reader.ReadInt64();
 
                         long? lastStableOffset = null;
+                        long? logStartOffset = null;
                         var transactions = new List<AbortedTransaction>();
                         if (context.ApiVersion >= 4) {
                             lastStableOffset = reader.ReadInt64();
+                            if (context.ApiVersion >= 5) {
+                                logStartOffset = reader.ReadInt64();
+                            }
                             var count = reader.ReadInt32();
                             for (var a = 0; a < count; a++) {
                                 var producerId = reader.ReadInt64();
@@ -71,7 +73,7 @@ namespace KafkaClient.Protocol
                         }
                         var messages = reader.ReadMessages();
 
-                        topics.Add(new Topic(topicName, partitionId, highWaterMarkOffset, errorCode, lastStableOffset, messages));
+                        topics.Add(new Topic(topicName, partitionId, highWaterMarkOffset, errorCode, lastStableOffset, logStartOffset, messages, transactions));
                     }
                 }
                 return new FetchResponse(topics, throttleTime);
@@ -82,7 +84,7 @@ namespace KafkaClient.Protocol
         {
             Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
-            throttle_time_ms = throttleTime;
+            ThrottleTime = throttleTime;
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -93,7 +95,7 @@ namespace KafkaClient.Protocol
         /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
         /// violate any quota.) Only version 1 and above (0.9.0)
         /// </summary>
-        public TimeSpan? throttle_time_ms { get; }
+        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -109,14 +111,14 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Responses.HasEqualElementsInOrder(other.Responses) 
-                && throttle_time_ms.Equals(other.throttle_time_ms);
+                && ThrottleTime.Equals(other.ThrottleTime);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                return ((Responses?.Count.GetHashCode() ?? 0)*397) ^ throttle_time_ms.GetHashCode();
+                return ((Responses?.Count.GetHashCode() ?? 0)*397) ^ ThrottleTime.GetHashCode();
             }
         }
 
@@ -124,28 +126,42 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicResponse, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},error_code:{Error},high_watermark:{high_watermark},Messages:{Messages.Count}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},error_code:{Error},high_watermark:{HighWatermark},last_stable_offset:{LastStableOffset},log_start_offset:{LogStartOffset},Messages:{Messages.Count},aborted_transactions:{AbortedTransactions.ToStrings()}}}";
 
-            public Topic(string topic, int partitionId, long highWatermark, ErrorCode errorCode = ErrorCode.NONE, long? lastStableOffset = null, IEnumerable<Message> messages = null)
+            public Topic(string topic, int partitionId, long highWatermark, ErrorCode errorCode = ErrorCode.NONE, long? lastStableOffset = null, long? logStartOffset = null, IEnumerable<Message> messages = null, IEnumerable<AbortedTransaction> abortedTransactions = null)
                 : base(topic, partitionId, errorCode)
             {
-                high_watermark = highWatermark;
-                last_stable_offset = lastStableOffset;
+                HighWatermark = highWatermark;
+                LastStableOffset = lastStableOffset;
+                LogStartOffset = logStartOffset;
                 Messages = ImmutableList<Message>.Empty.AddNotNullRange(messages);
+                AbortedTransactions = ImmutableList<AbortedTransaction>.Empty.AddNotNullRange(abortedTransactions);
             }
 
             /// <summary>
             /// The offset at the end of the log for this partition. This can be used by the client to determine how many messages behind the end of the log they are.
             /// </summary>
-            public long high_watermark { get; }
+            public long HighWatermark { get; }
 
             /// <summary>
             /// The last stable offset (or LSO) of the partition. This is the last offset such that the state of all transactional 
             /// records prior to this offset have been decided (ABORTED or COMMITTED)
+            /// Version: 4+
             /// </summary>
-            public long? last_stable_offset { get; }
+            public long? LastStableOffset { get; }
+
+            /// <summary>
+            /// Earliest available offset.
+            /// Version: 5+
+            /// </summary>
+            public long? LogStartOffset { get; }
 
             public IImmutableList<Message> Messages { get; }
+
+            /// <summary>
+            /// Version: 4+
+            /// </summary>
+            public IImmutableList<AbortedTransaction> AbortedTransactions { get; }
 
             #region Equality
 
@@ -159,18 +175,22 @@ namespace KafkaClient.Protocol
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
                 return base.Equals(other)
-                    && high_watermark == other.high_watermark
-                    && last_stable_offset == other.last_stable_offset
-                    && Messages.HasEqualElementsInOrder(other.Messages);
+                    && HighWatermark == other.HighWatermark
+                    && LastStableOffset == other.LastStableOffset
+                    && LogStartOffset == other.LogStartOffset
+                    && Messages.HasEqualElementsInOrder(other.Messages)
+                    && AbortedTransactions.HasEqualElementsInOrder(other.AbortedTransactions);
             }
 
             public override int GetHashCode()
             {
                 unchecked {
                     int hashCode = base.GetHashCode();
-                    hashCode = (hashCode * 397) ^ high_watermark.GetHashCode();
-                    hashCode = (hashCode * 397) ^ (last_stable_offset?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (Messages?.Count.GetHashCode() ?? 0);
+                    hashCode = (hashCode * 397) ^ HighWatermark.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (LastStableOffset?.GetHashCode() ?? 0);
+                    hashCode = (hashCode * 397) ^ (LogStartOffset?.GetHashCode() ?? 0);
+                    hashCode = (hashCode * 397) ^ (Messages?.Count.GetHashCode() ?? 0);
+                    hashCode = (hashCode * 397) ^ (AbortedTransactions?.Count.GetHashCode() ?? 0);
                     return hashCode;
                 }
             }
@@ -180,21 +200,23 @@ namespace KafkaClient.Protocol
 
         public class AbortedTransaction : IEquatable<AbortedTransaction>
         {
+            public override string ToString() => $"{{producer_id:{ProducerId},first_offset:{FirstOffset}}}";
+
             public AbortedTransaction(long producerId, long firstOffset)
             {
-                producer_id = producerId;
-                first_offset = firstOffset;
+                ProducerId = producerId;
+                FirstOffset = firstOffset;
             }
 
             /// <summary>
             /// The producer id associated with the aborted transactions.
             /// </summary>
-            public long producer_id { get; }
+            public long ProducerId { get; }
 
             /// <summary>
             /// The first offset in the aborted transaction.
             /// </summary>
-            public long first_offset { get; }
+            public long FirstOffset { get; }
 
             #region Equality
 
@@ -207,8 +229,8 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return producer_id == other.producer_id
-                    && first_offset == other.first_offset;
+                return ProducerId == other.ProducerId
+                    && FirstOffset == other.FirstOffset;
             }
 
             public override int GetHashCode()
@@ -216,8 +238,8 @@ namespace KafkaClient.Protocol
                 unchecked
                 {
                     int hashCode = base.GetHashCode();
-                    hashCode = (hashCode * 397) ^ producer_id.GetHashCode();
-                    hashCode = (hashCode * 397) ^ first_offset.GetHashCode();
+                    hashCode = (hashCode * 397) ^ ProducerId.GetHashCode();
+                    hashCode = (hashCode * 397) ^ FirstOffset.GetHashCode();
                     return hashCode;
                 }
             }

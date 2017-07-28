@@ -218,6 +218,17 @@ namespace KafkaClient.Tests.Unit
         }
 #endif
 
+        private byte MessageVersion(short version)
+        {
+            switch (version) {
+                case 5:
+                case 4:
+                case 3: return (byte)2;
+                case 2: return (byte)1;
+                default: return (byte) 0;
+            }
+        }
+
         [Test]
         public void ProduceRequest(
             [Values(0, 1, 2, 3)] short version,
@@ -232,7 +243,7 @@ namespace KafkaClient.Tests.Unit
             var payloads = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partition = 1 + t % totalPartitions;
-                payloads.Add(new ProduceRequest.Topic(topicName + t, partition, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec));
+                payloads.Add(new ProduceRequest.Topic(topicName + t, partition, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec));
             }
             var request = new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeoutMilliseconds), acks, version >= 3 ? topicName : null);
             var requestWithUpdatedAttribute = new ProduceRequest(request.Topics.Select(t => new ProduceRequest.Topic(t.TopicName, t.PartitionId,
@@ -256,7 +267,7 @@ namespace KafkaClient.Tests.Unit
             var topics = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partition = 1 + t % totalPartitions;
-                topics.Add(new ProduceRequest.Topic(topicName + t, partition, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec));
+                topics.Add(new ProduceRequest.Topic(topicName + t, partition, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec));
             }
             var alternate = topics.Take(1).Select(p => new ProduceRequest.Topic(topicName, p.PartitionId, p.Messages, p.Codec));
             var request = new ProduceRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds), acks, version >= 3 ? topicName : null);
@@ -274,19 +285,19 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void ProduceRequestTopicEquality(
-            [Values(0, 1, 2)] short version,
+            [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
             [Values(1, 5)] int totalPartitions,
             [Values(3)] int messagesPerSet,
             [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
         {
             var topic = new ProduceRequest.Topic(
-                topicName, totalPartitions, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec);
+                topicName, totalPartitions, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec);
             topic.AssertEqualToSelf();
             topic.AssertNotEqual(null,
-                new ProduceRequest.Topic(topicName + 1, totalPartitions, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec),
-                new ProduceRequest.Topic(topicName, totalPartitions + 1, GenerateMessages(messagesPerSet, (byte)(version >= 2 ? 1 : 0), codec), codec),
-                new ProduceRequest.Topic(topicName, totalPartitions, GenerateMessages(messagesPerSet + 1, (byte)(version >= 2 ? 1 : 0), codec), codec));
+                new ProduceRequest.Topic(topicName + 1, totalPartitions, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec),
+                new ProduceRequest.Topic(topicName, totalPartitions + 1, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec),
+                new ProduceRequest.Topic(topicName, totalPartitions, GenerateMessages(messagesPerSet + 1, MessageVersion(version), codec), codec));
         }
 
         [Test]
@@ -364,11 +375,11 @@ namespace KafkaClient.Tests.Unit
             var topic = new FetchRequest.Topic(topicName, totalPartitions, _randomizer.Next(0, int.MaxValue), _randomizer.Next(0, int.MaxValue), maxBytes);
             topic.AssertEqualToSelf();
             topic.AssertNotEqual(null,
-                new FetchRequest.Topic(topicName + 1, totalPartitions, topic.fetch_offset, topic.log_start_offset, maxBytes),
-                new FetchRequest.Topic(topicName, totalPartitions + 1, topic.fetch_offset, topic.log_start_offset, maxBytes),
-                new FetchRequest.Topic(topicName, totalPartitions, topic.fetch_offset + 1, topic.log_start_offset, maxBytes),
-                new FetchRequest.Topic(topicName, totalPartitions, topic.fetch_offset, topic.log_start_offset + 1, maxBytes),
-                new FetchRequest.Topic(topicName, totalPartitions, topic.fetch_offset, topic.log_start_offset, maxBytes + 1));
+                new FetchRequest.Topic(topicName + 1, totalPartitions, topic.FetchOffset, topic.LogStartOffset, maxBytes),
+                new FetchRequest.Topic(topicName, totalPartitions + 1, topic.FetchOffset, topic.LogStartOffset, maxBytes),
+                new FetchRequest.Topic(topicName, totalPartitions, topic.FetchOffset + 1, topic.LogStartOffset, maxBytes),
+                new FetchRequest.Topic(topicName, totalPartitions, topic.FetchOffset, topic.LogStartOffset + 1, maxBytes),
+                new FetchRequest.Topic(topicName, totalPartitions, topic.FetchOffset, topic.LogStartOffset, maxBytes + 1));
         }
 
         [Test]
@@ -385,22 +396,22 @@ namespace KafkaClient.Tests.Unit
             for (var t = 0; t < topicsPerRequest; t++) {
                 topics.Add(new FetchRequest.Topic(topicName + t, t % totalPartitions, _randomizer.Next(0, int.MaxValue), _randomizer.Next(0, int.MaxValue), maxBytes));
             }
-            var alternate = topics.Take(1).Select(p => new FetchRequest.Topic(topicName, p.PartitionId, p.fetch_offset, p.max_bytes));
+            var alternate = topics.Take(1).Select(p => new FetchRequest.Topic(topicName, p.PartitionId, p.FetchOffset, p.MaxBytes));
             var request = new FetchRequest(topics, TimeSpan.FromMilliseconds(maxWaitMilliseconds), minBytes, version >= 3 ? maxBytes / _randomizer.Next(1, maxBytes) : 0, version >= 4 ? (byte?)_randomizer.Next(0, 1) : null);
             request.AssertEqualToSelf();
             request.AssertNotEqual(null,
-                new FetchRequest(alternate.Union(topics.Skip(1)), request.max_wait_time, request.min_bytes, request.max_bytes, request.isolation_level),
-                new FetchRequest(topics.Skip(1), request.max_wait_time, request.min_bytes, request.max_bytes, request.isolation_level),
-                new FetchRequest(topics, TimeSpan.FromMilliseconds(maxWaitMilliseconds + 1), request.min_bytes, request.max_bytes, request.isolation_level),
-                new FetchRequest(topics, request.max_wait_time, request.min_bytes + 1, request.max_bytes, request.isolation_level),
-                new FetchRequest(topics, request.max_wait_time, request.min_bytes, request.max_bytes + 1, request.isolation_level),
-                new FetchRequest(topics, request.max_wait_time, request.min_bytes, request.max_bytes, request.isolation_level == 0 ? (byte)1 : (byte)0)
+                new FetchRequest(alternate.Union(topics.Skip(1)), request.MaxWaitTime, request.MinBytes, request.MaxBytes, request.IsolationLevel),
+                new FetchRequest(topics.Skip(1), request.MaxWaitTime, request.MinBytes, request.MaxBytes, request.IsolationLevel),
+                new FetchRequest(topics, TimeSpan.FromMilliseconds(maxWaitMilliseconds + 1), request.MinBytes, request.MaxBytes, request.IsolationLevel),
+                new FetchRequest(topics, request.MaxWaitTime, request.MinBytes + 1, request.MaxBytes, request.IsolationLevel),
+                new FetchRequest(topics, request.MaxWaitTime, request.MinBytes, request.MaxBytes + 1, request.IsolationLevel),
+                new FetchRequest(topics, request.MaxWaitTime, request.MinBytes, request.MaxBytes, request.IsolationLevel == 0 ? (byte)1 : (byte)0)
                 );
         }
 
         [Test]
         public void FetchResponse(
-            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values(0, 1234)] int throttleTime,
             [Values("testTopic")] string topicName, 
             [Values(1, 10)] int topicsPerRequest, 
@@ -416,20 +427,34 @@ namespace KafkaClient.Tests.Unit
             var topics = new List<FetchResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partitionId = t % totalPartitions;
-                var messages = GenerateMessages(messagesPerSet, (byte) (version >= 2 ? 1 : 0), codec);
-                topics.Add(new FetchResponse.Topic(topicName + t, partitionId, _randomizer.Next(), errorCode, messages: messages));
+                var messages = GenerateMessages(messagesPerSet, MessageVersion(version), codec);
+                var abortedTransactions = version >= 4
+                    ? totalPartitions.Repeat(i => new FetchResponse.AbortedTransaction(i, i)).ToList()
+                    : null;
+                topics.Add(new FetchResponse.Topic(topicName + t, partitionId, _randomizer.Next(), errorCode, version >= 4 ? (long?)topicsPerRequest : null, version >= 5 ? (long?)topicsPerRequest : null, messages, abortedTransactions));
             }
             var response = new FetchResponse(topics, version >= 1 ? TimeSpan.FromMilliseconds(throttleTime) : (TimeSpan?)null);
-            var responseWithUpdatedAttribute = new FetchResponse(response.Responses.Select(t => new FetchResponse.Topic(t.TopicName, t.PartitionId, t.high_watermark, t.Error,
-                    messages: t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)))), 
-                response.throttle_time_ms);
+            var responseWithUpdatedAttribute = new FetchResponse(response.Responses.Select(t => new FetchResponse.Topic(t.TopicName, t.PartitionId, t.HighWatermark, t.Error, t.LastStableOffset, t.LogStartOffset,
+                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)), t.AbortedTransactions)), 
+                response.ThrottleTime);
 
             response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
         }
 
         [Test]
+        public void FetchResponseAbortedTransactionEquality([Values(1, 5)] int totalPartitions)
+        {
+            var abortedTransaction = new FetchResponse.AbortedTransaction(totalPartitions, totalPartitions);
+            abortedTransaction.AssertEqualToSelf();
+            abortedTransaction.AssertNotEqual(null,
+                new FetchResponse.AbortedTransaction(totalPartitions + 1, totalPartitions),
+                new FetchResponse.AbortedTransaction(totalPartitions, totalPartitions + 1)
+            );
+        }
+
+        [Test]
         public void FetchResponseTopicEquality(
-            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values("testTopic")] string topicName, 
             [Values(1, 5)] int totalPartitions, 
             [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
@@ -440,22 +465,33 @@ namespace KafkaClient.Tests.Unit
             [Values(3)] int messagesPerSet
             )
         {
-            var messages = GenerateMessages(messagesPerSet, (byte) (version >= 2 ? 1 : 0), codec);
-            var topic = new FetchResponse.Topic(topicName, totalPartitions, _randomizer.Next(), errorCode, messages: messages);
+            var messages = GenerateMessages(messagesPerSet, MessageVersion(version), codec);
+            var abortedTransactions = version >= 4
+                ? totalPartitions.Repeat(i => new FetchResponse.AbortedTransaction(i, i)).ToList()
+                : null;
+            var topic = new FetchResponse.Topic(topicName, totalPartitions, _randomizer.Next(), errorCode, version >= 4 ? (long?)totalPartitions : null, version >= 5 ? (long?)totalPartitions : null, messages, abortedTransactions);
             topic.AssertEqualToSelf();
             topic.AssertNotEqual(null,
-                new FetchResponse.Topic(topicName + 1, totalPartitions, topic.high_watermark, topic.Error, messages: messages),
-                new FetchResponse.Topic(topicName, totalPartitions + 1, topic.high_watermark, topic.Error, messages: messages),
-                new FetchResponse.Topic(topicName, totalPartitions, topic.high_watermark + 1, topic.Error, messages: messages),
-                new FetchResponse.Topic(topicName, totalPartitions, topic.high_watermark, topic.Error + 1, messages: messages),
-                new FetchResponse.Topic(topicName, totalPartitions, topic.high_watermark, topic.Error, messages: messages.Skip(1)),
-                new FetchResponse.Topic(topicName, totalPartitions, topic.high_watermark, topic.Error, messages: ModifyMessages(messages))
+                new FetchResponse.Topic(topicName + 1, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages, topic.AbortedTransactions),
+                new FetchResponse.Topic(topicName, totalPartitions + 1, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages, topic.AbortedTransactions),
+                new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark + 1, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages, topic.AbortedTransactions),
+                new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error + 1, topic.LastStableOffset, topic.LogStartOffset, messages, topic.AbortedTransactions),
+                new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages.Skip(1), topic.AbortedTransactions),
+                new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, ModifyMessages(messages), topic.AbortedTransactions)
                 );
+            if (version >= 4) {
+                topic.AssertNotEqual(new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset.GetValueOrDefault() + 1, topic.LogStartOffset, messages, topic.AbortedTransactions));
+                topic.AssertNotEqual(new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages, topic.AbortedTransactions.Skip(1)));
+                topic.AssertNotEqual(new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset, messages, (new [] {new FetchResponse.AbortedTransaction(totalPartitions + 1, 0)}).Union(topic.AbortedTransactions.Skip(1))));
+            }
+            if (version >= 5) {
+                topic.AssertNotEqual(new FetchResponse.Topic(topicName, totalPartitions, topic.HighWatermark, topic.Error, topic.LastStableOffset, topic.LogStartOffset.GetValueOrDefault() + 1, messages, topic.AbortedTransactions));
+            }
         }
 
-               [Test]
+        [Test]
         public void FetchResponseEquality(
-            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values(0, 1234)] int throttleTime,
             [Values("testTopic")] string topicName, 
             [Values(1, 10)] int topicsPerRequest, 
@@ -471,21 +507,21 @@ namespace KafkaClient.Tests.Unit
             var topics = new List<FetchResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
                 var partitionId = t % totalPartitions;
-                var messages = GenerateMessages(messagesPerSet, (byte) (version >= 2 ? 1 : 0), codec);
+                var messages = GenerateMessages(messagesPerSet, MessageVersion(version), codec);
                 topics.Add(new FetchResponse.Topic(topicName + t, partitionId, _randomizer.Next(), errorCode, messages: messages));
             }
-            var alternate = topics.Take(1).Select(p => new FetchResponse.Topic(topicName, p.PartitionId, p.high_watermark, p.Error, messages: p.Messages));
+            var alternate = topics.Take(1).Select(p => new FetchResponse.Topic(topicName, p.PartitionId, p.HighWatermark, p.Error, messages: p.Messages));
             var response = new FetchResponse(topics, version >= 1 ? TimeSpan.FromMilliseconds(throttleTime) : (TimeSpan?)null);
             response.AssertNotEqual(null,
-                new FetchResponse(alternate.Union(topics.Skip(1)), response.throttle_time_ms),
-                new FetchResponse(topics.Skip(1), response.throttle_time_ms)
+                new FetchResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime),
+                new FetchResponse(topics.Skip(1), response.ThrottleTime)
                 );
         }
- 
+
 #if DOTNETSTANDARD
         [Test]
         public void FetchResponseSnappy(
-            [Values(0, 1, 2, 3)] short version,
+            [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values(0, 1234)] int throttleTime,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
