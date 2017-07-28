@@ -9,7 +9,10 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Produce Request => acks timeout [topics]
+    /// Produce Request => transactional_id* acks timeout [topics]
+    /// *transactional_id only version 3 and above
+    /// transactional_id         -- The transactional ID of the producer. This is used to authorize transaction produce requests. 
+    ///                             This can be null for non-transactional producers.
     ///  acks => INT16           -- This field indicates how many acknowledgements the servers should receive before responding to the request. 
     ///                             If it is 0 the server will not send any response (this is the only case where the server will not reply to 
     ///                             a request). If it is 1, the server will wait the data is written to the local log before sending a response. 
@@ -30,7 +33,7 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class ProduceRequest : Request, IRequest<ProduceResponse>, IEquatable<ProduceRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},acks:{acks},timeout:{timeout},topics:[{topics.ToStrings()}]}}";
+        public override string ToString() => $"{{Api:{ApiKey},acks:{acks},timeout:{timeout},transactional_id:{transactional_id},topics:[{topics.ToStrings()}]}}";
 
         public override string ShortString() => topics.Count == 1 ? $"{ApiKey} {topics[0].topic}" : ApiKey.ToString();
 
@@ -43,17 +46,20 @@ namespace KafkaClient.Protocol
                                    } into tpc
                                    select tpc).ToList();
 
+            if (context.ApiVersion.GetValueOrDefault() >= 3) {
+                writer.Write(transactional_id);
+            }
             writer.Write(acks)
                     .Write((int)timeout.TotalMilliseconds)
                     .Write(groupedPayloads.Count);
 
             foreach (var groupedPayload in groupedPayloads) {
-                var payloads = groupedPayload.ToList();
+                var topics = groupedPayload.ToList();
                 writer.Write(groupedPayload.Key.topic)
-                        .Write(payloads.Count)
+                        .Write(topics.Count)
                         .Write(groupedPayload.Key.partition_id);
 
-                var compressedBytes = writer.Write(payloads.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
+                var compressedBytes = writer.Write(topics.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
                 Interlocked.Add(ref totalCompressedBytes, compressedBytes);
             }
 
@@ -65,16 +71,17 @@ namespace KafkaClient.Protocol
 
         public ProduceResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => ProduceResponse.FromBytes(context, bytes);
 
-        public ProduceRequest(Topic topic, TimeSpan? timeout = null, short acks = 1)
-            : this(new [] { topic }, timeout, acks)
+        public ProduceRequest(Topic topic, TimeSpan? timeout = null, short acks = 1, string transactional_id = null)
+            : this(new [] { topic }, timeout, acks, transactional_id)
         {
         }
 
-        public ProduceRequest(IEnumerable<Topic> payload, TimeSpan? timeout = null, short acks = 1) 
+        public ProduceRequest(IEnumerable<Topic> payload, TimeSpan? timeout = null, short acks = 1, string transactional_id = null) 
             : base(ApiKey.Produce, acks != 0)
         {
             this.timeout = timeout.GetValueOrDefault(TimeSpan.FromSeconds(1));
             this.acks = acks;
+            this.transactional_id = transactional_id;
             topics = payload != null ? payload.ToImmutableList() : ImmutableList<Topic>.Empty;
         }
 
@@ -82,6 +89,11 @@ namespace KafkaClient.Protocol
         /// Time kafka will wait for requested ack level before returning.
         /// </summary>
         public TimeSpan timeout { get; }
+
+        /// <summary>
+        /// The transactional ID of the producer. This is used to authorize transaction produce requests. This can be null for non-transactional producers.
+        /// </summary>
+        public string transactional_id { get; }
 
         /// <summary>
         /// Level of ack required by kafka: 0 immediate, 1 written to leader, 2+ replicas synced, -1 all replicas
@@ -108,6 +120,7 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(this, other)) return true;
             return timeout.Equals(other.timeout) 
                 && acks == other.acks 
+                && transactional_id == other.transactional_id
                 && topics.HasEqualElementsInOrder(other.topics);
         }
 
@@ -116,8 +129,9 @@ namespace KafkaClient.Protocol
         {
             unchecked {
                 var hashCode = timeout.GetHashCode();
-                hashCode = (hashCode*397) ^ acks.GetHashCode();
-                hashCode = (hashCode*397) ^ (topics?.Count.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ acks.GetHashCode();
+                hashCode = (hashCode * 397) ^ (transactional_id?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (topics?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

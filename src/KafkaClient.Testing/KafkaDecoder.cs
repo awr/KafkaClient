@@ -98,6 +98,9 @@ namespace KafkaClient.Testing
         private static IRequest ProduceRequest(IRequestContext context, ArraySegment<byte> data)
         {
             using (var reader = ReadHeader(data)) {
+                if (context.ApiVersion >= 3) {
+                    var transactional_id = reader.ReadString();
+                }
                 var acks = reader.ReadInt16();
                 var timeout = reader.ReadInt32();
 

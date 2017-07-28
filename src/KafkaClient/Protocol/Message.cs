@@ -50,7 +50,7 @@ namespace KafkaClient.Protocol
             Offset = offset;
             MessageVersion = version;
             Attribute = (byte)(attribute & CodecMask);
-            Key = key;
+            Key = key.Count > 0 ? key : EmptySegment;
             Value = value;
             Timestamp = timestamp;
         }
