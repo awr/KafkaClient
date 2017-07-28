@@ -233,6 +233,71 @@ namespace KafkaClient.Protocol
         /// <summary>
         /// The message format version on the broker does not support the request.
         /// </summary>
-        UNSUPPORTED_FOR_MESSAGE_FORMAT = 43
+        UNSUPPORTED_FOR_MESSAGE_FORMAT = 43,
+
+        /// <summary>
+        /// Request parameters do not satisfy the configured policy.
+        /// </summary>
+        POLICY_VIOLATION = 44,
+
+        /// <summary>
+        /// The broker received an out of order sequence number
+        /// </summary>
+        OUT_OF_ORDER_SEQUENCE_NUMBER = 45,
+        
+        /// <summary>
+        /// The broker received a duplicate sequence number
+        /// </summary>
+        DUPLICATE_SEQUENCE_NUMBER = 46,
+        
+        /// <summary>
+        /// Producer attempted an operation with an old epoch. Either there is a newer producer with the 
+        /// same transactionalId, or the producer's transaction has been expired by the broker.
+        /// </summary>
+        INVALID_PRODUCER_EPOCH = 47,
+        
+        /// <summary>
+        /// The producer attempted a transactional operation in an invalid state
+        /// </summary>
+        INVALID_TXN_STATE = 48,
+        
+        /// <summary>
+        /// The producer attempted to use a producer id which is not currently assigned to its transactional id
+        /// </summary>
+        INVALID_PRODUCER_ID_MAPPING = 49,
+        
+        /// <summary>
+        /// The transaction timeout is larger than the maximum value allowed by the broker (as configured by 
+        /// max.transaction.timeout.ms).
+        /// </summary>
+        INVALID_TRANSACTION_TIMEOUT = 50,
+        
+        /// <summary>
+        /// The producer attempted to update a transaction while another concurrent operation on the same 
+        /// transaction was ongoing
+        /// </summary>
+        CONCURRENT_TRANSACTIONS = 51,
+        
+        /// <summary>
+        /// Indicates that the transaction coordinator sending a WriteTxnMarker is no longer the current coordinator 
+        /// for a given producer.
+        /// </summary>
+        TRANSACTION_COORDINATOR_FENCED = 52,
+        
+        /// <summary>
+        /// Transactional Id authorization failed
+        /// </summary>
+        TRANSACTIONAL_ID_AUTHORIZATION_FAILED = 53,
+        
+        /// <summary>
+        /// Security features are disabled.
+        /// </summary>
+        SECURITY_DISABLED = 54,
+        
+        /// <summary>
+        /// The broker did not attempt to execute this operation. This may happen for batched RPCs where some 
+        /// operations in the batch failed, causing the broker to respond without trying the rest.
+        /// </summary>
+        OPERATION_NOT_ATTEMPTED = 55,
     }
 }
