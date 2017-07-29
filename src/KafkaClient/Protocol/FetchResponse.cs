@@ -39,7 +39,6 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 TimeSpan? throttleTime = null;
-
                 if (context.ApiVersion >= 1) {
                     throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
                 }
@@ -92,7 +91,8 @@ namespace KafkaClient.Protocol
 
         /// <summary>
         /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) Only version 1 and above (0.9.0)
+        /// violate any quota.) 
+        /// Version: 1+
         /// </summary>
         public TimeSpan? ThrottleTime { get; }
 

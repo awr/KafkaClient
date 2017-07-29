@@ -26,7 +26,7 @@ namespace KafkaClient.Assignment
         {
             var topicNames = memberMetadata.Values.SelectMany(m => m.Subscriptions).Distinct().ToList();
             var topicMetadata = await router.GetTopicMetadataAsync(topicNames, cancellationToken).ConfigureAwait(false);
-            var partitions = new HashSet<TopicPartition>(topicMetadata.SelectMany(t => t.partition_metadata.Select(p => new TopicPartition(t.topic, p.partition_id))));
+            var partitions = new HashSet<TopicPartition>(topicMetadata.SelectMany(t => t.PartitionMetadata.Select(p => new TopicPartition(t.TopicName, p.PartitionId))));
 
             var previousAssignments = router.GetGroupMemberAssignment(groupId); // take the latest we've got, ignoring whether it's a current gen
             var assignments = memberMetadata.Keys.ToDictionary(_ => _, _ => new List<TopicPartition>());

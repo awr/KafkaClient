@@ -456,7 +456,7 @@ namespace KafkaClient
                 partitions =>
                     new OffsetsRequest(
                         partitions.Select(
-                            _ => new OffsetsRequest.Topic(topicName, _.partition_id, offsetTime, maxOffsets))),
+                            _ => new OffsetsRequest.Topic(topicName, _.PartitionId, offsetTime, maxOffsets))),
                 cancellationToken);
         }
 
@@ -523,7 +523,7 @@ namespace KafkaClient
                 topicName,
                 partitions =>
                     new OffsetFetchRequest(
-                        groupId, partitions.Select(_ => new OffsetsRequest.Topic(topicName, _.partition_id))),
+                        groupId, partitions.Select(_ => new OffsetsRequest.Topic(topicName, _.PartitionId))),
                 cancellationToken);
         }
 
@@ -550,13 +550,13 @@ namespace KafkaClient
 
                     var topicMetadata = await router.GetTopicMetadataAsync(topicName, cancellationToken).ConfigureAwait(false);
                     routedTopicRequests = topicMetadata
-                        .partition_metadata
-                        .Where(_ => !offsets.ContainsKey(_.partition_id)) // skip partitions already successfully retrieved
-                        .GroupBy(x => x.leader)
+                        .PartitionMetadata
+                        .Where(_ => !offsets.ContainsKey(_.PartitionId)) // skip partitions already successfully retrieved
+                        .GroupBy(x => x.Leader)
                         .Select(partitions => 
                             new RoutedTopicRequest<TResponse>(requestFunc(partitions),
                                 topicName, 
-                                partitions.Select(_ => _.partition_id).First(), 
+                                partitions.Select(_ => _.PartitionId).First(), 
                                 router.Log))
                         .ToArray();
 

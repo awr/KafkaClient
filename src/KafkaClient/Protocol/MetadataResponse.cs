@@ -3,48 +3,52 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Metadata Response => [brokers] *cluster_id *controller_id [topic_metadata]
-    ///  *controller_id is only version 1 (0.10.0) and above
-    ///  *cluster_id is only version 2 (0.10.1) and above
-    /// 
-    ///  broker => node_id host port *rack  (any number of brokers may be returned)
-    ///   *Rack is only version 1 (0.10.0) and above
-    ///                                  -- The node id, hostname, and port information for a kafka broker
-    ///   node_id => INT32               -- The broker id.
-    ///   host => STRING                 -- The hostname of the broker.
-    ///   port => INT32                  -- The port on which the broker accepts requests.
-    ///   rack => NULLABLE_STRING        -- The rack of the broker.
-    ///  cluster_id => NULLABLE_STRING   -- The cluster id that this broker belongs to.
-    ///  controller_id => INT32          -- The broker id of the controller broker
-    /// 
-    ///  topic_metadata => topic_error_code topic *is_internal [partition_metadata]
-    ///   *is_internal is only version 1 (0.10.0) and above
-    ///   topic_error_code => INT16      -- The error code for the given topic.
-    ///   topic => STRING                -- The name of the topic.
-    ///   is_internal => BOOLEAN         -- Indicates if the topic is considered a Kafka internal topic
-    /// 
-    ///   partition_metadata => partition_error_code partition_id leader replicas isr
-    ///    partition_error_code => INT16 -- The error code for the partition, if any.
-    ///    partition_id => INT32         -- The id of the partition.
-    ///    leader => INT32               -- The id of the broker acting as leader for this partition.
-    ///                                     If no leader exists because we are in the middle of a leader election this id will be -1.
-    ///    replicas => [INT32]           -- The set of all nodes that host this partition.
-    ///    isr => [INT32]                -- The set of nodes that are in sync with the leader for this partition.
-    ///
-    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-MetadataAPI
+    /// Metadata Response => *throttle_time_ms [brokers] *cluster_id *controller_id [topic_metadata] 
     /// </summary>
+    /// <remarks>
+    /// Metadata Response => *throttle_time_ms [brokers] *cluster_id *controller_id [topic_metadata] 
+    ///   throttle_time_ms => INT32
+    ///   brokers => node_id host port *rack 
+    ///     node_id => INT32
+    ///     host => STRING
+    ///     port => INT32
+    ///     rack => NULLABLE_STRING
+    ///   cluster_id => NULLABLE_STRING
+    ///   controller_id => INT32
+    ///   topic_metadata => topic_error_code topic *is_internal [partition_metadata] 
+    ///     topic_error_code => INT16
+    ///     topic => STRING
+    ///     is_internal => BOOLEAN
+    ///     partition_metadata => partition_error_code partition_id leader [replicas] [isr] 
+    ///       partition_error_code => INT16
+    ///       partition_id => INT32
+    ///       leader => INT32
+    ///       replicas => INT32
+    ///       isr => INT32
+    ///
+    /// Version 1+: controller_id
+    /// Version 1+: is_internal
+    /// Version 1+: rack
+    /// Version 2+: cluster_id
+    /// Version 3+: throttle_time_ms
+    /// From http://kafka.apache.org/protocol.html#The_Messages_Metadata
+    /// </remarks>
     public class MetadataResponse : IResponse, IEquatable<MetadataResponse>
     {
-        public override string ToString() => $"{{brokers:[{brokers.ToStrings()}],topic_metadata:[{topic_metadata.ToStrings()}],cluster_id:{cluster_id},controller_id:{controller_id}}}";
+        public override string ToString() => $"{{brokers:[{Brokers.ToStrings()}],topic_metadata:[{TopicMetadata.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId}}}";
 
         public static MetadataResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
+                TimeSpan? throttleTime = null;
+                if (context.ApiVersion >= 3) {
+                    throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
+                }
+
                 var brokers = new Server[reader.ReadInt32()];
                 for (var b = 0; b < brokers.Length; b++) {
                     var brokerId = reader.ReadInt32();
@@ -95,25 +99,44 @@ namespace KafkaClient.Protocol
                     topics[t] = new Topic(topicName, topicError, partitions, isInternal);
                 }
 
-                return new MetadataResponse(brokers, topics, controllerId, clusterId);
+                return new MetadataResponse(brokers, topics, controllerId, clusterId, throttleTime);
             }            
         }
 
-        public MetadataResponse(IEnumerable<Server> brokers = null, IEnumerable<Topic> topics = null, int? controllerId = null, string clusterId = null)
+        public MetadataResponse(IEnumerable<Server> brokers = null, IEnumerable<Topic> topics = null, int? controllerId = null, string clusterId = null, TimeSpan? throttleTime = null)
         {
-            this.brokers = ImmutableList<Server>.Empty.AddNotNullRange(brokers);
-            topic_metadata = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            controller_id = controllerId;
-            cluster_id = clusterId;
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(topic_metadata.Select(t => t.topic_error_code));
+            Brokers = ImmutableList<Server>.Empty.AddNotNullRange(brokers);
+            TopicMetadata = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            ControllerId = controllerId;
+            ClusterId = clusterId;
+            ThrottleTime = throttleTime;
+            Errors = ImmutableList<ErrorCode>.Empty.AddRange(TopicMetadata.Select(t => t.TopicError));
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<Server> brokers { get; }
-        public int? controller_id { get; }
-        public string cluster_id { get; }
-        public IImmutableList<Topic> topic_metadata { get; }
+        public IImmutableList<Server> Brokers { get; }
+
+        /// <summary>
+        /// The broker id of the controller broker.
+        /// Version: 1+
+        /// </summary>
+        public int? ControllerId { get; }
+
+        /// <summary>
+        /// The cluster id that this broker belongs to.
+        /// Version: 2+
+        /// </summary>
+        public string ClusterId { get; }
+
+        /// <summary>
+        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
+        /// violate any quota.) 
+        /// Version: 3+
+        /// </summary>
+        public TimeSpan? ThrottleTime { get; }
+
+        public IImmutableList<Topic> TopicMetadata { get; }
 
         #region Equality
 
@@ -128,20 +151,22 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return brokers.HasEqualElementsInOrder(other.brokers) 
-                && controller_id == other.controller_id
-                && cluster_id == other.cluster_id
-                && topic_metadata.HasEqualElementsInOrder(other.topic_metadata);
+            return Brokers.HasEqualElementsInOrder(other.Brokers) 
+                && ControllerId == other.ControllerId
+                && ClusterId == other.ClusterId
+                && TopicMetadata.HasEqualElementsInOrder(other.TopicMetadata)
+                && ThrottleTime == other.ThrottleTime;
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = brokers?.Count.GetHashCode() ?? 0;
-                hashCode = (hashCode*397) ^ (controller_id?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (cluster_id?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (topic_metadata?.Count.GetHashCode() ?? 0);
+                var hashCode = Brokers?.Count.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ (ControllerId?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ClusterId?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ThrottleTime?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (TopicMetadata?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -150,22 +175,33 @@ namespace KafkaClient.Protocol
 
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},topic_error_code:{topic_error_code},partition_metadata:[{partition_metadata.ToStrings()}],is_internal:{is_internal}}}";
+            public override string ToString() => $"{{topic:{TopicName},topic_error_code:{TopicError},partition_metadata:[{PartitionMetadata.ToStrings()}],is_internal:{IsInternal}}}";
 
             public Topic(string topicName, ErrorCode errorCode = ErrorCode.NONE, IEnumerable<Partition> partitions = null, bool? isInternal = null)
             {
-                topic_error_code = errorCode;
-                topic = topicName;
-                is_internal = isInternal;
-                partition_metadata = ImmutableList<Partition>.Empty.AddNotNullRange(partitions);
+                TopicError = errorCode;
+                TopicName = topicName;
+                IsInternal = isInternal;
+                PartitionMetadata = ImmutableList<Partition>.Empty.AddNotNullRange(partitions);
             }
 
-            public ErrorCode topic_error_code { get; }
+            /// <summary>
+            /// The error code for the partition, if any.
+            /// </summary>
+            public ErrorCode TopicError { get; }
 
-            public string topic { get; }
-            public bool? is_internal { get; }
+            /// <summary>
+            /// The name of the topic.
+            /// </summary>
+            public string TopicName { get; }
 
-            public IImmutableList<Partition> partition_metadata { get; }
+            /// <summary>
+            /// Indicates if the topic is considered a Kafka internal topic.
+            /// Version: 1+
+            /// </summary>
+            public bool? IsInternal { get; }
+
+            public IImmutableList<Partition> PartitionMetadata { get; }
 
             #region Equality
 
@@ -180,20 +216,20 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return topic_error_code == other.topic_error_code 
-                    && string.Equals(topic, other.topic) 
-                    && is_internal == other.is_internal
-                    && partition_metadata.HasEqualElementsInOrder(other.partition_metadata);
+                return TopicError == other.TopicError 
+                    && string.Equals(TopicName, other.TopicName) 
+                    && IsInternal == other.IsInternal
+                    && PartitionMetadata.HasEqualElementsInOrder(other.PartitionMetadata);
             }
 
             /// <inheritdoc />
             public override int GetHashCode()
             {
                 unchecked {
-                    var hashCode = (int) topic_error_code;
-                    hashCode = (hashCode*397) ^ (topic?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (is_internal?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (partition_metadata?.GetHashCode() ?? 0);
+                    var hashCode = (int) TopicError;
+                    hashCode = (hashCode*397) ^ (TopicName?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (IsInternal?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (PartitionMetadata?.GetHashCode() ?? 0);
                     return hashCode;
                 }
             }
@@ -203,43 +239,43 @@ namespace KafkaClient.Protocol
 
         public class Partition : IEquatable<Partition>
         {
-            public override string ToString() => $"{{partition_id:{partition_id},partition_error_code:{partition_error_code},leader:{leader},replicas:[{replicas.ToStrings()}],isr:[{isr.ToStrings()}]}}";
+            public override string ToString() => $"{{partition_id:{PartitionId},partition_error_code:{PartitionError},leader:{Leader},replicas:[{Replicas.ToStrings()}],isr:[{Isr.ToStrings()}]}}";
 
             public Partition(int partitionId, int leaderId, ErrorCode errorCode = ErrorCode.NONE, IEnumerable<int> replicas = null, IEnumerable<int> isrs = null)
             {
-                partition_error_code = errorCode;
-                partition_id = partitionId;
-                leader = leaderId;
-                this.replicas = ImmutableList<int>.Empty.AddNotNullRange(replicas);
-                isr = ImmutableList<int>.Empty.AddNotNullRange(isrs);
+                PartitionError = errorCode;
+                PartitionId = partitionId;
+                Leader = leaderId;
+                Replicas = ImmutableList<int>.Empty.AddNotNullRange(replicas);
+                Isr = ImmutableList<int>.Empty.AddNotNullRange(isrs);
             }
 
             /// <summary>
             /// Error code.
             /// </summary>
-            public ErrorCode partition_error_code { get; }
+            public ErrorCode PartitionError { get; }
 
             /// <summary>
             /// The Id of the partition that this metadata describes.
             /// </summary>
-            public int partition_id { get; }
+            public int PartitionId { get; }
 
             /// <summary>
             /// The node id for the kafka broker currently acting as leader for this partition. If no leader exists because we are in the middle of a leader election this id will be -1.
             /// </summary>
-            public int leader { get; }
+            public int Leader { get; }
 
-            public bool IsElectingLeader => leader == -1;
+            public bool IsElectingLeader => Leader == -1;
 
             /// <summary>
             /// The set of alive nodes that currently acts as slaves for the leader for this partition.
             /// </summary>
-            public IImmutableList<int> replicas { get; }
+            public IImmutableList<int> Replicas { get; }
 
             /// <summary>
             /// The set subset of the replicas that are "caught up" to the leader
             /// </summary>
-            public IImmutableList<int> isr { get; }
+            public IImmutableList<int> Isr { get; }
 
             /// <inheritdoc />
             public override bool Equals(object obj)
@@ -252,26 +288,25 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return partition_error_code == other.partition_error_code 
-                    && partition_id == other.partition_id 
-                    && leader == other.leader 
-                    && replicas.HasEqualElementsInOrder(other.replicas) 
-                    && isr.HasEqualElementsInOrder(other.isr);
+                return PartitionError == other.PartitionError 
+                    && PartitionId == other.PartitionId 
+                    && Leader == other.Leader 
+                    && Replicas.HasEqualElementsInOrder(other.Replicas) 
+                    && Isr.HasEqualElementsInOrder(other.Isr);
             }
 
             /// <inheritdoc />
             public override int GetHashCode()
             {
                 unchecked {
-                    var hashCode = (int) partition_error_code;
-                    hashCode = (hashCode*397) ^ partition_id;
-                    hashCode = (hashCode*397) ^ leader;
-                    hashCode = (hashCode*397) ^ (replicas?.Count.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (isr?.Count.GetHashCode() ?? 0);
+                    var hashCode = (int) PartitionError;
+                    hashCode = (hashCode*397) ^ PartitionId;
+                    hashCode = (hashCode*397) ^ Leader;
+                    hashCode = (hashCode*397) ^ (Replicas?.Count.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (Isr?.Count.GetHashCode() ?? 0);
                     return hashCode;
                 }
             }
         }
-
     }
 }

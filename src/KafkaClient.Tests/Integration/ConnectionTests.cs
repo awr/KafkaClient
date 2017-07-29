@@ -55,8 +55,8 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var singleResult = await router.Connections.First().SendAsync(new MetadataRequest(TestConfig.TopicName()), CancellationToken.None);
-                    Assert.True(singleResult.topic_metadata.Count > 0);
-                    Assert.True(singleResult.topic_metadata.First().partition_metadata.Count > 0);
+                    Assert.True(singleResult.TopicMetadata.Count > 0);
+                    Assert.True(singleResult.TopicMetadata.First().PartitionMetadata.Count > 0);
 
                     var senderTasks = new List<Task>();
                     for (var s = 0; s < senders; s++) {
@@ -95,8 +95,8 @@ namespace KafkaClient.Tests.Integration
                         Assert.AreEqual(result1.Result.Responses.Count, 1);
                         Assert.True(result1.Result.Responses.First().TopicName == topicName, "ProduceRequest did not return expected topic.");
 
-                        Assert.True(result2.Result.topic_metadata.Count > 0);
-                        Assert.True(result2.Result.topic_metadata.Any(x => x.topic == topicName), "MetadataRequest did not return expected topic.");
+                        Assert.True(result2.Result.TopicMetadata.Count > 0);
+                        Assert.True(result2.Result.TopicMetadata.Any(x => x.TopicName == topicName), "MetadataRequest did not return expected topic.");
 
                         Assert.AreEqual(result3.Result.Responses.Count, 1);
                         Assert.True(result3.Result.Responses.First().TopicName == topicName, "OffsetRequest did not return expected topic.");

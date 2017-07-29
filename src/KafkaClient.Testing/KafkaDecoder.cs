@@ -199,8 +199,12 @@ namespace KafkaClient.Testing
                 for (var t = 0; t < topicNames.Length; t++) {
                     topicNames[t] = reader.ReadString();
                 }
+                bool? allowAutoTopicCreation = null;
+                if (context.ApiVersion >= 4) {
+                    allowAutoTopicCreation = reader.ReadBoolean();
+                }
 
-                return new MetadataRequest(topicNames);
+                return new MetadataRequest(topicNames, allowAutoTopicCreation);
             }
         }
         
@@ -561,8 +565,11 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.brokers.Count);
-            foreach (var broker in response.brokers) {
+            if (context.ApiVersion >= 3) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Brokers.Count);
+            foreach (var broker in response.Brokers) {
                 writer.Write(broker.Id)
                     .Write(broker.Host)
                     .Write(broker.Port);
@@ -572,16 +579,16 @@ namespace KafkaClient.Testing
             }
 
             if (context.ApiVersion >= 2) {
-                writer.Write(response.cluster_id);
+                writer.Write(response.ClusterId);
             }
             if (context.ApiVersion >= 1) {
-                writer.Write(response.controller_id.GetValueOrDefault());
+                writer.Write(response.ControllerId.GetValueOrDefault());
             }
 
-            var groupedTopics = response.topic_metadata.GroupBy(t => new { TopicName = t.topic, ErrorCode = t.topic_error_code, IsInternal = t.is_internal }).ToList();
+            var groupedTopics = response.TopicMetadata.GroupBy(t => new { TopicName = t.TopicName, ErrorCode = t.TopicError, IsInternal = t.IsInternal }).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
-                var partitions = topic.SelectMany(_ => _.partition_metadata).ToList();
+                var partitions = topic.SelectMany(_ => _.PartitionMetadata).ToList();
 
                 writer.Write(topic.Key.ErrorCode)
                     .Write(topic.Key.TopicName);
@@ -590,11 +597,11 @@ namespace KafkaClient.Testing
                 }
                 writer.Write(partitions.Count); // partitionsPerTopic
                 foreach (var partition in partitions) {
-                    writer.Write(partition.partition_error_code)
-                        .Write(partition.partition_id)
-                        .Write(partition.leader)
-                        .Write(partition.replicas)
-                        .Write(partition.isr);
+                    writer.Write(partition.PartitionError)
+                        .Write(partition.PartitionId)
+                        .Write(partition.Leader)
+                        .Write(partition.Replicas)
+                        .Write(partition.Isr);
                 }
             }
             return true;

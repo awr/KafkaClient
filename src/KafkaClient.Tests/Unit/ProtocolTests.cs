@@ -678,6 +678,7 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void MetadataRequest(
+            [Values(0, 1, 2, 3, 4)] short version,
             [Values("testTopic")] string topicName,
             [Values(0, 1, 10)] int topicsPerRequest)
         {
@@ -685,13 +686,14 @@ namespace KafkaClient.Tests.Unit
             for (var t = 0; t < topicsPerRequest; t++) {
                 topics.Add(topicName + t);
             }
-            var request = new MetadataRequest(topics);
+            var request = new MetadataRequest(topics, version >= 4 ? (bool?)true : null);
 
-            request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeDecodeRequest(version);
         }
 
         [Test]
         public void MetadataRequestEquality(
+            [Values(0, 1, 2, 3, 4)] short version,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest)
         {
@@ -700,16 +702,19 @@ namespace KafkaClient.Tests.Unit
                 topics.Add(topicName + t);
             }
             var alternate = topics.Take(1).Select(p => p + p);
-            var request = new MetadataRequest(topics);
+            var request = new MetadataRequest(topics, version >= 4 ? (bool?)true : null);
             request.AssertEqualToSelf();
             request.AssertNotEqual(new MetadataRequest[] { null });
-            request.AssertNotEqual(new MetadataRequest(alternate.Union(topics.Skip(1))));
-            request.AssertNotEqual(new MetadataRequest(topics.Skip(1)));
+            request.AssertNotEqual(new MetadataRequest(alternate.Union(topics.Skip(1)), request.AllowTopicAutoCreation));
+            request.AssertNotEqual(new MetadataRequest(topics.Skip(1), request.AllowTopicAutoCreation));
+            if (version >= 4) {
+                request.AssertNotEqual(new MetadataRequest(topics, false));
+            }
         }
 
         [Test]
         public void MetadataResponse(
-            [Values(0, 1, 2)] short version,
+            [Values(0, 1, 2, 3, 4)] short version,
             [Values(1, 15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -740,13 +745,13 @@ namespace KafkaClient.Tests.Unit
                 }
                 topics.Add(new MetadataResponse.Topic(topicName + t, errorCode, partitions, version >= 1 ? topicsPerRequest%2 == 0 : (bool?)null));
             }
-            var response = new MetadataResponse(brokers, topics, version >= 1 ? brokersPerRequest : (int?)null, version >= 2 ? $"cluster-{version}" : null);
+            var response = new MetadataResponse(brokers, topics, version >= 1 ? brokersPerRequest : (int?)null, version >= 2 ? $"cluster-{version}" : null, version >= 3 ? (TimeSpan?)TimeSpan.FromMilliseconds(150) : null);
 
             response.AssertCanEncodeDecodeResponse(version);
         }
 
         [Test]
-        public void ServerEquality([Values(0, 1, 2)] short version)
+        public void ServerEquality([Values(0, 1, 2, 3, 4)] short version)
         {
             var server = new Server(1, "kafka", 9092, version >= 1 ? "rack" : null);
             server.AssertEqualToSelf();
@@ -780,18 +785,18 @@ namespace KafkaClient.Tests.Unit
 
             partition.AssertEqualToSelf();
             partition.AssertNotEqual(null,
-                new MetadataResponse.Partition(partition.partition_id + 1, leader, errorCode, replicas, isrs),
-                new MetadataResponse.Partition(partition.partition_id, leader + 1, errorCode, replicas, isrs),
-                new MetadataResponse.Partition(partition.partition_id, leader, errorCode + 1, replicas, isrs),
-                new MetadataResponse.Partition(partition.partition_id, leader, errorCode, replicas.Skip(1), isrs),
-                new MetadataResponse.Partition(partition.partition_id, leader, errorCode, (new [] { replicas.Count() * 2}).Union(replicas.Skip(1)), isrs),
-                new MetadataResponse.Partition(partition.partition_id, leader, errorCode, replicas, isrs.Skip(1)),
-                new MetadataResponse.Partition(partition.partition_id, leader, errorCode, replicas, (new [] { isrs.Count() * 2}).Union(isrs.Skip(1))));
+                new MetadataResponse.Partition(partition.PartitionId + 1, leader, errorCode, replicas, isrs),
+                new MetadataResponse.Partition(partition.PartitionId, leader + 1, errorCode, replicas, isrs),
+                new MetadataResponse.Partition(partition.PartitionId, leader, errorCode + 1, replicas, isrs),
+                new MetadataResponse.Partition(partition.PartitionId, leader, errorCode, replicas.Skip(1), isrs),
+                new MetadataResponse.Partition(partition.PartitionId, leader, errorCode, (new [] { replicas.Count() * 2}).Union(replicas.Skip(1)), isrs),
+                new MetadataResponse.Partition(partition.PartitionId, leader, errorCode, replicas, isrs.Skip(1)),
+                new MetadataResponse.Partition(partition.PartitionId, leader, errorCode, replicas, (new [] { isrs.Count() * 2}).Union(isrs.Skip(1))));
         }
 
         [Test]
         public void MetadataResponseTopicEquality(
-            [Values(0, 1, 2)] short version,
+            [Values(0, 1, 2, 3, 4)] short version,
             [Values(1, 15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -811,23 +816,23 @@ namespace KafkaClient.Tests.Unit
                 partitions.Add(new MetadataResponse.Partition(partitionId, leader, errorCode, replicas, isrs));
             }
 
-            var alternate = partitions.Take(1).Select(p => new MetadataResponse.Partition(p.partition_id + 1, p.leader, p.partition_error_code, p.replicas, p.isr));
+            var alternate = partitions.Take(1).Select(p => new MetadataResponse.Partition(p.PartitionId + 1, p.Leader, p.PartitionError, p.Replicas, p.Isr));
             var topic = new MetadataResponse.Topic(topicName, errorCode, partitions, version >= 1 ? topicsPerRequest%2 == 0 : (bool?)null);
             topic.AssertEqualToSelf();
             topic.AssertNotEqual(null,
-                new MetadataResponse.Topic(topicName + 1, errorCode, partitions, topic.is_internal),
-                new MetadataResponse.Topic(topicName, errorCode + 1, partitions, topic.is_internal),
-                new MetadataResponse.Topic(topicName, errorCode, partitions.Skip(1), topic.is_internal),
-                new MetadataResponse.Topic(topicName, errorCode, alternate.Union(partitions.Skip(1)), topic.is_internal)
+                new MetadataResponse.Topic(topicName + 1, errorCode, partitions, topic.IsInternal),
+                new MetadataResponse.Topic(topicName, errorCode + 1, partitions, topic.IsInternal),
+                new MetadataResponse.Topic(topicName, errorCode, partitions.Skip(1), topic.IsInternal),
+                new MetadataResponse.Topic(topicName, errorCode, alternate.Union(partitions.Skip(1)), topic.IsInternal)
                 );
             if (version >= 1) {
-                topic.AssertNotEqual(new MetadataResponse.Topic(topicName, errorCode, partitions, !topic.is_internal.Value));
+                topic.AssertNotEqual(new MetadataResponse.Topic(topicName, errorCode, partitions, !topic.IsInternal.Value));
             }
         }
 
         [Test]
         public void MetadataResponseEquality(
-            [Values(0, 1, 2)] short version,
+            [Values(0, 1, 2, 3, 4)] short version,
             [Values(1, 15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
@@ -859,20 +864,23 @@ namespace KafkaClient.Tests.Unit
                 topics.Add(new MetadataResponse.Topic(topicName + t, errorCode, partitions, version >= 1 ? topicsPerRequest%2 == 0 : (bool?)null));
             }
             var alternateBrokers = brokers.Take(1).Select(b => new Server(b.Id + 1, b.Host, b.Port, b.Rack));
-            var alternateTopics = topics.Take(1).Select(t => new MetadataResponse.Topic(t.topic + t.topic, t.topic_error_code, t.partition_metadata, t.is_internal));
-            var response = new MetadataResponse(brokers, topics, version >= 1 ? brokersPerRequest : (int?)null, version >= 2 ? $"cluster-{version}" : null);
+            var alternateTopics = topics.Take(1).Select(t => new MetadataResponse.Topic(t.TopicName + t.TopicName, t.TopicError, t.PartitionMetadata, t.IsInternal));
+            var response = new MetadataResponse(brokers, topics, version >= 1 ? brokersPerRequest : (int?)null, version >= 2 ? $"cluster-{version}" : null, version >= 4 ? (TimeSpan?)TimeSpan.FromMilliseconds(150) : null);
             response.AssertEqualToSelf();
             response.AssertNotEqual(null,
-                new MetadataResponse(brokers.Skip(1), topics, response.controller_id, response.cluster_id),
-                new MetadataResponse(alternateBrokers.Union(brokers.Skip(1)), topics, response.controller_id, response.cluster_id),
-                new MetadataResponse(brokers, topics.Skip(1), response.controller_id, response.cluster_id),
-                new MetadataResponse(brokers, alternateTopics.Union(topics.Skip(1)), response.controller_id, response.cluster_id)
+                new MetadataResponse(brokers.Skip(1), topics, response.ControllerId, response.ClusterId, response.ThrottleTime),
+                new MetadataResponse(alternateBrokers.Union(brokers.Skip(1)), topics, response.ControllerId, response.ClusterId, response.ThrottleTime),
+                new MetadataResponse(brokers, topics.Skip(1), response.ControllerId, response.ClusterId, response.ThrottleTime),
+                new MetadataResponse(brokers, alternateTopics.Union(topics.Skip(1)), response.ControllerId, response.ClusterId, response.ThrottleTime)
                 );
             if (version >= 1) {
-                response.AssertNotEqual(new MetadataResponse(brokers, topics, response.controller_id + 1, response.cluster_id));
+                response.AssertNotEqual(new MetadataResponse(brokers, topics, response.ControllerId + 1, response.ClusterId, response.ThrottleTime));
             }
             if (version >= 2) {
-                response.AssertNotEqual(new MetadataResponse(brokers, topics, response.controller_id, response.cluster_id + 1));
+                response.AssertNotEqual(new MetadataResponse(brokers, topics, response.ControllerId, response.ClusterId + 1, response.ThrottleTime));
+            }
+            if (version >= 3) {
+                response.AssertNotEqual(new MetadataResponse(brokers, topics, response.ControllerId, response.ClusterId, TimeSpan.FromMilliseconds(250)));
             }
         }
 

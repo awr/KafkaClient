@@ -102,7 +102,7 @@ namespace KafkaClient
             var topic = await Router.GetTopicMetadataAsync(topicName, cancellationToken);
             var partitionedMessages =
                 from message in messages
-                group message by Configuration.PartitionSelector.Select(topic, message.Key).partition_id
+                group message by Configuration.PartitionSelector.Select(topic, message.Key).PartitionId
                 into partition
                 select new { PartitionId = partition.Key, Messages = partition };
 

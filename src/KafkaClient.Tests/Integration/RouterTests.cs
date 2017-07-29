@@ -156,7 +156,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var response = await router.GetTopicMetadataAsync(topicName, CancellationToken.None);
-                    Assert.AreEqual(response.topic_error_code, ErrorCode.NONE);
+                    Assert.AreEqual(response.TopicError, ErrorCode.NONE);
                 });
             }
         }

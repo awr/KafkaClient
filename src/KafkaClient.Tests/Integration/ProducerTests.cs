@@ -115,7 +115,7 @@ namespace KafkaClient.Tests.Integration
         {
             var partitionSelector = Substitute.For<IPartitionSelector>();
             partitionSelector.Select(null, new ArraySegment<byte>())
-                             .ReturnsForAnyArgs(_ => _.Arg<MetadataResponse.Topic>().partition_metadata.Single(p => p.partition_id == 1));
+                             .ReturnsForAnyArgs(_ => _.Arg<MetadataResponse.Topic>().PartitionMetadata.Single(p => p.PartitionId == 1));
 
             using (var router = await new KafkaOptions(TestConfig.IntegrationUri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
