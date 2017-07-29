@@ -886,7 +886,7 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void OffsetCommitRequest(
-            [Values(0, 1, 2)] short version,
+            [Values(0, 1, 2, 3)] short version,
             [Values("group1", "group2")] string groupId,
             [Values(0, 5)] int generation,
             [Values(-1, 20000)] int retentionTime,
@@ -917,7 +917,80 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void OffsetCommitTopicEquality(
+            [Values(0, 1, 2, 3)] short version,
+            [Values(-1, 20000)] int retentionTime,
+            [Values("testTopic")] string topicName,
+            [Values(5)] int maxPartitions,
+            [Values(null, "something useful for the client")] string metadata)
+        {
+            var topic = new OffsetCommitRequest.Topic(topicName, maxPartitions, _randomizer.Next(0, int.MaxValue), metadata, version == 1 ? retentionTime : (long?) null);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new OffsetCommitRequest.Topic(topicName + 1, maxPartitions, topic.Offset, metadata, topic.TimeStamp),
+                new OffsetCommitRequest.Topic(topicName, maxPartitions + 1, topic.Offset, metadata, topic.TimeStamp),
+                new OffsetCommitRequest.Topic(topicName, maxPartitions, topic.Offset + 1, metadata, topic.TimeStamp),
+                new OffsetCommitRequest.Topic(topicName, maxPartitions, topic.Offset, (metadata ?? "stuff") + 1, topic.TimeStamp)
+                );
+            if (version == 1) {
+                topic.AssertNotEqual(new OffsetCommitRequest.Topic(topicName, maxPartitions, topic.Offset, metadata, retentionTime + 1));
+            }
+        }
+
+        [Test]
+        public void OffsetCommitRequestEquality(
+            [Values(0, 1, 2, 3)] short version,
+            [Values("group1", "group2")] string groupId,
+            [Values(0, 5)] int generation,
+            [Values(-1, 20000)] int retentionTime,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(5)] int maxPartitions,
+            [Values(10)] int maxOffsets,
+            [Values(null, "something useful for the client")] string metadata)
+        {
+            var timestamp = retentionTime;
+            var offsetCommits = new List<OffsetCommitRequest.Topic>();
+            for (var t = 0; t < topicsPerRequest; t++)
+            {
+                offsetCommits.Add(new OffsetCommitRequest.Topic(
+                    topicName + t,
+                    t % maxPartitions,
+                    _randomizer.Next(0, int.MaxValue),
+                    metadata,
+                    version == 1 ? timestamp : (long?)null));
+            }
+            var alternate = offsetCommits.Take(1).Select(o => new OffsetCommitRequest.Topic(topicName, o.PartitionId, o.Offset, o.Metadata, o.TimeStamp));
+            var request = new OffsetCommitRequest(
+                groupId,
+                offsetCommits,
+                version >= 1 ? "member" + generation : null,
+                version >= 1 ? generation : 0,
+                version >= 2 && retentionTime >= 0 ? (TimeSpan?)TimeSpan.FromMilliseconds(retentionTime) : null);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new OffsetCommitRequest(groupId + 1, offsetCommits, request.MemberId, request.GenerationId, request.RetentionTime),
+                new OffsetCommitRequest(groupId, offsetCommits.Skip(1), request.MemberId, request.GenerationId, request.RetentionTime),
+                new OffsetCommitRequest(groupId, alternate.Union(offsetCommits.Skip(1)), request.MemberId, request.GenerationId, request.RetentionTime),
+                new OffsetCommitRequest(groupId, offsetCommits, request.MemberId + 1, request.GenerationId, request.RetentionTime),
+                new OffsetCommitRequest(groupId, offsetCommits, request.MemberId, request.GenerationId + 1, request.RetentionTime)
+            );
+            if (version >= 1) {
+                request.AssertNotEqual(
+                    new OffsetCommitRequest(groupId, offsetCommits, request.MemberId + 1, request.GenerationId, request.RetentionTime),
+                    new OffsetCommitRequest(groupId, offsetCommits, request.MemberId, request.GenerationId + 1, request.RetentionTime)
+                );
+            }
+            if (version >= 2) {
+                request.AssertNotEqual(
+                    new OffsetCommitRequest(groupId, offsetCommits, request.MemberId, request.GenerationId, TimeSpan.FromMilliseconds(100))
+                );
+            }
+        }
+
+        [Test]
         public void OffsetCommitResponse(
+            [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
             [Values(1, 5)] int partitionsPerTopic,
@@ -932,9 +1005,38 @@ namespace KafkaClient.Tests.Unit
                     topics.Add(new TopicResponse(topicName + t, partitionId, errorCode));
                 }
             }
-            var response = new OffsetCommitResponse(topics);
+            var response = new OffsetCommitResponse(topics, version >= 3 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void OffsetCommitResponseEquality(
+            [Values(0, 1, 2, 3)] short version,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
+        {
+            var topics = new List<TopicResponse>();
+            for (var t = 0; t < topicsPerRequest; t++) {
+                for (var partitionId = 0; partitionId < partitionsPerTopic; partitionId++) {
+                    topics.Add(new TopicResponse(topicName + t, partitionId, errorCode));
+                }
+            }
+            var alternate = topics.Take(1).Select(o => new TopicResponse(topicName, o.PartitionId, o.Error));
+            var response = new OffsetCommitResponse(topics, version >= 3 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new OffsetCommitResponse(topics.Skip(1), response.ThrottleTime),
+                new OffsetCommitResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime)
+            );
+            if (version >= 3) {
+                response.AssertNotEqual(new OffsetCommitResponse(topics, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]

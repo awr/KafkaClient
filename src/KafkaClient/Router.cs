@@ -506,11 +506,11 @@ namespace KafkaClient
         public Task<SyncGroupResponse> SyncGroupAsync(SyncGroupRequest request, IRequestContext context, IRetry retryPolicy, CancellationToken cancellationToken)
         {
             if (request.group_assignments.Count > 0) {
-                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.group_assignments, request.generation_id);
-                _memberAssignmentCache.AddOrUpdate(request.group_id, value, (key, old) => value);
+                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.group_assignments, request.GenerationId);
+                _memberAssignmentCache.AddOrUpdate(request.GroupId, value, (key, old) => value);
             }
 
-            return this.SendAsync(request, request.group_id, cancellationToken, context, retryPolicy); 
+            return this.SendAsync(request, request.GroupId, cancellationToken, context, retryPolicy); 
         }
 
         public IImmutableDictionary<string, IMemberAssignment> GetGroupMemberAssignment(string groupId, int? generationId = null)

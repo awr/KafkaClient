@@ -16,15 +16,15 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class HeartbeatRequest : GroupRequest, IRequest<HeartbeatResponse>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{group_id},member_id:{member_id},generation_id:{generation_id}}}";
+        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId}}}";
 
-        public override string ShortString() => $"{ApiKey} {group_id} {member_id}";
+        public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            writer.Write(group_id)
-                  .Write(generation_id)
-                  .Write(member_id);
+            writer.Write(GroupId)
+                  .Write(GenerationId)
+                  .Write(MemberId);
         }
 
         public HeartbeatResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => HeartbeatResponse.FromBytes(context, bytes);

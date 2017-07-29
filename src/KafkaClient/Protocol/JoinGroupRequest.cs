@@ -43,19 +43,19 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class JoinGroupRequest : Request, IRequest<JoinGroupResponse>, IGroupMember, IEquatable<JoinGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{group_id},member_id:{member_id},session_timeout:{session_timeout},rebalance_timeout:{rebalance_timeout},protocol_type:{protocol_type},group_protocols:[{group_protocols.ToStrings()}]}}";
+        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},session_timeout:{session_timeout},rebalance_timeout:{rebalance_timeout},protocol_type:{protocol_type},group_protocols:[{group_protocols.ToStrings()}]}}";
 
-        public override string ShortString() => $"{ApiKey} {group_id} {member_id}";
+        public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            writer.Write(group_id)
+            writer.Write(GroupId)
                     .Write((int)session_timeout.TotalMilliseconds);
 
             if (context.ApiVersion >= 1) {
                 writer.Write((int) rebalance_timeout.TotalMilliseconds);
             }
-            writer.Write(member_id)
+            writer.Write(MemberId)
                     .Write(protocol_type)
                     .Write(group_protocols.Count);
 
@@ -71,10 +71,10 @@ namespace KafkaClient.Protocol
         public JoinGroupRequest(string groupId, TimeSpan sessionTimeout, string memberId, string protocolType, IEnumerable<GroupProtocol> groupProtocols, TimeSpan? rebalanceTimeout = null) 
             : base(ApiKey.JoinGroup)
         {
-            group_id = groupId;
+            GroupId = groupId;
             session_timeout = sessionTimeout;
             rebalance_timeout = rebalanceTimeout ?? session_timeout;
-            member_id = memberId ?? "";
+            MemberId = memberId ?? "";
             protocol_type = protocolType;
             group_protocols = ImmutableList<GroupProtocol>.Empty.AddNotNullRange(groupProtocols);
         }
@@ -98,10 +98,10 @@ namespace KafkaClient.Protocol
 
         public IImmutableList<GroupProtocol> group_protocols { get; }
         /// <inheritdoc />
-        public string group_id { get; }
+        public string GroupId { get; }
 
         /// <inheritdoc />
-        public string member_id { get; }
+        public string MemberId { get; }
 
         /// <inheritdoc />
         public string protocol_type { get; }
@@ -122,8 +122,8 @@ namespace KafkaClient.Protocol
             return base.Equals(other) 
                 && session_timeout.Equals(other.session_timeout) 
                 && rebalance_timeout.Equals(other.rebalance_timeout) 
-                && string.Equals(group_id, other.group_id) 
-                && string.Equals(member_id, other.member_id)
+                && string.Equals(GroupId, other.GroupId) 
+                && string.Equals(MemberId, other.MemberId)
                 && group_protocols.HasEqualElementsInOrder(other.group_protocols);
         }
 
@@ -135,8 +135,8 @@ namespace KafkaClient.Protocol
                 hashCode = (hashCode*397) ^ session_timeout.GetHashCode();
                 hashCode = (hashCode*397) ^ rebalance_timeout.GetHashCode();
                 hashCode = (hashCode*397) ^ (group_protocols?.Count.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (group_id?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (member_id?.GetHashCode() ?? 0);
+                hashCode = (hashCode*397) ^ (GroupId?.GetHashCode() ?? 0);
+                hashCode = (hashCode*397) ^ (MemberId?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

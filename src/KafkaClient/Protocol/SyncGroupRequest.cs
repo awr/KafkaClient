@@ -20,15 +20,15 @@ namespace KafkaClient.Protocol
     /// </summary>
     public class SyncGroupRequest : GroupRequest, IRequest<SyncGroupResponse>, IEquatable<SyncGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{group_id},member_id:{member_id},generation_id:{generation_id},group_assignments:[{group_assignments.ToStrings()}]}}";
+        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId},group_assignments:[{group_assignments.ToStrings()}]}}";
 
-        public override string ShortString() => $"{ApiKey} {group_id} {member_id}";
+        public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            writer.Write(group_id)
-                  .Write(generation_id)
-                  .Write(member_id)
+            writer.Write(GroupId)
+                  .Write(GenerationId)
+                  .Write(MemberId)
                   .Write(group_assignments.Count);
 
             var encoder = context.GetEncoder(context.ProtocolType);

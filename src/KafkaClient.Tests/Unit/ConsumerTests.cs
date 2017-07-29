@@ -110,18 +110,18 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
 #pragma warning disable 4014
             router.Received().SyncGroupAsync(
-                Arg.Is((SyncGroupRequest s) => s.group_id == request.group_id && s.member_id == memberId),
+                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId),
                 Arg.Any<IRequestContext>(),
                 Arg.Any<IRetry>(), 
                 Arg.Any<CancellationToken>());
             conn.DidNotReceive().SendAsync(
-                Arg.Is((HeartbeatRequest s) => s.group_id == request.group_id && s.member_id == memberId), 
+                Arg.Is((HeartbeatRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId), 
                 Arg.Any<CancellationToken>(),
                 Arg.Any<IRequestContext>());
 #pragma warning restore 4014
@@ -142,13 +142,13 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
 #pragma warning disable 4014
             router.Received().SyncGroupAsync(
-                Arg.Is((SyncGroupRequest s) => s.group_id == request.group_id && s.member_id == memberId && s.group_assignments.Count > 0),
+                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.group_assignments.Count > 0),
                 Arg.Any<IRequestContext>(),
                 Arg.Any<IRetry>(), 
                 Arg.Any<CancellationToken>());
@@ -170,13 +170,13 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, "other" + memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response)) {
                 await Task.Delay(300);
             }
 
 #pragma warning disable 4014
             router.Received().SyncGroupAsync(
-                Arg.Is((SyncGroupRequest s) => s.group_id == request.group_id && s.member_id == memberId && s.group_assignments.Count == 0),
+                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.group_assignments.Count == 0),
                 Arg.Any<IRequestContext>(),
                 Arg.Any<IRetry>(), 
                 Arg.Any<CancellationToken>());
@@ -203,7 +203,7 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response, config)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response, config)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -212,7 +212,7 @@ namespace KafkaClient.Tests.Unit
                                 if (c.GetMethodInfo().Name != nameof(Connection.SendAsync)) return false;
                                 var s = c.GetArguments()[0] as HeartbeatRequest;
                                 if (s == null) return false;
-                                return s.group_id == request.group_id && s.member_id == memberId && s.generation_id == response.generation_id;
+                                return s.GroupId == request.GroupId && s.MemberId == memberId && s.GenerationId == response.generation_id;
                             }),
                             Is.InRange(expectedHeartbeats - 1, expectedHeartbeats + 1));
         }
@@ -241,7 +241,7 @@ namespace KafkaClient.Tests.Unit
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
             lastHeartbeat = DateTimeOffset.UtcNow;
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response)) {
                 await Task.Delay(totalMilliseconds);
             }
 
@@ -271,17 +271,17 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.protocol_name, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
-            using (new GroupConsumer(router, request.group_id, request.protocol_type, response, config)) {
+            using (new GroupConsumer(router, request.GroupId, request.protocol_type, response, config)) {
                 await Task.Delay(heartbeatMilliseconds * 3);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 conn.DidNotReceive().SendAsync(
-                    Arg.Is((LeaveGroupRequest s) => s.group_id == request.group_id && s.member_id == memberId),
+                    Arg.Is((LeaveGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId),
                     Arg.Any<CancellationToken>(),
                     Arg.Any<IRequestContext>());
             }
             conn.Received().SendAsync(
-                Arg.Is((LeaveGroupRequest s) => s.group_id == request.group_id && s.member_id == memberId),
+                Arg.Is((LeaveGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId),
                 Arg.Any<CancellationToken>(),
                 Arg.Any<IRequestContext>());
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed

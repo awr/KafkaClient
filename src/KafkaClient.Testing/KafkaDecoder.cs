@@ -611,6 +611,9 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 3) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
