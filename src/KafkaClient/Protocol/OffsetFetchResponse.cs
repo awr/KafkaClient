@@ -82,7 +82,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicOffset, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{offset},metadata:{metadata},error_code:{error_code}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{Offset},metadata:{metadata},error_code:{error_code}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode, long offset, string metadata) 
                 : base(topic, partitionId, offset)

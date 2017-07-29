@@ -539,7 +539,7 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void OffsetsRequest(
-            [Values(0, 1)] short version,
+            [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName, 
             [Values(1, 10)] int topicsPerRequest, 
             [Values(1, 5)] int totalPartitions, 
@@ -551,7 +551,7 @@ namespace KafkaClient.Tests.Unit
                 var offset = new OffsetsRequest.Topic(topicName + t, t % totalPartitions, time, version == 0 ? maxOffsets : 1);
                 topics.Add(offset);
             }
-            var request = new OffsetsRequest(topics);
+            var request = new OffsetsRequest(topics, version >= 2 ? (byte?)IsolationLevels.ReadCommitted : null);
 
             request.AssertCanEncodeDecodeRequest(version);
         }
@@ -570,6 +570,9 @@ namespace KafkaClient.Tests.Unit
                 new OffsetsRequest.Topic(topicName + 1, totalPartitions, time, version == 0 ? maxOffsets : 1),
                 new OffsetsRequest.Topic(topicName, totalPartitions + 1, time, version == 0 ? maxOffsets : 1),
                 new OffsetsRequest.Topic(topicName, totalPartitions, time + 1, version == 0 ? maxOffsets : 1));
+            if (version == 0) {
+                topic.AssertNotEqual(new OffsetsRequest.Topic(topicName, totalPartitions, time, 2));
+            }
         }
 
         public void OffsetsRequestEquality(
@@ -585,18 +588,21 @@ namespace KafkaClient.Tests.Unit
                 var offset = new OffsetsRequest.Topic(topicName + t, t % totalPartitions, time, version == 0 ? maxOffsets : 1);
                 topics.Add(offset);
             }
-            var alternate = topics.Take(1).Select(p => new OffsetsRequest.Topic(topicName, p.PartitionId, p.timestamp, p.max_num_offsets));
-            var request = new OffsetsRequest(topics);
+            var alternate = topics.Take(1).Select(p => new OffsetsRequest.Topic(topicName, p.PartitionId, p.Timestamp, p.MaxNumOffsets));
+            var request = new OffsetsRequest(topics, version >= 2 ? (byte?)IsolationLevels.ReadCommitted : null);
             request.AssertEqualToSelf();
             request.AssertNotEqual(null,
-                new OffsetsRequest(alternate.Union(topics.Skip(1))),
-                new OffsetsRequest(topics.Skip(1))
+                new OffsetsRequest(alternate.Union(topics.Skip(1)), request.IsolationLevel),
+                new OffsetsRequest(topics.Skip(1), request.IsolationLevel)
                 );
+            if (version >= 2) {
+                request.AssertNotEqual(new OffsetsRequest(topics, IsolationLevels.ReadUnCommitted));
+            }
         }
 
         [Test]
         public void OffsetsResponse(
-            [Values(0, 1)] short version,
+            [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName, 
             [Values(1, 10)] int topicsPerRequest, 
             [Values(5)] int totalPartitions, 
@@ -614,14 +620,14 @@ namespace KafkaClient.Tests.Unit
                     topics.Add(new OffsetsResponse.Topic(topicName + t, partitionId, errorCode, _randomizer.Next(-1, int.MaxValue), version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null));
                 }
             }
-            var response = new OffsetsResponse(topics);
+            var response = new OffsetsResponse(topics, version >= 2 ? (TimeSpan?)TimeSpan.FromMilliseconds(150) : null);
 
             response.AssertCanEncodeDecodeResponse(version);
         }
 
         [Test]
         public void OffsetsResponseTopicEquality(
-            [Values(0, 1)] short version,
+            [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName,
             [Values(
                 ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
@@ -632,15 +638,15 @@ namespace KafkaClient.Tests.Unit
             var topic = new OffsetsResponse.Topic(topicName, 0, errorCode, _randomizer.Next(-1, int.MaxValue), version >= 1 ? (DateTimeOffset?) DateTimeOffset.UtcNow : null);
             topic.AssertEqualToSelf();
             topic.AssertNotEqual(null,
-                new OffsetsResponse.Topic(topicName + 1, 0, errorCode, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
-                new OffsetsResponse.Topic(topicName, 1, errorCode, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
-                new OffsetsResponse.Topic(topicName, 0, errorCode + 1, topic.offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
-                new OffsetsResponse.Topic(topicName, 0, errorCode, topic.offset + 1, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null));
+                new OffsetsResponse.Topic(topicName + 1, 0, errorCode, topic.Offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 1, errorCode, topic.Offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 0, errorCode + 1, topic.Offset, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null),
+                new OffsetsResponse.Topic(topicName, 0, errorCode, topic.Offset + 1, version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null));
         }
 
         [Test]
         public void OffsetsResponseEquality(
-            [Values(0, 1)] short version,
+            [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName, 
             [Values(1, 10)] int topicsPerRequest, 
             [Values(5)] int totalPartitions, 
@@ -658,13 +664,16 @@ namespace KafkaClient.Tests.Unit
                     topics.Add(new OffsetsResponse.Topic(topicName + t, partitionId, errorCode, _randomizer.Next(-1, int.MaxValue), version >= 1 ? (DateTimeOffset?)DateTimeOffset.UtcNow : null));
                 }
             }
-            var alternate = topics.Take(1).Select(p => new OffsetsResponse.Topic(topicName, p.PartitionId, p.error_code, p.offset, p.timestamp));
-            var response = new OffsetsResponse(topics);
+            var alternate = topics.Take(1).Select(p => new OffsetsResponse.Topic(topicName, p.PartitionId, p.Error, p.Offset, p.Timestamp));
+            var response = new OffsetsResponse(topics, version >= 2 ? (TimeSpan?)TimeSpan.FromMilliseconds(150) : null);
             response.AssertEqualToSelf();
             response.AssertNotEqual(null,
-                new OffsetsResponse(alternate.Union(topics.Skip(1))),
-                new OffsetsResponse(topics.Skip(1))
+                new OffsetsResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime),
+                new OffsetsResponse(topics.Skip(1), response.ThrottleTime)
                 );
+            if (version >= 2) {
+                response.AssertNotEqual(new OffsetsResponse(topics, response.ThrottleTime.GetValueOrDefault().Add(TimeSpan.FromMilliseconds(100))));
+            }
         }
 
         [Test]

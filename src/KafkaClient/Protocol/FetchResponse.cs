@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
@@ -237,8 +236,7 @@ namespace KafkaClient.Protocol
             {
                 unchecked
                 {
-                    int hashCode = base.GetHashCode();
-                    hashCode = (hashCode * 397) ^ ProducerId.GetHashCode();
+                    int hashCode = ProducerId.GetHashCode();
                     hashCode = (hashCode * 397) ^ FirstOffset.GetHashCode();
                     return hashCode;
                 }

@@ -166,6 +166,10 @@ namespace KafkaClient.Testing
             using (var reader = ReadHeader(data)) {
                 // ReSharper disable once UnusedVariable
                 var replicaId = reader.ReadInt32(); // expect -1
+                byte isolationLevel = 0;
+                if (context.ApiVersion >= 2) {
+                    isolationLevel = reader.ReadByte();
+                }
 
                 var topics = new List<OffsetsRequest.Topic>();
                 var offsetCount = reader.ReadInt32();
@@ -184,7 +188,7 @@ namespace KafkaClient.Testing
                         topics.Add(new OffsetsRequest.Topic(topicName, partitionId, time, maxOffsets));
                     }
                 }
-                return new OffsetsRequest(topics);
+                return new OffsetsRequest(topics, isolationLevel);
             }
         }
 
@@ -528,6 +532,9 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 2) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
@@ -537,13 +544,13 @@ namespace KafkaClient.Testing
                     .Write(partitions.Count);
                 foreach (var partition in partitions) {
                     writer.Write(partition.PartitionId)
-                        .Write(partition.error_code);
+                        .Write(partition.Error);
                     if (context.ApiVersion == 0) {
                         writer.Write(1)
-                              .Write(partition.offset);
+                              .Write(partition.Offset);
                     } else {
-                        writer.Write(partition.timestamp?.ToUnixTimeMilliseconds() ?? 0L)
-                            .Write(partition.offset);
+                        writer.Write(partition.Timestamp?.ToUnixTimeMilliseconds() ?? 0L)
+                            .Write(partition.Offset);
                     }
                 }
             }
@@ -623,7 +630,7 @@ namespace KafkaClient.Testing
                     .Write(partitions.Count); // partitionsPerTopic
                 foreach (var partition in partitions) {
                     writer.Write(partition.PartitionId)
-                        .Write(partition.offset)
+                        .Write(partition.Offset)
                         .Write(partition.metadata)
                         .Write(partition.error_code);
                 }

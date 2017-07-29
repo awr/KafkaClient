@@ -429,7 +429,7 @@ namespace KafkaClient
 
                     if (partition == null) return MessageBatch.Empty;
                     var currentOffset = await Router.GetOffsetsAsync(GroupId, partition.TopicName, partition.PartitionId, cancellationToken).ConfigureAwait(false);
-                    var offset = currentOffset.offset + 1;
+                    var offset = currentOffset.Offset + 1;
                     var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, partition.TopicName, partition.PartitionId, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
                     var batch = new MessageBatch(messages, partition, offset, Router, Configuration, AutoConsume, batchSize, GroupId, MemberId, generationId);
                     _syncSemaphore.Lock(() => _batches = _batches.Add(partition, batch), cancellationToken);

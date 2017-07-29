@@ -447,7 +447,7 @@ namespace KafkaClient
         /// <param name="router">The router which provides the route and metadata.</param>
         /// <param name="topicName">Name of the topic to get offset information from.</param>
         /// <param name="maxOffsets">How many to get, at most.</param>
-        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.timestamp"/></param>
+        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.Timestamp"/></param>
         /// <param name="cancellationToken"></param>
         public static Task<IImmutableList<OffsetsResponse.Topic>> GetOffsetsAsync(this IRouter router, string topicName, int maxOffsets, long offsetTime, CancellationToken cancellationToken)
         {
@@ -478,7 +478,7 @@ namespace KafkaClient
         /// <param name="topicName">Name of the topic to get offset information from.</param>
         /// <param name="partitionId">The partition to get offsets for.</param>
         /// <param name="maxOffsets">How many to get, at most.</param>
-        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.timestamp"/></param>
+        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.Timestamp"/></param>
         /// <param name="cancellationToken"></param>
         public static async Task<OffsetsResponse.Topic> GetOffsetsAsync(this IRouter router, string topicName, int partitionId, int maxOffsets, long offsetTime, CancellationToken cancellationToken)
         {

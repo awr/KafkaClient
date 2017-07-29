@@ -88,7 +88,7 @@ namespace KafkaClient.Tests.Integration
                         var responseAckLevel1 = await producer.SendAsync(new Message("Ack Level 1"), topicName, 0, new SendMessageConfiguration(acks: 1), CancellationToken.None);
                         var offsetResponse = await producer.Router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.PartitionId == 0);
-                        Assert.AreEqual(responseAckLevel1.BaseOffset, maxOffset.offset - 1);
+                        Assert.AreEqual(responseAckLevel1.BaseOffset, maxOffset.Offset - 1);
                     }
                 });
             }
@@ -104,7 +104,7 @@ namespace KafkaClient.Tests.Integration
                         var offsetResponse = await router.GetOffsetsAsync(topicName, CancellationToken.None);
                         var maxOffset = offsetResponse.First(x => x.PartitionId == 0);
 
-                        Assert.AreEqual(responseAckLevel1.BaseOffset, maxOffset.offset - 1);
+                        Assert.AreEqual(responseAckLevel1.BaseOffset, maxOffset.Offset - 1);
                     }
                 });
             }

@@ -135,7 +135,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(TestConfig.TopicName(), 0, CancellationToken.None);
-                    using (var consumer = new Consumer(new TopicOffset(offset.TopicName, offset.PartitionId, offset.offset + 1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
+                    using (var consumer = new Consumer(new TopicOffset(offset.TopicName, offset.PartitionId, offset.Offset + 1), router, TestConfig.IntegrationOptions.ConsumerConfiguration)) {
 
                         await AssertAsync.Throws<FetchOutOfRangeException>(
                             () => consumer.FetchAsync(CancellationToken.None, 5),
@@ -300,7 +300,7 @@ namespace KafkaClient.Tests.Integration
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offset, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, 0, CancellationToken.None);
 
-                    Assert.AreEqual(offset, res.offset);
+                    Assert.AreEqual(offset, res.Offset);
                 });
             }
         }
@@ -336,12 +336,12 @@ namespace KafkaClient.Tests.Integration
                     await router.GetOffsetsAsync(topicName, partitionId, CancellationToken.None);
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
                     var res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
-                    Assert.AreEqual(offest, res.offset);
+                    Assert.AreEqual(offest, res.Offset);
 
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, newOffset, CancellationToken.None);
                     res = await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
 
-                    Assert.AreEqual(newOffset, res.offset);
+                    Assert.AreEqual(newOffset, res.Offset);
                 });
             }
         }
@@ -422,7 +422,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
 
-                    Assert.AreNotEqual(-1, offset.offset);
+                    Assert.AreNotEqual(-1, offset.Offset);
                 });
             }
         }
@@ -545,7 +545,7 @@ namespace KafkaClient.Tests.Integration
                             Assert.AreEqual(results.Messages.Select(x => x.Value.ToUtf8String()).ToList(), expected); // Expected the message list in the correct order.
 
                             var newOffset = await producer.Router.GetOffsetsAsync(offset.TopicName, offset.PartitionId, CancellationToken.None);
-                            Assert.AreEqual(newOffset.offset - offset.offset, totalMessages);
+                            Assert.AreEqual(newOffset.Offset - offset.Offset, totalMessages);
                         }
                     }
                 });
@@ -719,7 +719,7 @@ namespace KafkaClient.Tests.Integration
                     //await router.SendAsync(new GroupCoordinatorRequest(groupId), topicName, partitionId, CancellationToken.None).ConfigureAwait(false);
                     //var groupOffset = await router.GetOffsetAsync(groupId, topicName, partitionId, CancellationToken.None);
 
-                    var missingMessages = Math.Max(0, totalMessages + groupOffset.offset - offset.offset + 1);
+                    var missingMessages = Math.Max(0, totalMessages + groupOffset.Offset - offset.Offset + 1);
                     if (missingMessages > 0)
                     {
                         var messages = new List<Message>();

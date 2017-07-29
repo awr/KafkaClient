@@ -103,7 +103,7 @@ namespace KafkaClient.Tests.Special
 
                         var maxTimeToRun = TimeSpan.FromMilliseconds(timeoutInMs);
                         var stopwatch = new Stopwatch();
-                        var missingMessages = Math.Max(0, totalMessages - (int)offset.offset);
+                        var missingMessages = Math.Max(0, totalMessages - (int)offset.Offset);
                         if (missingMessages > 0) {
                             stopwatch.Start();
                             var sendList = new List<Task>(missingMessages/batchSize);
