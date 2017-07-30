@@ -27,7 +27,7 @@ namespace KafkaClient.Tests.Integration
                     var topic = response.Responses.FirstOrDefault();
 
                     Assert.NotNull(topic);
-                    Assert.AreEqual(topic.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(topic.Error, ErrorCode.NONE);
                     Assert.AreEqual(topic.Offset, -1);
                 });
             }
@@ -89,7 +89,7 @@ namespace KafkaClient.Tests.Integration
                     var fetchTopic = fetchResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(fetchTopic);
-                    Assert.AreEqual(fetchTopic.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(fetchTopic.Error, ErrorCode.NONE);
                     Assert.AreEqual(fetchTopic.Offset, offset);
                 });
             }
@@ -125,9 +125,9 @@ namespace KafkaClient.Tests.Integration
                     var fetchTopic = fetchResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(fetchTopic);
-                    Assert.AreEqual(fetchTopic.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(fetchTopic.Error, ErrorCode.NONE);
                     Assert.AreEqual(fetchTopic.Offset, offset);
-                    Assert.AreEqual(fetchTopic.metadata, metadata);
+                    Assert.AreEqual(fetchTopic.Metadata, metadata);
                 });
             }
         }

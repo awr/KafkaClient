@@ -1,4 +1,3 @@
-// ReSharper disable InconsistentNaming
 namespace KafkaClient.Protocol
 {
     public interface IGroupMember

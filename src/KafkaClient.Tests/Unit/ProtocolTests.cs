@@ -1056,7 +1056,30 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void OffsetFetchRequestEquality(
+            [Values("group1", "group2")] string groupId,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(5)] int maxPartitions)
+        {
+            var topics = new List<TopicPartition>();
+            for (var t = 0; t < topicsPerRequest; t++)
+            {
+                topics.Add(new TopicPartition(topicName + t, t % maxPartitions));
+            }
+            var alternate = topics.Take(1).Select(o => new TopicPartition(topicName, o.PartitionId));
+            var request = new OffsetFetchRequest(groupId, topics);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new OffsetFetchRequest(groupId + 1, topics),
+                new OffsetFetchRequest(groupId, topics.Skip(1)),
+                new OffsetFetchRequest(groupId, alternate.Union(topics.Skip(1)))
+            );
+        }
+
+        [Test]
         public void OffsetFetchResponse(
+            [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
             [Values(1, 10)] int topicsPerRequest,
             [Values(1, 5)] int partitionsPerTopic,
@@ -1078,9 +1101,79 @@ namespace KafkaClient.Tests.Unit
                     topics.Add(new OffsetFetchResponse.Topic(topicName + t, partitionId, errorCode, offset, offset >= 0 ? topicName : string.Empty));
                 }
             }
-            var response = new OffsetFetchResponse(topics);
+            var response = new OffsetFetchResponse(topics, version >= 2 ? (ErrorCode?)errorCode : null, version >= 3 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void OffsetFetchResponseTopicEquality(
+            [Values(0, 1, 2, 3)] short version,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
+                ErrorCode.GROUP_LOAD_IN_PROGRESS,
+                ErrorCode.NOT_COORDINATOR_FOR_GROUP,
+                ErrorCode.ILLEGAL_GENERATION,
+                ErrorCode.UNKNOWN_MEMBER_ID,
+                ErrorCode.TOPIC_AUTHORIZATION_FAILED,
+                ErrorCode.GROUP_AUTHORIZATION_FAILED
+            )] ErrorCode errorCode)
+        {
+            var offset = (long)_randomizer.Next(int.MinValue, int.MaxValue);
+            var topic = new OffsetFetchResponse.Topic(topicName, partitionsPerTopic, errorCode, offset, offset >= 0 ? topicName : string.Empty);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new OffsetFetchResponse.Topic(topic.TopicName + 1, topic.PartitionId, topic.Error, topic.Offset, topic.Metadata),
+                new OffsetFetchResponse.Topic(topic.TopicName, topic.PartitionId + 1, topic.Error, topic.Offset, topic.Metadata),
+                new OffsetFetchResponse.Topic(topic.TopicName, topic.PartitionId, topic.Error + 1, topic.Offset, topic.Metadata),
+                new OffsetFetchResponse.Topic(topic.TopicName, topic.PartitionId, topic.Error, topic.Offset + 1, topic.Metadata),
+                new OffsetFetchResponse.Topic(topic.TopicName, topic.PartitionId, topic.Error, topic.Offset, topic.Metadata + 1)
+            );
+        }
+
+        [Test]
+        public void OffsetFetchResponseEquality(
+            [Values(0, 1, 2, 3)] short version,
+            [Values("testTopic")] string topicName,
+            [Values(1, 10)] int topicsPerRequest,
+            [Values(1, 5)] int partitionsPerTopic,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
+                ErrorCode.GROUP_LOAD_IN_PROGRESS,
+                ErrorCode.NOT_COORDINATOR_FOR_GROUP,
+                ErrorCode.ILLEGAL_GENERATION,
+                ErrorCode.UNKNOWN_MEMBER_ID,
+                ErrorCode.TOPIC_AUTHORIZATION_FAILED,
+                ErrorCode.GROUP_AUTHORIZATION_FAILED
+            )] ErrorCode errorCode)
+        {
+            var topics = new List<OffsetFetchResponse.Topic>();
+            for (var t = 0; t < topicsPerRequest; t++)
+            {
+                for (var partitionId = 0; partitionId < partitionsPerTopic; partitionId++)
+                {
+                    var offset = (long)_randomizer.Next(int.MinValue, int.MaxValue);
+                    topics.Add(new OffsetFetchResponse.Topic(topicName + t, partitionId, errorCode, offset, offset >= 0 ? topicName : string.Empty));
+                }
+            }
+            var alternate = topics.Take(1).Select(o => new OffsetFetchResponse.Topic(topicName, o.PartitionId, o.Error, o.Offset, o.Metadata));
+            var response = new OffsetFetchResponse(topics, version >= 2 ? (ErrorCode?)errorCode : null, version >= 3 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new OffsetFetchResponse(topics.Skip(1), response.Error, response.ThrottleTime),
+                new OffsetFetchResponse(alternate.Union(topics.Skip(1)), response.Error, response.ThrottleTime)
+            );
+            if (version >= 2) {
+                response.AssertNotEqual(new OffsetFetchResponse(topics, response.Error.Value + 1, response.ThrottleTime));
+            }
+            if (version >= 3) {
+                response.AssertNotEqual(new OffsetFetchResponse(topics, response.Error, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]

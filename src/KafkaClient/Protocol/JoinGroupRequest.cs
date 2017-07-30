@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {

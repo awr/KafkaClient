@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Immutable;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {

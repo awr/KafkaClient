@@ -632,6 +632,9 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 3) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
@@ -641,9 +644,12 @@ namespace KafkaClient.Testing
                 foreach (var partition in partitions) {
                     writer.Write(partition.PartitionId)
                         .Write(partition.Offset)
-                        .Write(partition.metadata)
-                        .Write(partition.error_code);
+                        .Write(partition.Metadata)
+                        .Write(partition.Error);
                 }
+            }
+            if (context.ApiVersion >= 2) {
+                writer.Write(response.Error.GetValueOrDefault());
             }
             return true;
         }
