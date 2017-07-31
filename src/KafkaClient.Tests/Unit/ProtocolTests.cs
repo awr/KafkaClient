@@ -1177,15 +1177,34 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void GroupCoordinatorRequest([Values("group1", "group2")] string groupId)
+        public void FindCoordinatorRequest(
+            [Values(0, 1)] short version,
+            [Values("group1", "group2")] string groupId)
         {
-            var request = new GroupCoordinatorRequest(groupId);
-            request.AssertCanEncodeDecodeRequest(0);
-            request.AssertCanEncodeRequestDecodeResponse(0);
+            var request = new FindCoordinatorRequest(groupId, version >= 1 ? CoordinatorType.Transaction : CoordinatorType.Group);
+            request.AssertCanEncodeDecodeRequest(version);
         }
 
         [Test]
-        public void GroupCoordinatorResponse(
+        public void FindCoordinatorRequestEquality(
+            [Values(0, 1)] short version,
+            [Values("group1")] string groupId)
+        {
+            var request = new FindCoordinatorRequest(groupId, version >= 1 ? CoordinatorType.Transaction : CoordinatorType.Group);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new FindCoordinatorRequest(groupId + 1, request.CoordinatorType)
+            );
+            if (version >= 1) {
+                request.AssertNotEqual(null,
+                    new FindCoordinatorRequest(groupId, CoordinatorType.Group)
+                );
+            }
+        }
+
+        [Test]
+        public void FindCoordinatorResponse(
+            [Values(0, 1)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE,
@@ -1194,9 +1213,36 @@ namespace KafkaClient.Tests.Unit
             [Values(0, 1)] int coordinatorId
             )
         {
-            var response = new GroupCoordinatorResponse(errorCode, coordinatorId, "broker-" + coordinatorId, 9092 + coordinatorId);
+            var response = new FindCoordinatorResponse(errorCode, coordinatorId, "broker-" + coordinatorId, 9092 + coordinatorId, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null, version >= 1 ? "foo" : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void FindCoordinatorResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE,
+                ErrorCode.GROUP_AUTHORIZATION_FAILED
+            )] ErrorCode errorCode,
+            [Values(0, 1)] int coordinatorId
+        )
+        {
+            var response = new FindCoordinatorResponse(errorCode, coordinatorId, "broker-" + coordinatorId, 9092 + coordinatorId, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null, version >= 1 ? "foo" : null);
+
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new FindCoordinatorResponse(errorCode + 1, response.Id, response.Host, response.Port, response.ThrottleTime, response.ErrorMessage),
+                new FindCoordinatorResponse(errorCode, response.Id + 1, response.Host, response.Port, response.ThrottleTime, response.ErrorMessage),
+                new FindCoordinatorResponse(errorCode, response.Id, response.Host + 1, response.Port, response.ThrottleTime, response.ErrorMessage),
+                new FindCoordinatorResponse(errorCode, response.Id, response.Host, response.Port + 1, response.ThrottleTime, response.ErrorMessage)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(
+                    new FindCoordinatorResponse(errorCode, response.Id, response.Host, response.Port, TimeSpan.FromMilliseconds(200), response.ErrorMessage),
+                    new FindCoordinatorResponse(errorCode, response.Id, response.Host, response.Port, response.ThrottleTime, response.ErrorMessage + 1));
+            }
         }
 
         [Test]

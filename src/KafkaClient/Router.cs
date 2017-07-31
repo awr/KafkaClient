@@ -368,7 +368,7 @@ namespace KafkaClient
                     }
 
                     Log.Info(() => LogEvent.Create($"Router refreshing servers for group {groupId}"));
-                    var request = new GroupCoordinatorRequest(groupId);
+                    var request = new FindCoordinatorRequest(groupId);
                     try {
                         var response = await this.SendToAnyAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -385,12 +385,12 @@ namespace KafkaClient
                 }, cancellationToken).ConfigureAwait(false);
         }
 
-        private void UpdateGroupServerCache(GroupCoordinatorRequest request, GroupCoordinatorResponse response)
+        private void UpdateGroupServerCache(FindCoordinatorRequest request, FindCoordinatorResponse response)
         {
             if (request == null || response == null) return;
 
-            _groupServerCache = _groupServerCache.SetItem(request.group_id, new Tuple<int, DateTimeOffset>(response.Id, DateTimeOffset.UtcNow));
-            Log.Verbose(() => LogEvent.Create($"Router set serverId to {response.Id} for group {request.group_id}"));
+            _groupServerCache = _groupServerCache.SetItem(request.CoordinatorId, new Tuple<int, DateTimeOffset>(response.Id, DateTimeOffset.UtcNow));
+            Log.Verbose(() => LogEvent.Create($"Router set serverId to {response.Id} for group {request.CoordinatorId}"));
         }
 
         #endregion

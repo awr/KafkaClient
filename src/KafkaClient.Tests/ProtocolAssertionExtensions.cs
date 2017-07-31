@@ -95,7 +95,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(MetadataResponse)) return ApiKey.Metadata;
             if (typeof(T) == typeof(OffsetCommitResponse)) return ApiKey.OffsetCommit;
             if (typeof(T) == typeof(OffsetFetchResponse)) return ApiKey.OffsetFetch;
-            if (typeof(T) == typeof(GroupCoordinatorResponse)) return ApiKey.GroupCoordinator;
+            if (typeof(T) == typeof(FindCoordinatorResponse)) return ApiKey.FindCoordinator;
             if (typeof(T) == typeof(JoinGroupResponse)) return ApiKey.JoinGroup;
             if (typeof(T) == typeof(HeartbeatResponse)) return ApiKey.Heartbeat;
             if (typeof(T) == typeof(LeaveGroupResponse)) return ApiKey.LeaveGroup;

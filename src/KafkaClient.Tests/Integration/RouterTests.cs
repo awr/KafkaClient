@@ -44,12 +44,12 @@ namespace KafkaClient.Tests.Integration
 
                     // ensure the group exists
                     var groupId = TestConfig.GroupId();
-                    var group = new GroupCoordinatorRequest(groupId);
+                    var group = new FindCoordinatorRequest(groupId);
                     var groupResponse = await conn.Connection.SendAsync(group, CancellationToken.None);
                     Assert.NotNull(groupResponse);
-                    Assert.AreEqual(groupResponse.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(groupResponse.Error, ErrorCode.NONE);
 
-                    var commit = new OffsetCommitRequest(group.group_id, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, 10, null) });
+                    var commit = new OffsetCommitRequest(group.CoordinatorId, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, 10, null) });
                     var response = await conn.Connection.SendAsync(commit, CancellationToken.None);
                     var topic = response.Responses.FirstOrDefault();
 
@@ -72,12 +72,12 @@ namespace KafkaClient.Tests.Integration
 
                     // ensure the group exists
                     var groupId = TestConfig.GroupId();
-                    var group = new GroupCoordinatorRequest(groupId);
+                    var group = new FindCoordinatorRequest(groupId);
                     var groupResponse = await conn.Connection.SendAsync(group, CancellationToken.None);
                     Assert.NotNull(groupResponse);
-                    Assert.AreEqual(groupResponse.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(groupResponse.Error, ErrorCode.NONE);
 
-                    var commit = new OffsetCommitRequest(group.group_id, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, null) });
+                    var commit = new OffsetCommitRequest(group.CoordinatorId, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, null) });
                     var commitResponse = await conn.Connection.SendAsync(commit, CancellationToken.None);
                     var commitTopic = commitResponse.Responses.SingleOrDefault();
 
@@ -108,12 +108,12 @@ namespace KafkaClient.Tests.Integration
 
                     // ensure the group exists
                     var groupId = TestConfig.GroupId();
-                    var group = new GroupCoordinatorRequest(groupId);
+                    var group = new FindCoordinatorRequest(groupId);
                     var groupResponse = await conn.Connection.SendAsync(group, CancellationToken.None);
                     Assert.NotNull(groupResponse);
-                    Assert.AreEqual(groupResponse.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(groupResponse.Error, ErrorCode.NONE);
 
-                    var commit = new OffsetCommitRequest(group.group_id, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, metadata) });
+                    var commit = new OffsetCommitRequest(group.CoordinatorId, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, metadata) });
                     var commitResponse = await conn.Connection.SendAsync(commit, CancellationToken.None);
                     var commitTopic = commitResponse.Responses.SingleOrDefault();
 
@@ -140,12 +140,12 @@ namespace KafkaClient.Tests.Integration
                     var conn = await router.GetTopicConnectionAsync(topicName, 0, CancellationToken.None);
 
                     var groupId = TestConfig.GroupId();
-                    var request = new GroupCoordinatorRequest(groupId);
+                    var request = new FindCoordinatorRequest(groupId);
 
                     var response = await conn.Connection.SendAsync(request, CancellationToken.None);
 
                     Assert.NotNull(response);
-                    Assert.AreEqual(response.error_code, ErrorCode.NONE);
+                    Assert.AreEqual(response.Error, ErrorCode.NONE);
                 });
             }
         }

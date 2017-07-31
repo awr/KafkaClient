@@ -11,7 +11,7 @@
         Metadata = 3,
         OffsetCommit = 8,
         OffsetFetch = 9,
-        GroupCoordinator = 10,
+        FindCoordinator = 10,
         JoinGroup = 11,
         Heartbeat = 12,
         LeaveGroup = 13,

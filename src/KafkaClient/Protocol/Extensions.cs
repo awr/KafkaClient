@@ -240,8 +240,8 @@ namespace KafkaClient.Protocol
                     return OffsetCommitResponse.FromBytes(context, bytes);
                 case ApiKey.OffsetFetch:
                     return OffsetFetchResponse.FromBytes(context, bytes);
-                case ApiKey.GroupCoordinator:
-                    return GroupCoordinatorResponse.FromBytes(context, bytes);
+                case ApiKey.FindCoordinator:
+                    return FindCoordinatorResponse.FromBytes(context, bytes);
                 case ApiKey.JoinGroup:
                     return JoinGroupResponse.FromBytes(context, bytes);
                 case ApiKey.Heartbeat:

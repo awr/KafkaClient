@@ -46,7 +46,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(MetadataRequest)) return (T)MetadataRequest(context, bytes);
             if (typeof(T) == typeof(OffsetCommitRequest)) return (T)OffsetCommitRequest(context, bytes);
             if (typeof(T) == typeof(OffsetFetchRequest)) return (T)OffsetFetchRequest(context, bytes);
-            if (typeof(T) == typeof(GroupCoordinatorRequest)) return (T)GroupCoordinatorRequest(context, bytes);
+            if (typeof(T) == typeof(FindCoordinatorRequest)) return (T)FindCoordinatorRequest(context, bytes);
             if (typeof(T) == typeof(JoinGroupRequest)) return (T)JoinGroupRequest(context, bytes);
             if (typeof(T) == typeof(HeartbeatRequest)) return (T)HeartbeatRequest(context, bytes);
             if (typeof(T) == typeof(LeaveGroupRequest)) return (T)LeaveGroupRequest(context, bytes);
@@ -77,7 +77,7 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as MetadataResponse)
                 || TryEncodeResponse(writer, context, response as OffsetCommitResponse)
                 || TryEncodeResponse(writer, context, response as OffsetFetchResponse)
-                || TryEncodeResponse(writer, context, response as GroupCoordinatorResponse)
+                || TryEncodeResponse(writer, context, response as FindCoordinatorResponse)
                 || TryEncodeResponse(writer, context, response as JoinGroupResponse)
                 || TryEncodeResponse(writer, context, response as HeartbeatResponse)
                 || TryEncodeResponse(writer, context, response as LeaveGroupResponse)
@@ -271,12 +271,16 @@ namespace KafkaClient.Testing
             }
         }
         
-        private static IRequest GroupCoordinatorRequest(IRequestContext context, ArraySegment<byte> payload)
+        private static IRequest FindCoordinatorRequest(IRequestContext context, ArraySegment<byte> payload)
         {
             using (var reader = ReadHeader(payload)) {
                 var groupId = reader.ReadString();
+                var coordinatorType = CoordinatorType.Group;
+                if (context.ApiVersion >= 1) {
+                    coordinatorType = (CoordinatorType)reader.ReadByte();
+                }
 
-                return new GroupCoordinatorRequest(groupId);
+                return new FindCoordinatorRequest(groupId, coordinatorType);
             }
         }
 
@@ -654,12 +658,18 @@ namespace KafkaClient.Testing
             return true;
         }
         
-        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, GroupCoordinatorResponse response)
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, FindCoordinatorResponse response)
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code)
-                .Write(response.Id)
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Error);
+            if (context.ApiVersion >= 1) {
+                writer.Write(response.ErrorMessage);
+            }
+            writer.Write(response.Id)
                 .Write(response.Host)
                 .Write(response.Port);
             return true;
