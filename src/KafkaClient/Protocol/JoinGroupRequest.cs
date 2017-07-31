@@ -7,18 +7,7 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// JoinGroup Request => group_id session_timeout *rebalance_timeout member_id protocol_type [GroupProtocol] 
-    ///  *rebalance_timeout only applies to version 1 (Kafka 0.10.1) and above
-    ///   group_id => STRING           -- The group id.
-    ///   session_timeout => INT32     -- The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.
-    ///   rebalance_timeout => INT32   -- The maximum time that the coordinator will wait for each member to rejoin when rebalancing the group
-    ///   member_id => STRING          -- The assigned consumer id or an empty string for a new consumer.
-    ///   protocol_type => STRING      -- Unique name for class of protocols implemented by group (ie "consumer")
-    ///   GroupProtocol => ProtocolName ProtocolMetadata
-    ///     protocol_name => STRING    -- ie AssignmentStrategy for "consumer" type. protocol_name != protocol_type. It's a subtype of sorts.
-    ///     protocol_metadata => BYTES -- <see cref="ConsumerProtocolMetadata"/>
-    /// 
-    /// see http://kafka.apache.org/protocol.html#protocol_messages for details
+    /// JoinGroup Request => group_id session_timeout *rebalance_timeout member_id protocol_type [group_protocols] 
     /// 
     /// The join group request is used by a client to become a member of a group. 
     /// When new members join an existing group, all previous members are required to rejoin by sending a new join group request. 
@@ -40,28 +29,42 @@ namespace KafkaClient.Protocol
     /// version and the old version of the protocol. Once all members have upgraded, the coordinator will choose whichever protocol is listed 
     /// first in the GroupProtocols array.
     /// </summary>
+    /// <remarks>
+    /// JoinGroup Request => group_id session_timeout *rebalance_timeout member_id protocol_type [group_protocols] 
+    ///   group_id => STRING
+    ///   session_timeout => INT32
+    ///   rebalance_timeout => INT32
+    ///   member_id => STRING
+    ///   protocol_type => STRING
+    ///   group_protocols => protocol_name protocol_metadata 
+    ///     protocol_name => STRING
+    ///     protocol_metadata => BYTES
+    /// 
+    /// Version 1+: rebalance_timeout
+    /// From http://kafka.apache.org/protocol.html#The_Messages_JoinGroup
+    /// </remarks>
     public class JoinGroupRequest : Request, IRequest<JoinGroupResponse>, IGroupMember, IEquatable<JoinGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},session_timeout:{session_timeout},rebalance_timeout:{rebalance_timeout},protocol_type:{protocol_type},group_protocols:[{group_protocols.ToStrings()}]}}";
+        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},session_timeout:{SessionTimeout},rebalance_timeout:{RebalanceTimeout},protocol_type:{ProtocolType},group_protocols:[{GroupProtocols.ToStrings()}]}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
             writer.Write(GroupId)
-                    .Write((int)session_timeout.TotalMilliseconds);
+                    .Write((int)SessionTimeout.TotalMilliseconds);
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int) rebalance_timeout.TotalMilliseconds);
+                writer.Write((int) RebalanceTimeout.TotalMilliseconds);
             }
             writer.Write(MemberId)
-                    .Write(protocol_type)
-                    .Write(group_protocols.Count);
+                    .Write(ProtocolType)
+                    .Write(GroupProtocols.Count);
 
-            var encoder = context.GetEncoder(protocol_type);
-            foreach (var protocol in group_protocols) {
-                writer.Write(protocol.protocol_name)
-                        .Write(protocol.protocol_metadata, encoder);
+            var encoder = context.GetEncoder(ProtocolType);
+            foreach (var protocol in GroupProtocols) {
+                writer.Write(protocol.ProtocolName)
+                        .Write(protocol.ProtocolMetadata, encoder);
             }
         }
 
@@ -71,11 +74,11 @@ namespace KafkaClient.Protocol
             : base(ApiKey.JoinGroup)
         {
             GroupId = groupId;
-            session_timeout = sessionTimeout;
-            rebalance_timeout = rebalanceTimeout ?? session_timeout;
+            SessionTimeout = sessionTimeout;
+            RebalanceTimeout = rebalanceTimeout ?? SessionTimeout;
             MemberId = memberId ?? "";
-            protocol_type = protocolType;
-            group_protocols = ImmutableList<GroupProtocol>.Empty.AddNotNullRange(groupProtocols);
+            ProtocolType = protocolType;
+            GroupProtocols = ImmutableList<GroupProtocol>.Empty.AddNotNullRange(groupProtocols);
         }
 
         /// <summary>
@@ -87,23 +90,30 @@ namespace KafkaClient.Protocol
         /// to this duration to rejoin, but note that if the session timeout is lower than the rebalance timeout, the client must still continue 
         /// to send heartbeats.
         /// </summary>
-        public TimeSpan session_timeout { get; }
+        public TimeSpan SessionTimeout { get; }
 
         /// <summary>
         /// Once a rebalance begins, each client has up to this duration to rejoin, but note that if the session timeout is lower than the rebalance 
         /// timeout, the client must still continue to send heartbeats.
+        /// Version: 1+
         /// </summary>
-        public TimeSpan rebalance_timeout { get; }
+        public TimeSpan RebalanceTimeout { get; }
 
-        public IImmutableList<GroupProtocol> group_protocols { get; }
+        /// <summary>
+        /// List of protocols that the member supports.
+        /// </summary>
+        public IImmutableList<GroupProtocol> GroupProtocols { get; }
+
         /// <inheritdoc />
         public string GroupId { get; }
 
         /// <inheritdoc />
         public string MemberId { get; }
 
-        /// <inheritdoc />
-        public string protocol_type { get; }
+        /// <summary>
+        /// Unique name for class of protocols implemented by group.
+        /// </summary>
+        public string ProtocolType { get; }
 
         #region Equality
 
@@ -119,11 +129,12 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return base.Equals(other) 
-                && session_timeout.Equals(other.session_timeout) 
-                && rebalance_timeout.Equals(other.rebalance_timeout) 
-                && string.Equals(GroupId, other.GroupId) 
+                && SessionTimeout.Equals(other.SessionTimeout) 
+                && RebalanceTimeout.Equals(other.RebalanceTimeout) 
+                && string.Equals(GroupId, other.GroupId)
                 && string.Equals(MemberId, other.MemberId)
-                && group_protocols.HasEqualElementsInOrder(other.group_protocols);
+                && string.Equals(ProtocolType, other.ProtocolType)
+                && GroupProtocols.HasEqualElementsInOrder(other.GroupProtocols);
         }
 
         /// <inheritdoc />
@@ -131,11 +142,12 @@ namespace KafkaClient.Protocol
         {
             unchecked {
                 int hashCode = base.GetHashCode();
-                hashCode = (hashCode*397) ^ session_timeout.GetHashCode();
-                hashCode = (hashCode*397) ^ rebalance_timeout.GetHashCode();
-                hashCode = (hashCode*397) ^ (group_protocols?.Count.GetHashCode() ?? 0);
+                hashCode = (hashCode*397) ^ SessionTimeout.GetHashCode();
+                hashCode = (hashCode*397) ^ RebalanceTimeout.GetHashCode();
+                hashCode = (hashCode*397) ^ (GroupProtocols?.Count.GetHashCode() ?? 0);
                 hashCode = (hashCode*397) ^ (GroupId?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (MemberId?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (MemberId?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ProtocolType?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -144,15 +156,22 @@ namespace KafkaClient.Protocol
 
         public class GroupProtocol : IEquatable<GroupProtocol>
         {
-            public override string ToString() => $"{{protocol_name:{protocol_name},protocol_metadata:{protocol_metadata}}}";
+            public override string ToString() => $"{{protocol_name:{ProtocolName},protocol_metadata:{ProtocolMetadata}}}";
 
             public GroupProtocol(IMemberMetadata metadata)
             {
-                protocol_metadata = metadata;
+                ProtocolMetadata = metadata;
             }
 
-            public string protocol_name => protocol_metadata.AssignmentStrategy;
-            public IMemberMetadata protocol_metadata { get; }
+            /// <summary>
+            /// ie AssignmentStrategy for "consumer" type. protocol_name != protocol_type. It's a subtype of sorts.
+            /// </summary>
+            public string ProtocolName => ProtocolMetadata.AssignmentStrategy;
+
+            /// <summary>
+            /// For an example: <see cref="ConsumerProtocolMetadata"/>
+            /// </summary>
+            public IMemberMetadata ProtocolMetadata { get; }
 
             /// <inheritdoc />
             public override bool Equals(object obj)
@@ -165,15 +184,15 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return string.Equals(protocol_name, other.protocol_name) 
-                    && Equals(protocol_metadata, other.protocol_metadata);
+                return string.Equals(ProtocolName, other.ProtocolName) 
+                    && Equals(ProtocolMetadata, other.ProtocolMetadata);
             }
 
             /// <inheritdoc />
             public override int GetHashCode()
             {
                 unchecked {
-                    return ((protocol_name?.GetHashCode() ?? 0)*397) ^ (protocol_metadata?.GetHashCode() ?? 0);
+                    return ((ProtocolName?.GetHashCode() ?? 0)*397) ^ (ProtocolMetadata?.GetHashCode() ?? 0);
                 }
             }
         }

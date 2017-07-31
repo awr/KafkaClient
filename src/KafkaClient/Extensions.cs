@@ -581,8 +581,8 @@ namespace KafkaClient
         {
             var protocols = metadata?.Select(m => new JoinGroupRequest.GroupProtocol(m));
             var request = new JoinGroupRequest(groupId, configuration.GroupHeartbeat, null, protocolType, protocols, configuration.GroupRebalanceTimeout);
-            var response = await router.SendAsync(request, request.GroupId, cancellationToken, new RequestContext(protocolType: request.protocol_type), configuration.GroupCoordinationRetry).ConfigureAwait(false);
-            if (response == null || !response.error_code.IsSuccess()) {
+            var response = await router.SendAsync(request, request.GroupId, cancellationToken, new RequestContext(protocolType: request.ProtocolType), configuration.GroupCoordinationRetry).ConfigureAwait(false);
+            if (response == null || !response.Error.IsSuccess()) {
                 throw request.ExtractExceptions(response);
             }
             return response;

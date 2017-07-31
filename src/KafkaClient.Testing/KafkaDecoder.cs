@@ -679,17 +679,20 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code)
-                .Write(response.generation_id)
-                .Write(response.group_protocol)
-                .Write(response.leader_id)
-                .Write(response.member_id)
-                .Write(response.members.Count);
+            if (context.ApiVersion >= 2) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Error)
+                .Write(response.GenerationId)
+                .Write(response.GroupProtocol)
+                .Write(response.LeaderId)
+                .Write(response.MemberId)
+                .Write(response.Members.Count);
 
             var encoder = context.GetEncoder();
-            foreach (var member in response.members) {
-                writer.Write(member.member_id)
-                      .Write(member.member_metadata, encoder);
+            foreach (var member in response.Members) {
+                writer.Write(member.MemberId)
+                      .Write(member.MemberMetadata, encoder);
             }
             return true;
         }

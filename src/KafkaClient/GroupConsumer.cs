@@ -34,7 +34,7 @@ namespace KafkaClient
             if (!Encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(protocolType), $"ProtocolType {protocolType} is unknown");
 
             GroupId = groupId;
-            MemberId = response.member_id;
+            MemberId = response.MemberId;
             ProtocolType = protocolType;
 
             OnJoinGroup(response);
@@ -286,15 +286,15 @@ namespace KafkaClient
         /// </summary>
         private void OnJoinGroup(JoinGroupResponse response)
         {
-            if (response.member_id != MemberId) throw new ArgumentOutOfRangeException(nameof(response), $"Member is not valid ({MemberId} != {response.member_id})");
+            if (response.MemberId != MemberId) throw new ArgumentOutOfRangeException(nameof(response), $"Member is not valid ({MemberId} != {response.MemberId})");
             if (_disposeCount > 0) throw new ObjectDisposedException($"Consumer {{GroupId:{GroupId},MemberId:{MemberId}}} is no longer valid");
 
             _joinSemaphore.Lock(
                 () => {
-                    IsLeader = response.leader_id == MemberId;
-                    GenerationId = response.generation_id;
-                    _groupProtocol = response.group_protocol;
-                    _memberMetadata = response.members.ToImmutableDictionary(member => member.member_id, member => member.member_metadata);
+                    IsLeader = response.LeaderId == MemberId;
+                    GenerationId = response.GenerationId;
+                    _groupProtocol = response.GroupProtocol;
+                    _memberMetadata = response.Members.ToImmutableDictionary(member => member.MemberId, member => member.MemberMetadata);
                     Router.Log.Info(() => LogEvent.Create(GenerationId > 1 
                         ? $"Consumer {MemberId} Rejoined {GroupId} Generation{GenerationId}"
                         : $"Consumer {MemberId} Joined {GroupId}"));

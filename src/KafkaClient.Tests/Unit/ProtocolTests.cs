@@ -4,6 +4,7 @@ using System.Linq;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
+using KafkaClient.Telemetry;
 using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
@@ -256,13 +257,13 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void ProduceRequestEquality(
             [Values(0, 1, 2, 3)] short version,
-            [Values(0, 2, -1)] short acks,
-            [Values(0, 1000)] int timeoutMilliseconds,
+            [Values(-1)] short acks,
+            [Values(1000)] int timeoutMilliseconds,
             [Values("testTopic")] string topicName,
-            [Values(2, 10)] int topicsPerRequest,
-            [Values(1, 5)] int totalPartitions,
+            [Values(2)] int topicsPerRequest,
+            [Values(5)] int totalPartitions,
             [Values(3)] int messagesPerSet,
-            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
+            [Values(MessageCodec.Gzip)] MessageCodec codec)
         {
             var topics = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -287,9 +288,9 @@ namespace KafkaClient.Tests.Unit
         public void ProduceRequestTopicEquality(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 5)] int totalPartitions,
+            [Values(5)] int totalPartitions,
             [Values(3)] int messagesPerSet,
-            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
+            [Values(MessageCodec.Gzip)] MessageCodec codec)
         {
             var topic = new ProduceRequest.Topic(
                 topicName, totalPartitions, GenerateMessages(messagesPerSet, MessageVersion(version), codec), codec);
@@ -325,15 +326,15 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void ProduceResponseEquality(
             [Values(0, 1, 2, 3)] short version,
-            [Values(-1, 0, 10000000)] long timestampMilliseconds, 
+            [Values(10000000)] long timestampMilliseconds, 
             [Values("testTopic")] string topicName, 
-            [Values(1, 10)] int topicsPerRequest, 
-            [Values(1, 5)] int totalPartitions, 
+            [Values(2)] int topicsPerRequest, 
+            [Values(5)] int totalPartitions, 
             [Values(
                 ErrorCode.NONE,
                 ErrorCode.CORRUPT_MESSAGE
             )] ErrorCode errorCode,
-            [Values(0, 100000)] int throttleTime)
+            [Values(100000)] int throttleTime)
         {
             var topics = new List<ProduceResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -369,7 +370,7 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void FetchRequestTopicEquality(
             [Values("testTopic")] string topicName, 
-            [Values(1, 5)] int totalPartitions, 
+            [Values(2)] int totalPartitions, 
             [Values(25600000)] int maxBytes)
         {
             var topic = new FetchRequest.Topic(topicName, totalPartitions, _randomizer.Next(0, int.MaxValue), _randomizer.Next(0, int.MaxValue), maxBytes);
@@ -385,11 +386,11 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void FetchRequestEquality(
             [Values(0, 1, 2, 3, 4, 5)] short version,
-            [Values(0, 100)] int maxWaitMilliseconds, 
-            [Values(0, 64000)] int minBytes, 
+            [Values(100)] int maxWaitMilliseconds, 
+            [Values(64000)] int minBytes, 
             [Values("testTopic")] string topicName, 
-            [Values(1, 10)] int topicsPerRequest, 
-            [Values(1, 5)] int totalPartitions, 
+            [Values(2)] int topicsPerRequest, 
+            [Values(2)] int totalPartitions, 
             [Values(25600000)] int maxBytes)
         {
             var topics = new List<FetchRequest.Topic>();
@@ -442,7 +443,7 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void FetchResponseAbortedTransactionEquality([Values(1, 5)] int totalPartitions)
+        public void FetchResponseAbortedTransactionEquality([Values(2)] int totalPartitions)
         {
             var abortedTransaction = new FetchResponse.AbortedTransaction(totalPartitions, totalPartitions);
             abortedTransaction.AssertEqualToSelf();
@@ -456,10 +457,9 @@ namespace KafkaClient.Tests.Unit
         public void FetchResponseTopicEquality(
             [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values("testTopic")] string topicName, 
-            [Values(1, 5)] int totalPartitions, 
+            [Values(2)] int totalPartitions, 
             [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
             [Values(
-                ErrorCode.NONE,
                 ErrorCode.OFFSET_OUT_OF_RANGE
             )] ErrorCode errorCode, 
             [Values(3)] int messagesPerSet
@@ -494,8 +494,8 @@ namespace KafkaClient.Tests.Unit
             [Values(0, 1, 2, 3, 4, 5)] short version,
             [Values(0, 1234)] int throttleTime,
             [Values("testTopic")] string topicName, 
-            [Values(1, 10)] int topicsPerRequest, 
-            [Values(1, 5)] int totalPartitions, 
+            [Values(2)] int topicsPerRequest, 
+            [Values(2)] int totalPartitions, 
             [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
             [Values(
                 ErrorCode.NONE,
@@ -560,9 +560,9 @@ namespace KafkaClient.Tests.Unit
         public void OffsetsRequestTopicEquality(
             [Values(0, 1)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 5)] int totalPartitions,
-            [Values(-2, -1, 123456, 10000000)] long time,
-            [Values(1, 10)] int maxOffsets)
+            [Values(2)] int totalPartitions,
+            [Values(-2, 123456)] long time,
+            [Values(3)] int maxOffsets)
         {
             var topic = new OffsetsRequest.Topic(topicName, totalPartitions, time, version == 0 ? maxOffsets : 1);
             topic.AssertEqualToSelf();
@@ -575,13 +575,14 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
+        [Test]
         public void OffsetsRequestEquality(
             [Values(0, 1)] short version,
             [Values("testTopic")] string topicName, 
-            [Values(1, 10)] int topicsPerRequest, 
-            [Values(1, 5)] int totalPartitions, 
-            [Values(-2, -1, 123456, 10000000)] long time,
-            [Values(1, 10)] int maxOffsets)
+            [Values(3)] int topicsPerRequest, 
+            [Values(2)] int totalPartitions, 
+            [Values(123456)] long time,
+            [Values(2)] int maxOffsets)
         {
             var topics = new List<OffsetsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -630,9 +631,7 @@ namespace KafkaClient.Tests.Unit
             [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName,
             [Values(
-                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
-                ErrorCode.NOT_LEADER_FOR_PARTITION,
-                ErrorCode.UNKNOWN
+                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
             )] ErrorCode errorCode)
         {
             var topic = new OffsetsResponse.Topic(topicName, 0, errorCode, _randomizer.Next(-1, int.MaxValue), version >= 1 ? (DateTimeOffset?) DateTimeOffset.UtcNow : null);
@@ -648,14 +647,12 @@ namespace KafkaClient.Tests.Unit
         public void OffsetsResponseEquality(
             [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName, 
-            [Values(1, 10)] int topicsPerRequest, 
+            [Values(2)] int topicsPerRequest, 
             [Values(5)] int totalPartitions, 
             [Values(
-                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
-                ErrorCode.NOT_LEADER_FOR_PARTITION,
-                ErrorCode.UNKNOWN
+                ErrorCode.NOT_LEADER_FOR_PARTITION
             )] ErrorCode errorCode, 
-            [Values(1, 5)] int offsetsPerPartition)
+            [Values(2)] int offsetsPerPartition)
         {
             var topics = new List<OffsetsResponse.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -695,7 +692,7 @@ namespace KafkaClient.Tests.Unit
         public void MetadataRequestEquality(
             [Values(0, 1, 2, 3, 4)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest)
+            [Values(2)] int topicsPerRequest)
         {
             var topics = new List<string>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -715,10 +712,10 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void MetadataResponse(
             [Values(0, 1, 2, 3, 4)] short version,
-            [Values(1, 15)] int brokersPerRequest,
+            [Values(15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
@@ -769,10 +766,9 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void MetadataResponsePartitionEquality(
-            [Values(1, 15)] int brokersPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(15)] int brokersPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
-                 ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
              )] ErrorCode errorCode)
         {
@@ -797,10 +793,10 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void MetadataResponseTopicEquality(
             [Values(0, 1, 2, 3, 4)] short version,
-            [Values(1, 15)] int brokersPerRequest,
+            [Values(15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(2)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
@@ -833,12 +829,11 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void MetadataResponseEquality(
             [Values(0, 1, 2, 3, 4)] short version,
-            [Values(1, 15)] int brokersPerRequest,
+            [Values(15)] int brokersPerRequest,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(2)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
-                 ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION
              )] ErrorCode errorCode)
         {
@@ -891,7 +886,7 @@ namespace KafkaClient.Tests.Unit
             [Values(0, 5)] int generation,
             [Values(-1, 20000)] int retentionTime,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
+            [Values(2)] int topicsPerRequest,
             [Values(5)] int maxPartitions,
             [Values(10)] int maxOffsets,
             [Values(null, "something useful for the client")] string metadata)
@@ -940,14 +935,14 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void OffsetCommitRequestEquality(
             [Values(0, 1, 2, 3)] short version,
-            [Values("group1", "group2")] string groupId,
-            [Values(0, 5)] int generation,
-            [Values(-1, 20000)] int retentionTime,
+            [Values("group")] string groupId,
+            [Values(5)] int generation,
+            [Values(20000)] int retentionTime,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
+            [Values(10)] int topicsPerRequest,
             [Values(5)] int maxPartitions,
             [Values(10)] int maxOffsets,
-            [Values(null, "something useful for the client")] string metadata)
+            [Values("something useful for the client")] string metadata)
         {
             var timestamp = retentionTime;
             var offsetCommits = new List<OffsetCommitRequest.Topic>();
@@ -992,8 +987,8 @@ namespace KafkaClient.Tests.Unit
         public void OffsetCommitResponse(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
@@ -1014,10 +1009,9 @@ namespace KafkaClient.Tests.Unit
         public void OffsetCommitResponseEquality(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
-                ErrorCode.NONE,
                 ErrorCode.OFFSET_METADATA_TOO_LARGE
             )] ErrorCode errorCode)
         {
@@ -1043,7 +1037,7 @@ namespace KafkaClient.Tests.Unit
         public void OffsetFetchRequest(
             [Values("group1", "group2")] string groupId,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
+            [Values(10)] int topicsPerRequest,
             [Values(5)] int maxPartitions)
         {
             var topics = new List<TopicPartition>();
@@ -1057,9 +1051,9 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void OffsetFetchRequestEquality(
-            [Values("group1", "group2")] string groupId,
+            [Values("group")] string groupId,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
+            [Values(10)] int topicsPerRequest,
             [Values(5)] int maxPartitions)
         {
             var topics = new List<TopicPartition>();
@@ -1081,8 +1075,8 @@ namespace KafkaClient.Tests.Unit
         public void OffsetFetchResponse(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
@@ -1110,16 +1104,9 @@ namespace KafkaClient.Tests.Unit
         public void OffsetFetchResponseTopicEquality(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
-                ErrorCode.NONE,
-                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
-                ErrorCode.GROUP_LOAD_IN_PROGRESS,
-                ErrorCode.NOT_COORDINATOR_FOR_GROUP,
-                ErrorCode.ILLEGAL_GENERATION,
-                ErrorCode.UNKNOWN_MEMBER_ID,
-                ErrorCode.TOPIC_AUTHORIZATION_FAILED,
                 ErrorCode.GROUP_AUTHORIZATION_FAILED
             )] ErrorCode errorCode)
         {
@@ -1139,16 +1126,9 @@ namespace KafkaClient.Tests.Unit
         public void OffsetFetchResponseEquality(
             [Values(0, 1, 2, 3)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(10)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(
-                ErrorCode.NONE,
-                ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
-                ErrorCode.GROUP_LOAD_IN_PROGRESS,
-                ErrorCode.NOT_COORDINATOR_FOR_GROUP,
-                ErrorCode.ILLEGAL_GENERATION,
-                ErrorCode.UNKNOWN_MEMBER_ID,
-                ErrorCode.TOPIC_AUTHORIZATION_FAILED,
                 ErrorCode.GROUP_AUTHORIZATION_FAILED
             )] ErrorCode errorCode)
         {
@@ -1188,7 +1168,7 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void FindCoordinatorRequestEquality(
             [Values(0, 1)] short version,
-            [Values("group1")] string groupId)
+            [Values("group")] string groupId)
         {
             var request = new FindCoordinatorRequest(groupId, version >= 1 ? CoordinatorType.Transaction : CoordinatorType.Group);
             request.AssertEqualToSelf();
@@ -1222,11 +1202,9 @@ namespace KafkaClient.Tests.Unit
         public void FindCoordinatorResponseEquality(
             [Values(0, 1)] short version,
             [Values(
-                ErrorCode.NONE,
-                ErrorCode.GROUP_COORDINATOR_NOT_AVAILABLE,
                 ErrorCode.GROUP_AUTHORIZATION_FAILED
             )] ErrorCode errorCode,
-            [Values(0, 1)] int coordinatorId
+            [Values(1)] int coordinatorId
         )
         {
             var response = new FindCoordinatorResponse(errorCode, coordinatorId, "broker-" + coordinatorId, 9092 + coordinatorId, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null, version >= 1 ? "foo" : null);
@@ -1246,38 +1224,13 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void ApiVersionsRequest()
-        {
-            var request = new ApiVersionsRequest();
-            request.AssertCanEncodeDecodeRequest(0);
-            request.AssertCanEncodeRequestDecodeResponse(0);
-        }
-
-        [Test]
-        public void ApiVersionsResponse(
-            [Values(
-                 ErrorCode.NONE,
-                 ErrorCode.BROKER_NOT_AVAILABLE
-             )] ErrorCode errorCode
-            )
-        {
-            var supported = new List<ApiVersionsResponse.VersionSupport>();
-            for (short apiKey = 0; apiKey <= 18; apiKey++) {
-                supported.Add(new ApiVersionsResponse.VersionSupport((ApiKey)apiKey, 0, (short)_randomizer.Next(0, 2)));
-            }
-            var response = new ApiVersionsResponse(errorCode, supported);
-
-            response.AssertCanEncodeDecodeResponse(0);
-        }
-
-        [Test]
         public void JoinGroupRequest(
-            [Values(0, 1)] short version,
-            [Values("test", "a groupId")] string groupId, 
+            [Values(0, 1, 2)] short version,
+            [Values("test", "group")] string groupId, 
             [Values(1, 20000)] int sessionTimeout,
-            [Values("", "an existing member")] string memberId, 
+            [Values("one", "two")] string memberId, 
             [Values("consumer", "other")] string protocolType, 
-            [Values(1, 10)] int protocolsPerRequest)
+            [Values(10)] int protocolsPerRequest)
         {
             var protocols = new List<JoinGroupRequest.GroupProtocol>();
             for (var p = 0; p < protocolsPerRequest; p++) {
@@ -1292,16 +1245,69 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void JoinGroupGroupProtocolEquality(
+            [Values(10)] int protocolsPerRequest)
+        {
+            var bytes = new byte[protocolsPerRequest * 100];
+            _randomizer.NextBytes(bytes);
+            var protocol = new JoinGroupRequest.GroupProtocol(new ByteTypeMetadata("known", new ArraySegment<byte>(bytes)));
+            protocol.AssertEqualToSelf();
+            protocol.AssertNotEqual(null,
+                new JoinGroupRequest.GroupProtocol(new ByteTypeMetadata(protocol.ProtocolName + 1, new ArraySegment<byte>(bytes))),
+                new JoinGroupRequest.GroupProtocol(new ByteTypeMetadata(protocol.ProtocolName, new ArraySegment<byte>(bytes, 1, bytes.Length - 1)))
+                );
+        }
+
+        [Test]
+        public void JoinGroupRequestEquality(
+            [Values(0, 1, 2)] short version,
+            [Values("test")] string groupId,
+            [Values(20000)] int sessionTimeout,
+            [Values("member")] string memberId,
+            [Values("consumer", "other")] string protocolType,
+            [Values(10)] int protocolsPerRequest)
+        {
+            var protocols = new List<JoinGroupRequest.GroupProtocol>();
+            for (var p = 0; p < protocolsPerRequest; p++)
+            {
+                var bytes = new byte[protocolsPerRequest * 100];
+                _randomizer.NextBytes(bytes);
+                protocols.Add(new JoinGroupRequest.GroupProtocol(new ByteTypeMetadata("known", new ArraySegment<byte>(bytes))));
+            }
+            var alternate = protocols.Take(1).Select(
+                p => new JoinGroupRequest.GroupProtocol(
+                    new ByteTypeMetadata(
+                        p.ProtocolName + 1, new ArraySegment<byte>(new byte[] { 0 }))));
+            var request = new JoinGroupRequest(groupId, TimeSpan.FromMilliseconds(sessionTimeout), memberId, protocolType, protocols, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(sessionTimeout * 2) : null);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new JoinGroupRequest(groupId + 1, request.SessionTimeout, request.MemberId, request.ProtocolType, request.GroupProtocols, request.RebalanceTimeout),
+                new JoinGroupRequest(groupId, TimeSpan.FromMilliseconds(sessionTimeout + 1), request.MemberId, request.ProtocolType, request.GroupProtocols, request.RebalanceTimeout),
+                new JoinGroupRequest(groupId, request.SessionTimeout, request.MemberId + 1, request.ProtocolType, request.GroupProtocols, request.RebalanceTimeout),
+                new JoinGroupRequest(groupId, request.SessionTimeout, request.MemberId, request.ProtocolType + 1, request.GroupProtocols, request.RebalanceTimeout),
+                new JoinGroupRequest(groupId, request.SessionTimeout, request.MemberId, request.ProtocolType, request.GroupProtocols.Skip(1), request.RebalanceTimeout),
+                new JoinGroupRequest(groupId, request.SessionTimeout, request.MemberId, request.ProtocolType, alternate.Union(request.GroupProtocols.Skip(1)), request.RebalanceTimeout)
+            );
+            if (version >= 1)
+            {
+                request.AssertNotEqual(
+                    new JoinGroupRequest(groupId, request.SessionTimeout, request.MemberId, request.ProtocolType, request.GroupProtocols, TimeSpan.FromMilliseconds(sessionTimeout * 3))
+                );
+            }
+        }
+
+        [Test]
         public void JoinGroupResponse(
+            [Values(0, 1, 2)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode,
-            [Values(0, 1, 20000)] int generationId,
+            [Values(0, 20000)] int generationId,
             [Values("consumer", "other")] string protocol, 
-            [Values("test", "a groupId")] string leaderId, 
+            [Values("test")] string leaderId, 
             [Values("", "an existing member")] string memberId, 
-            [Values(1, 10)] int memberCount)
+            [Values(10)] int memberCount)
         {
             var members = new List<JoinGroupResponse.Member>();
             for (var m = 0; m < memberCount; m++) {
@@ -1309,18 +1315,75 @@ namespace KafkaClient.Tests.Unit
                 _randomizer.NextBytes(bytes);
                 members.Add(new JoinGroupResponse.Member(memberId + m, new ByteTypeMetadata("known", new ArraySegment<byte>(bytes))));
             }
-            var response = new JoinGroupResponse(errorCode, generationId, "known", leaderId, memberId, members);
+            var response = new JoinGroupResponse(errorCode, generationId, "known", leaderId, memberId, members, version >= 2 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocol));
+            response.AssertCanEncodeDecodeResponse(version, new ByteMembershipEncoder(protocol));
+        }
+        [Test]
+        public void JoinGroupResponseMemberEquality(
+            [Values("an existing member")] string memberId,
+            [Values(10)] int memberCount)
+        {
+            var bytes = new byte[memberCount * 100];
+            _randomizer.NextBytes(bytes);
+            var member = new JoinGroupResponse.Member(memberId, new ByteTypeMetadata("known", new ArraySegment<byte>(bytes)));
+
+            member.AssertEqualToSelf();
+            member.AssertNotEqual(null,
+                new JoinGroupResponse.Member(memberId + 1, new ByteTypeMetadata("known", new ArraySegment<byte>(bytes))),
+                new JoinGroupResponse.Member(memberId, new ByteTypeMetadata("known1", new ArraySegment<byte>(bytes))),
+                new JoinGroupResponse.Member(memberId, new ByteTypeMetadata("known", new ArraySegment<byte>(bytes, 1, bytes.Length - 1)))
+            );
+        }
+
+        [Test]
+        public void JoinGroupResponseEquality(
+            [Values(0, 1, 2)] short version,
+            [Values(
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode,
+            [Values(20000)] int generationId,
+            [Values("consumer")] string protocol,
+            [Values("test")] string leaderId,
+            [Values("an existing member")] string memberId,
+            [Values(10)] int memberCount)
+        {
+            var members = new List<JoinGroupResponse.Member>();
+            for (var m = 0; m < memberCount; m++)
+            {
+                var bytes = new byte[memberCount * 100];
+                _randomizer.NextBytes(bytes);
+                members.Add(new JoinGroupResponse.Member(memberId + m, new ByteTypeMetadata("known", new ArraySegment<byte>(bytes))));
+            }
+            var alternate = members.Take(1).Select(
+                m => new JoinGroupResponse.Member(m.MemberId + 1,
+                    new ByteTypeMetadata("known", new ArraySegment<byte>(new byte[]{0}))));
+            var response = new JoinGroupResponse(errorCode, generationId, "known", leaderId, memberId, members, version >= 2 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new JoinGroupResponse(errorCode + 1, generationId, response.GroupProtocol, response.LeaderId, response.MemberId, response.Members, response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId + 1, response.GroupProtocol, response.LeaderId, response.MemberId, response.Members, response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId, response.GroupProtocol + 1, response.LeaderId, response.MemberId, response.Members, response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId, response.GroupProtocol, response.LeaderId + 1, response.MemberId, response.Members, response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId, response.GroupProtocol, response.LeaderId, response.MemberId + 1, response.Members, response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId, response.GroupProtocol, response.LeaderId, response.MemberId, response.Members.Skip(1), response.ThrottleTime),
+                new JoinGroupResponse(errorCode, generationId, response.GroupProtocol, response.LeaderId, response.MemberId, alternate.Union(response.Members.Skip(1)), response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(
+                    new JoinGroupResponse(
+                        errorCode, generationId, response.GroupProtocol + 1, response.LeaderId, response.MemberId,
+                        response.Members, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]
         public void JoinConsumerGroupRequest(
-            [Values("test", "a groupId")] string groupId, 
-            [Values(1, 20000)] int sessionTimeout,
-            [Values("", "an existing member")] string memberId, 
+            [Values("test")] string groupId, 
+            [Values(1)] int sessionTimeout,
+            [Values("an existing member")] string memberId, 
             [Values("mine", "yours")] string protocol, 
-            [Values(1, 10)] int protocolsPerRequest)
+            [Values(10)] int protocolsPerRequest)
         {
             var encoder = new ConsumerEncoder();
             var protocols = new List<JoinGroupRequest.GroupProtocol>();
@@ -1343,9 +1406,9 @@ namespace KafkaClient.Tests.Unit
              )] ErrorCode errorCode,
             [Values(0, 1, 20000)] int generationId,
             [Values("consumer")] string protocol, 
-            [Values("test", "a groupId")] string leaderId, 
-            [Values("", "an existing member")] string memberId, 
-            [Values(1, 10)] int memberCount)
+            [Values("test")] string leaderId, 
+            [Values("an existing member")] string memberId, 
+            [Values(10)] int memberCount)
         {
             var encoder = new ConsumerEncoder();
             var members = new List<JoinGroupResponse.Member>();
@@ -1673,36 +1736,28 @@ namespace KafkaClient.Tests.Unit
 
             response.AssertCanEncodeDecodeResponse(0);
         }
-
         [Test]
-        public void DeleteTopicsRequest(
-            [Values("test", "anotherNameForATopic")] string topicName, 
-            [Values(2, 3)] int count,
-            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        public void ApiVersionsRequest()
         {
-            var topics = new string[count];
-            for (var t = 0; t < count; t++) {
-                topics[t] = topicName + t;
-            }
-            var request = new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
-
+            var request = new ApiVersionsRequest();
             request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
         [Test]
-        public void DeleteTopicsResponse(
+        public void ApiVersionsResponse(
             [Values(
-                 ErrorCode.NONE,
-                 ErrorCode.NOT_CONTROLLER
-             )] ErrorCode errorCode,
-            [Values("test", "anotherNameForATopic")] string topicName, 
-            [Values(1, 5, 11)] int count)
+                ErrorCode.NONE,
+                ErrorCode.BROKER_NOT_AVAILABLE
+            )] ErrorCode errorCode
+        )
         {
-            var topics = new TopicsResponse.Topic[count];
-            for (var t = 0; t < count; t++) {
-                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
+            var supported = new List<ApiVersionsResponse.VersionSupport>();
+            for (short apiKey = 0; apiKey <= 18; apiKey++)
+            {
+                supported.Add(new ApiVersionsResponse.VersionSupport((ApiKey)apiKey, 0, (short)_randomizer.Next(0, 2)));
             }
-            var response = new DeleteTopicsResponse(topics);
+            var response = new ApiVersionsResponse(errorCode, supported);
 
             response.AssertCanEncodeDecodeResponse(0);
         }
@@ -1823,6 +1878,41 @@ namespace KafkaClient.Tests.Unit
             topic.AssertNotEqual(null,
                 new TopicsResponse.Topic(topicName + 1, errorCode),
                 new TopicsResponse.Topic(topicName, errorCode + 1));
+        }
+
+        [Test]
+        public void DeleteTopicsRequest(
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int count,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var topics = new string[count];
+            for (var t = 0; t < count; t++)
+            {
+                topics[t] = topicName + t;
+            }
+            var request = new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+
+            request.AssertCanEncodeDecodeRequest(0);
+        }
+
+        [Test]
+        public void DeleteTopicsResponse(
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new TopicsResponse.Topic[count];
+            for (var t = 0; t < count; t++)
+            {
+                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
+            }
+            var response = new DeleteTopicsResponse(topics);
+
+            response.AssertCanEncodeDecodeResponse(0);
         }
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)
