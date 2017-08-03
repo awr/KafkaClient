@@ -723,9 +723,12 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             var encoder = context.GetEncoder(context.ProtocolType);
-            writer.Write(response.error_code)
-                   .Write(response.member_assignment, encoder);
+            writer.Write(response.Error)
+                   .Write(response.MemberAssignment, encoder);
             return true;
         }
 

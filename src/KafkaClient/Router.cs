@@ -505,8 +505,8 @@ namespace KafkaClient
 
         public Task<SyncGroupResponse> SyncGroupAsync(SyncGroupRequest request, IRequestContext context, IRetry retryPolicy, CancellationToken cancellationToken)
         {
-            if (request.group_assignments.Count > 0) {
-                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.group_assignments, request.GenerationId);
+            if (request.GroupAssignments.Count > 0) {
+                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.GroupAssignments, request.GenerationId);
                 _memberAssignmentCache.AddOrUpdate(request.GroupId, value, (key, old) => value);
             }
 
@@ -525,7 +525,7 @@ namespace KafkaClient
         private IImmutableDictionary<string, IMemberAssignment> TryGetCachedMemberAssignment(string groupId, int? generationId = null)
         {
             if (_memberAssignmentCache.TryGetValue(groupId, out Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int> cachedValue) && (!generationId.HasValue || generationId.Value == cachedValue.Item2)) {
-                return cachedValue.Item1.ToImmutableDictionary(assignment => assignment.member_id, assignment => assignment.member_assignment);
+                return cachedValue.Item1.ToImmutableDictionary(assignment => assignment.MemberId, assignment => assignment.MemberAssignment);
             }
             return null;
         }

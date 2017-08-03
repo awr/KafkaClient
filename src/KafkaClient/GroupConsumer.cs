@@ -339,8 +339,8 @@ namespace KafkaClient
             }
 
             _syncSemaphore.Lock(() => {
-                _assignment = response.member_assignment;
-                var validPartitions = response.member_assignment.PartitionAssignments.ToImmutableHashSet();
+                _assignment = response.MemberAssignment;
+                var validPartitions = response.MemberAssignment.PartitionAssignments.ToImmutableHashSet();
                 var invalidPartitions = _batches.Where(pair => !validPartitions.Contains(pair.Key)).ToList();
                 foreach (var invalidPartition in invalidPartitions) {
                     invalidPartition.Value.Dispose();

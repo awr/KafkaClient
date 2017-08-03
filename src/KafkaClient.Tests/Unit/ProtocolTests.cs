@@ -1561,17 +1561,68 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void SyncGroupRequestEquality(
+            [Values("test", "a groupId")] string groupId, 
+            [Values(0, 1, 20000)] int generationId,
+            [Values("", "an existing member")] string memberId, 
+            [Values("consumer", "other")] string protocolType, 
+            [Values(5)] int assignmentsPerRequest)
+        {
+            var assignments = new List<SyncGroupRequest.GroupAssignment>();
+            for (var a = 0; a < assignmentsPerRequest; a++) {
+                var bytes = new byte[assignmentsPerRequest*100];
+                _randomizer.NextBytes(bytes);
+                assignments.Add(new SyncGroupRequest.GroupAssignment(protocolType + a, new ByteTypeAssignment(new ArraySegment<byte>(bytes))));
+            }
+            var alternate = assignments.Take(1).Select(
+                a => new SyncGroupRequest.GroupAssignment(
+                    protocolType, a.MemberAssignment));
+            var request = new SyncGroupRequest(groupId, generationId, memberId, assignments);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                null,
+                new SyncGroupRequest(groupId + 1, generationId, memberId, assignments),
+                new SyncGroupRequest(groupId, generationId + 1, memberId, assignments),
+                new SyncGroupRequest(groupId, generationId, memberId + 1, assignments),
+                new SyncGroupRequest(groupId, generationId, memberId, assignments.Skip(1)),
+                new SyncGroupRequest(groupId, generationId, memberId, alternate.Union(assignments.Skip(1)))
+            );
+        }
+
+        [Test]
         public void SyncGroupResponse(
+            [Values(0, 1)] short version,
             [Values(
-                 ErrorCode.NONE,
-                 ErrorCode.OFFSET_METADATA_TOO_LARGE
-             )] ErrorCode errorCode)
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
         {
             var bytes = new byte[1000];
             _randomizer.NextBytes(bytes);
-            var response = new SyncGroupResponse(errorCode, new ByteTypeAssignment(new ArraySegment<byte>(bytes)));
+            var response = new SyncGroupResponse(errorCode, new ByteTypeAssignment(new ArraySegment<byte>(bytes)), version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder("protocolType"));
+            response.AssertCanEncodeDecodeResponse(version, new ByteMembershipEncoder("protocolType"));
+        }
+
+        [Test]
+        public void SyncGroupResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
+        {
+            var bytes = new byte[1000];
+            _randomizer.NextBytes(bytes);
+            var response = new SyncGroupResponse(errorCode, new ByteTypeAssignment(new ArraySegment<byte>(bytes)), version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new SyncGroupResponse(errorCode + 1, response.MemberAssignment, response.ThrottleTime),
+                new SyncGroupResponse(errorCode + 1, new ByteTypeAssignment(new ArraySegment<byte>(bytes, 1, bytes.Length - 1)), response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(new SyncGroupResponse(errorCode, response.MemberAssignment, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]

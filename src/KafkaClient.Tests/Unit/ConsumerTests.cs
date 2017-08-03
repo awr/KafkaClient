@@ -148,7 +148,7 @@ namespace KafkaClient.Tests.Unit
 
 #pragma warning disable 4014
             router.Received().SyncGroupAsync(
-                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.group_assignments.Count > 0),
+                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.GroupAssignments.Count > 0),
                 Arg.Any<IRequestContext>(),
                 Arg.Any<IRetry>(), 
                 Arg.Any<CancellationToken>());
@@ -176,7 +176,7 @@ namespace KafkaClient.Tests.Unit
 
 #pragma warning disable 4014
             router.Received().SyncGroupAsync(
-                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.group_assignments.Count == 0),
+                Arg.Is((SyncGroupRequest s) => s.GroupId == request.GroupId && s.MemberId == memberId && s.GroupAssignments.Count == 0),
                 Arg.Any<IRequestContext>(),
                 Arg.Any<IRetry>(), 
                 Arg.Any<CancellationToken>());
