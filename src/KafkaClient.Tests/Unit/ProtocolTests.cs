@@ -1435,16 +1435,52 @@ namespace KafkaClient.Tests.Unit
             request.AssertCanEncodeRequestDecodeResponse(0);
         }
 
+
+        [Test]
+        public void HeartbeatRequestEquality(
+            [Values("test")] string groupId,
+            [Values(20000)] int generationId,
+            [Values("an existing member")] string memberId)
+        {
+            GroupRequest request = new HeartbeatRequest(groupId, generationId, memberId);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                null,
+                new HeartbeatRequest(groupId + 1, generationId, memberId),
+                new HeartbeatRequest(groupId, generationId + 1, memberId),
+                new HeartbeatRequest(groupId, generationId, memberId + 1)
+            );
+        }
+
         [Test]
         public void HeartbeatResponse(
+            [Values(0, 1)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
              )] ErrorCode errorCode)
         {
-            var response = new HeartbeatResponse(errorCode);
+            var response = new HeartbeatResponse(errorCode, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void HeartbeatResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
+        {
+            var response = new HeartbeatResponse(errorCode, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new HeartbeatResponse(errorCode + 1, response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(new HeartbeatResponse(errorCode, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]

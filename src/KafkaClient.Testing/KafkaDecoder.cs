@@ -701,7 +701,10 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code);
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Error);
             return true;
         }
 

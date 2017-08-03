@@ -27,11 +27,7 @@ namespace KafkaClient.Protocol
         public static FindCoordinatorResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
-                TimeSpan? throttleTime = null;
-                if (context.ApiVersion >= 1) {
-                    throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
-                }
-
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
                 var errorCode = (ErrorCode)reader.ReadInt16();
                 string errorMessage = null;
                 if (context.ApiVersion >= 1) {

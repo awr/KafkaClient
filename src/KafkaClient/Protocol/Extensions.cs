@@ -272,6 +272,12 @@ namespace KafkaClient.Protocol
             return (ErrorCode) reader.ReadInt16();
         }
 
+        public static TimeSpan? ReadThrottleTime(this IKafkaReader reader, bool inThisVersion = true)
+        {
+            if (!inThisVersion) return null;
+            return TimeSpan.FromMilliseconds(reader.ReadInt32());
+        }
+
         public static bool IsSuccess(this ErrorCode code)
         {
             return code == ErrorCode.NONE;

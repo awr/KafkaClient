@@ -3,16 +3,19 @@ using System;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Heartbeat Request (Version: 0) => group_id group_generation_id member_id 
-    ///   group_id => STRING           -- The group id.
-    ///   group_generation_id => INT32 -- The generation of the group.
-    ///   member_id => STRING          -- The member id assigned by the group coordinator.
-    /// 
-    /// see http://kafka.apache.org/protocol.html#protocol_messages
+    /// Heartbeat Request => group_id group_generation_id member_id 
     /// 
     /// Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If a heartbeat has *not* been 
     /// received by the coordinator with the configured session timeout, the member will be kicked out of the group.
     /// </summary>
+    /// <remarks>
+    /// Heartbeat Request => group_id group_generation_id member_id 
+    ///   group_id => STRING
+    ///   group_generation_id => INT32
+    ///   member_id => STRING
+    /// 
+    /// From http://kafka.apache.org/protocol.html#The_Messages_Heartbeat
+    /// </remarks>
     public class HeartbeatRequest : GroupRequest, IRequest<HeartbeatResponse>
     {
         public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId}}}";

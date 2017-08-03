@@ -42,11 +42,7 @@ namespace KafkaClient.Protocol
         public static OffsetFetchResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
-                TimeSpan? throttleTime = null;
-                if (context.ApiVersion >= 3) {
-                    throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
-                }
-
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 3);
                 var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
                 for (var t = 0; t < topicCount; t++) {

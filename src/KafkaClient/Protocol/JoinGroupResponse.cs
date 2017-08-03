@@ -41,11 +41,7 @@ namespace KafkaClient.Protocol
         public static JoinGroupResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
-                TimeSpan? throttleTime = null;
-                if (context.ApiVersion >= 2) {
-                    throttleTime = TimeSpan.FromMilliseconds(reader.ReadInt32());
-                }
-
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 2);
                 var errorCode = (ErrorCode)reader.ReadInt16();
                 var generationId = reader.ReadInt32();
                 var groupProtocol = reader.ReadString();
