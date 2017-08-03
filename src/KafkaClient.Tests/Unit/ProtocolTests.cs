@@ -1495,15 +1495,48 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void LeaveGroupResponse(
-            [Values(
-                 ErrorCode.NONE,
-                 ErrorCode.OFFSET_METADATA_TOO_LARGE
-             )] ErrorCode errorCode)
+        public void LeaveGroupRequestEquality(
+            [Values("test", "a groupId")] string groupId, 
+            [Values("", "an existing member")] string memberId)
         {
-            var response = new LeaveGroupResponse(errorCode);
+            var request = new LeaveGroupRequest(groupId, memberId);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                null,
+                new LeaveGroupRequest(groupId + 1, memberId),
+                new LeaveGroupRequest(groupId, memberId + 1)
+            );
+        }
 
-            response.AssertCanEncodeDecodeResponse(0);
+        [Test]
+        public void LeaveGroupResponse(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
+        {
+            var response = new LeaveGroupResponse(errorCode, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void LeaveGroupResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode)
+        {
+            var response = new LeaveGroupResponse(errorCode, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new LeaveGroupResponse(errorCode + 1, response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(new LeaveGroupResponse(errorCode, TimeSpan.FromMilliseconds(200)));
+            }
         }
 
         [Test]

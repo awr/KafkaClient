@@ -3,16 +3,19 @@ using System;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// LeaveGroupRequest => group_id member_id 
-    ///   group_id => STRING           -- The group id.
-    ///   member_id => STRING          -- The member id assigned by the group coordinator.
-    /// 
-    /// see http://kafka.apache.org/protocol.html#protocol_messages
+    /// LeaveGroup Request => group_id member_id 
     /// 
     /// To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since 
     /// it allows the group to rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to 
     /// an active member.
     /// </summary>
+    /// <remarks>
+    /// LeaveGroup Request => group_id member_id 
+    ///   group_id => STRING
+    ///   member_id => STRING
+    /// 
+    /// From http://kafka.apache.org/protocol.html#The_Messages_LeaveGroup
+    /// </remarks>
     public class LeaveGroupRequest : Request, IRequest<LeaveGroupResponse>, IGroupMember, IEquatable<LeaveGroupRequest>
     {
         public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId}}}";
