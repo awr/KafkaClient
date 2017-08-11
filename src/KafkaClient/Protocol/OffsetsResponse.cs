@@ -27,7 +27,7 @@ namespace KafkaClient.Protocol
     /// Version 2+: throttle_time_ms
     /// From http://kafka.apache.org/protocol.html#The_Messages_Offsets
     /// </remarks>
-    public class OffsetsResponse : IResponse<OffsetsResponse.Topic>, IEquatable<OffsetsResponse>
+    public class OffsetsResponse : ThrottledResponse, IResponse<OffsetsResponse.Topic>, IEquatable<OffsetsResponse>
     {
         public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
 
@@ -62,27 +62,16 @@ namespace KafkaClient.Protocol
             }            
         }
 
-        public OffsetsResponse(Topic topic)
-            : this(new[] {topic})
-        {
-        }
-
         public OffsetsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
-            ThrottleTime = throttleTime;
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
         public IImmutableList<Topic> Responses { get; }
-
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not violate any quota.)
-        /// Version: 2+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -97,15 +86,15 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Responses.HasEqualElementsInOrder(other.Responses)
-                && ThrottleTime == other.ThrottleTime;
+            return base.Equals(other) 
+                && Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                int hashCode = ThrottleTime?.GetHashCode() ?? 0;
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Responses?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }

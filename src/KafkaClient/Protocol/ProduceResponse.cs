@@ -24,7 +24,7 @@ namespace KafkaClient.Protocol
     /// Version 2+: log_append_time
     /// From http://kafka.apache.org/protocol.html#The_Messages_Produce
     /// </remarks>
-    public class ProduceResponse : IResponse<ProduceResponse.Topic>, IEquatable<ProduceResponse>
+    public class ProduceResponse : ThrottledResponse, IResponse<ProduceResponse.Topic>, IEquatable<ProduceResponse>
     {
         public override string ToString() => $"{{responses:[{Responses.ToStrings()}],throttle_time_ms:{ThrottleTime}}}";
 
@@ -59,28 +59,16 @@ namespace KafkaClient.Protocol
             }
         }
 
-        public ProduceResponse(Topic topic, TimeSpan? throttleTime = null)
-            : this (new []{ topic }, throttleTime)
-        {
-        }
-
         public ProduceResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
-            ThrottleTime = throttleTime;
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
         public IImmutableList<Topic> Responses { get; }
-
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. 
-        /// (Zero if the request did not violate any quota).
-        /// Version: 1+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -95,16 +83,16 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Responses.HasEqualElementsInOrder(other.Responses) 
-                && (int?)ThrottleTime?.TotalMilliseconds == (int?)other.ThrottleTime?.TotalMilliseconds;
+            return base.Equals(other) 
+                && Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = Responses?.Count.GetHashCode() ?? 0;
-                hashCode = (hashCode*397) ^ ThrottleTime.GetHashCode();
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode*397) ^ (Responses?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

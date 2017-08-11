@@ -34,7 +34,7 @@ namespace KafkaClient.Protocol
     /// Version 2+: throttle_time_ms
     /// From http://kafka.apache.org/protocol.html#The_Messages_JoinGroup
     /// </remarks>
-    public class JoinGroupResponse : IResponse, IEquatable<JoinGroupResponse>
+    public class JoinGroupResponse : ThrottledResponse, IResponse, IEquatable<JoinGroupResponse>
     {
         public override string ToString() => $"{{error_code:{Error},generation_id:{GenerationId},group_protocol:{GroupProtocol},leader_id:{LeaderId},member_id:{MemberId},members:[{Members.ToStrings()}]}}";
 
@@ -61,6 +61,7 @@ namespace KafkaClient.Protocol
         }
 
         public JoinGroupResponse(ErrorCode errorCode, int generationId, string groupProtocol, string leaderId, string memberId, IEnumerable<Member> members, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
@@ -69,7 +70,6 @@ namespace KafkaClient.Protocol
             LeaderId = leaderId;
             MemberId = memberId;
             Members = ImmutableList<Member>.Empty.AddNotNullRange(members);
-            ThrottleTime = throttleTime;
         }
 
         /// <inheritdoc />
@@ -99,13 +99,6 @@ namespace KafkaClient.Protocol
 
         public IImmutableList<Member> Members { get; }
 
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) 
-        /// Version: 1+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
-
         #region Equality
 
         /// <inheritdoc />
@@ -119,12 +112,12 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Error == other.Error 
+            return base.Equals(other) 
+                && Error == other.Error 
                 && GenerationId == other.GenerationId 
                 && string.Equals(GroupProtocol, other.GroupProtocol) 
                 && string.Equals(LeaderId, other.LeaderId) 
                 && string.Equals(MemberId, other.MemberId)
-                && ThrottleTime == other.ThrottleTime
                 && Members.HasEqualElementsInOrder(other.Members);
         }
 
@@ -132,12 +125,12 @@ namespace KafkaClient.Protocol
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = (int) Error;
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode*397) ^ GenerationId;
                 hashCode = (hashCode*397) ^ (GroupProtocol?.GetHashCode() ?? 0);
                 hashCode = (hashCode*397) ^ (LeaderId?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (MemberId?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (ThrottleTime?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (int) Error;
                 hashCode = (hashCode*397) ^ (Members?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }

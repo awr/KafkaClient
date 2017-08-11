@@ -31,7 +31,7 @@ namespace KafkaClient.Protocol
     /// Version 5+: log_start_offset
     /// From http://kafka.apache.org/protocol.html#The_Messages_Fetch
     /// </remarks>
-    public class FetchResponse : IResponse<FetchResponse.Topic>, IEquatable<FetchResponse>
+    public class FetchResponse : ThrottledResponse, IResponse<FetchResponse.Topic>, IEquatable<FetchResponse>
     {
         public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},responses:[{Responses.ToStrings()}]}}";
 
@@ -75,22 +75,15 @@ namespace KafkaClient.Protocol
         }
 
         public FetchResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
-            ThrottleTime = throttleTime;
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
         public IImmutableList<Topic> Responses { get; }
-
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) 
-        /// Version: 1+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -105,15 +98,17 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Responses.HasEqualElementsInOrder(other.Responses) 
-                && ThrottleTime.Equals(other.ThrottleTime);
+            return base.Equals(other)
+                && Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                return ((Responses?.Count.GetHashCode() ?? 0)*397) ^ ThrottleTime.GetHashCode();
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Responses?.Count.GetHashCode() ?? 0);
+                return hashCode;
             }
         }
 

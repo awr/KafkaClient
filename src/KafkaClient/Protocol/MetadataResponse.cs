@@ -37,7 +37,7 @@ namespace KafkaClient.Protocol
     /// Version 3+: throttle_time_ms
     /// From http://kafka.apache.org/protocol.html#The_Messages_Metadata
     /// </remarks>
-    public class MetadataResponse : IResponse, IEquatable<MetadataResponse>
+    public class MetadataResponse : ThrottledResponse, IResponse, IEquatable<MetadataResponse>
     {
         public override string ToString() => $"{{brokers:[{Brokers.ToStrings()}],topic_metadata:[{TopicMetadata.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId}}}";
 
@@ -100,12 +100,12 @@ namespace KafkaClient.Protocol
         }
 
         public MetadataResponse(IEnumerable<Server> brokers = null, IEnumerable<Topic> topics = null, int? controllerId = null, string clusterId = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Brokers = ImmutableList<Server>.Empty.AddNotNullRange(brokers);
             TopicMetadata = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             ControllerId = controllerId;
             ClusterId = clusterId;
-            ThrottleTime = throttleTime;
             Errors = ImmutableList<ErrorCode>.Empty.AddRange(TopicMetadata.Select(t => t.TopicError));
         }
 
@@ -125,13 +125,6 @@ namespace KafkaClient.Protocol
         /// </summary>
         public string ClusterId { get; }
 
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) 
-        /// Version: 3+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
-
         public IImmutableList<Topic> TopicMetadata { get; }
 
         #region Equality
@@ -147,21 +140,21 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Brokers.HasEqualElementsInOrder(other.Brokers) 
+            return base.Equals(other) 
+                && Brokers.HasEqualElementsInOrder(other.Brokers) 
                 && ControllerId == other.ControllerId
                 && ClusterId == other.ClusterId
-                && TopicMetadata.HasEqualElementsInOrder(other.TopicMetadata)
-                && ThrottleTime == other.ThrottleTime;
+                && TopicMetadata.HasEqualElementsInOrder(other.TopicMetadata);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = Brokers?.Count.GetHashCode() ?? 0;
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ControllerId?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ClusterId?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (ThrottleTime?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Brokers?.Count.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (TopicMetadata?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }

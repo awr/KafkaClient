@@ -14,7 +14,7 @@ namespace KafkaClient.Protocol
     /// Version 1+: throttle_time_ms
     /// From http://kafka.apache.org/protocol.html#The_Messages_LeaveGroup
     /// </remarks>
-    public class LeaveGroupResponse : IResponse, IEquatable<LeaveGroupResponse>
+    public class LeaveGroupResponse : ThrottledResponse, IResponse, IEquatable<LeaveGroupResponse>
     {
         public override string ToString() => $"{{error_code:{Error}}}";
 
@@ -28,23 +28,16 @@ namespace KafkaClient.Protocol
         }
 
         public LeaveGroupResponse(ErrorCode errorCode, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
-            ThrottleTime = throttleTime;
         }
 
         /// <inheritdoc />
         public IImmutableList<ErrorCode> Errors { get; }
 
         public ErrorCode Error { get; }
-
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) 
-        /// Version: 1+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -59,15 +52,17 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Error == other.Error
-                && ThrottleTime == other.ThrottleTime;
+            return base.Equals(other)
+                && Error == other.Error;
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                return (Error.GetHashCode() * 397) ^ ThrottleTime.GetHashCode();
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode*397) ^ Error.GetHashCode();
+                return hashCode;
             }
         }
 

@@ -35,7 +35,7 @@ namespace KafkaClient.Protocol
     /// Version 3+: throttle_time_ms
     /// From http://kafka.apache.org/protocol.html#The_Messages_OffsetFetch
     /// </remarks>
-    public class OffsetFetchResponse : IResponse<OffsetFetchResponse.Topic>, IEquatable<OffsetFetchResponse>
+    public class OffsetFetchResponse : ThrottledResponse, IResponse<OffsetFetchResponse.Topic>, IEquatable<OffsetFetchResponse>
     {
         public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
 
@@ -68,6 +68,7 @@ namespace KafkaClient.Protocol
         }
 
         public OffsetFetchResponse(IEnumerable<Topic> topics = null, ErrorCode? errorCode = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
             Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
             Errors = ImmutableList<ErrorCode>.Empty;
@@ -76,7 +77,6 @@ namespace KafkaClient.Protocol
                 Errors = Errors.Add(errorCode.Value);
             }
             Errors = Errors.AddRange(Responses.Select(t => t.Error));
-            ThrottleTime = throttleTime;
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -88,13 +88,6 @@ namespace KafkaClient.Protocol
         /// Version: 2+
         /// </summary>
         public ErrorCode? Error { get; }
-
-        /// <summary>
-        /// Duration in milliseconds for which the request was throttled due to quota violation. (Zero if the request did not 
-        /// violate any quota.) 
-        /// Version: 3+
-        /// </summary>
-        public TimeSpan? ThrottleTime { get; }
 
         #region Equality
 
@@ -109,17 +102,17 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Responses.HasEqualElementsInOrder(other.Responses)
-                && Error == other.Error
-                && ThrottleTime == other.ThrottleTime;
+            return base.Equals(other) 
+                && Responses.HasEqualElementsInOrder(other.Responses)
+                && Error == other.Error;
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = Error?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ (ThrottleTime?.GetHashCode() ?? 0);
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Error?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Responses?.Count.GetHashCode() ?? 0);
                 return hashCode;
             }

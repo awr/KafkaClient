@@ -91,7 +91,7 @@ namespace KafkaClient.Protocol
         public override int GetHashCode()
         {
             unchecked {
-                int hashCode = base.GetHashCode();
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ Error.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ErrorMessage?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ThrottleTime?.GetHashCode() ?? 0);
