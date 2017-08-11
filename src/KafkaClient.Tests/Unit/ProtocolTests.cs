@@ -1687,7 +1687,27 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void DescribeGroupsRequestEquality(
+            [Values("test", "a groupId")] string groupId, 
+            [Values(5)] int count)
+        {
+            var groups = new string[count];
+            for (var g = 0; g < count; g++) {
+                groups[g] = groupId + g;
+            }
+            var alternate = groups.Take(1).Select(_ => groupId);
+            var request = new DescribeGroupsRequest(groups);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                null,
+                new DescribeGroupsRequest(groups.Skip(1)),
+                new DescribeGroupsRequest(alternate.Union(groups.Skip(1)))
+            );
+        }
+
+        [Test]
         public void DescribeGroupsResponse(
+            [Values(0, 1)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
@@ -1711,13 +1731,51 @@ namespace KafkaClient.Tests.Unit
                 }
                 groups[g] = new DescribeGroupsResponse.Group(errorCode, groupId + g, state, protocolType, protocol, members);
             }
-            var response = new DescribeGroupsResponse(groups);
+            var response = new DescribeGroupsResponse(groups, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0, new ByteMembershipEncoder(protocolType));
+            response.AssertCanEncodeDecodeResponse(version, new ByteMembershipEncoder(protocolType));
         }
 
         [Test]
-        public void DescribeGroupsResponseMember(
+        public void DescribeGroupsResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode,
+            [Values("test")] string groupId, 
+            [Values(3)] int count,
+            [Values(Protocol.DescribeGroupsResponse.Group.States.Stable, Protocol.DescribeGroupsResponse.Group.States.Dead)] string state, 
+            [Values("consumer")] string protocolType,
+            [Values("good")] string protocol)
+        {
+            var groups = new DescribeGroupsResponse.Group[count];
+            for (var g = 0; g < count; g++) {
+                var members = new List<DescribeGroupsResponse.Member>();
+                for (var m = 0; m < count; m++) {
+                    var metadata = new byte[count*100];
+                    var assignment = new byte[count*10];
+                    _randomizer.NextBytes(metadata);
+                    _randomizer.NextBytes(assignment);
+
+                    members.Add(new DescribeGroupsResponse.Member("member" + m, "client" + m, "host-" + m, new ByteTypeMetadata(protocol, new ArraySegment<byte>(metadata)), new ByteTypeAssignment(new ArraySegment<byte>(assignment))));
+                }
+                groups[g] = new DescribeGroupsResponse.Group(errorCode, groupId + g, state, protocolType, protocol, members);
+            }
+            var alternate = groups.Take(1).Select(g => new DescribeGroupsResponse.Group(errorCode + 1, groupId, state, protocolType, protocol, g.Members));
+            var response = new DescribeGroupsResponse(groups, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DescribeGroupsResponse(groups.Skip(1), response.ThrottleTime),
+                new DescribeGroupsResponse(alternate.Union(groups.Skip(1)), response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(new DescribeGroupsResponse(groups, TimeSpan.FromMilliseconds(200)));
+            }
+        }
+
+        [Test]
+        public void DescribeGroupsResponseMemberEquality(
             [Values(2, 3)] int count,
             [Values("good", "bad", "ugly")] string protocol)
         {
@@ -1737,7 +1795,7 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void DescribeGroupsResponseGroup(
+        public void DescribeGroupsResponseGroupEquality(
             [Values(2, 3)] int count,
             [Values("good", "bad", "ugly")] string protocol,
             [Values(

@@ -480,7 +480,7 @@ namespace KafkaClient
 
                     // since the above may take some time to complete, it's necessary to hold on to the groups we found before
                     // just in case they expired between when we searched for them and now.
-                    var result = cachedResults.Hits.AddNotNullRange(response?.groups);
+                    var result = cachedResults.Hits.AddNotNullRange(response?.Groups);
                     return result;
                 }, cancellationToken).ConfigureAwait(false);
         }
@@ -491,8 +491,8 @@ namespace KafkaClient
 
             var groupCache = _groupCache;
             try {
-                foreach (var group in metadata.groups) {
-                    groupCache = groupCache.SetItem(group.group_id, new Tuple<DescribeGroupsResponse.Group, DateTimeOffset>(group, DateTimeOffset.UtcNow));
+                foreach (var group in metadata.Groups) {
+                    groupCache = groupCache.SetItem(group.GroupId, new Tuple<DescribeGroupsResponse.Group, DateTimeOffset>(group, DateTimeOffset.UtcNow));
                 }
             } finally {
                 _groupCache = groupCache;
@@ -517,7 +517,7 @@ namespace KafkaClient
         {
             var assignment = TryGetCachedMemberAssignment(groupId, generationId);
             if (assignment == null && !generationId.HasValue) {
-                assignment = TryGetCachedGroup(groupId)?.members?.ToImmutableDictionary(member => member.member_id, member => member.member_assignment);
+                assignment = TryGetCachedGroup(groupId)?.Members?.ToImmutableDictionary(member => member.member_id, member => member.member_assignment);
             }
             return assignment ?? ImmutableDictionary<string, IMemberAssignment>.Empty;
         }

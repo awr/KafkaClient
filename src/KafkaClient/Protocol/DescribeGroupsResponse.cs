@@ -8,29 +8,35 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// DescribeGroups Response => [groups]
-    ///  group => error_code group_id state protocol_type protocol [members] 
-    ///   error_code => INT16
-    ///   group_id => STRING
-    ///   state => STRING              -- The current state of the group (one of: Dead, Stable, AwaitingSync, or PreparingRebalance, or empty if there is no active group)
-    ///   protocol_type => STRING      -- The current group protocol type (will be empty if there is no active group)
-    ///   protocol => STRING           -- 	The current group protocol (only provided if the group is Stable)
-    ///   member => member_id client_id client_host member_metadata member_assignment
-    ///     member_id => STRING        -- The memberId assigned by the coordinator
-    ///     client_id => STRING        -- The client id used in the member's latest join group request
-    ///     client_host => STRING      -- The client host used in the request session corresponding to the member's join group.
-    ///     member_metadata => BYTES   -- The metadata corresponding to the current group protocol in use (will only be present if the group is stable).
-    ///     member_assignment => BYTES -- The current assignment provided by the group leader (will only be present if the group is stable).
-    ///
-    /// From http://kafka.apache.org/protocol.html#protocol_messages
+    /// DescribeGroups Response => *throttle_time_ms [groups] 
     /// </summary>
-    public class DescribeGroupsResponse : IResponse, IEquatable<DescribeGroupsResponse>
+    /// <remarks>
+    /// DescribeGroups Response => *throttle_time_ms [groups] 
+    ///   throttle_time_ms => INT32
+    ///   groups => error_code group_id state protocol_type protocol [members] 
+    ///     error_code => INT16
+    ///     group_id => STRING
+    ///     state => STRING
+    ///     protocol_type => STRING
+    ///     protocol => STRING
+    ///     members => member_id client_id client_host member_metadata member_assignment 
+    ///       member_id => STRING
+    ///       client_id => STRING
+    ///       client_host => STRING
+    ///       member_metadata => BYTES
+    ///       member_assignment => BYTES
+    /// 
+    /// Version 1+: throttle_time_ms
+    /// From http://kafka.apache.org/protocol.html#The_Messages_DescribeGroups
+    /// </remarks>
+    public class DescribeGroupsResponse : ThrottledResponse, IResponse, IEquatable<DescribeGroupsResponse>
     {
-        public override string ToString() => $"{{groups:[{groups.ToStrings()}]}}";
+        public override string ToString() => $"{{groups:[{Groups.ToStrings()}]}}";
 
         public static DescribeGroupsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
                 var groups = new Group[reader.ReadInt32()];
                 for (var g = 0; g < groups.Length; g++) {
                     var errorCode = (ErrorCode)reader.ReadInt16();
@@ -53,19 +59,20 @@ namespace KafkaClient.Protocol
                     groups[g] = new Group(errorCode, groupId, state, protocolType, protocol, members);
                 }
 
-                return new DescribeGroupsResponse(groups);
+                return new DescribeGroupsResponse(groups, throttleTime);
             }
         }
 
-        public DescribeGroupsResponse(IEnumerable<Group> groups)
+        public DescribeGroupsResponse(IEnumerable<Group> groups, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
-            this.groups = ImmutableList<Group>.Empty.AddNotNullRange(groups);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(this.groups.Select(g => g.error_code));
+            Groups = ImmutableList<Group>.Empty.AddNotNullRange(groups);
+            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Groups.Select(g => g.Error));
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<Group> groups { get; }
+        public IImmutableList<Group> Groups { get; }
 
         #region Equality
 
@@ -80,33 +87,38 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return groups.HasEqualElementsInOrder(other.groups);
+            return base.Equals(other)
+                && Groups.HasEqualElementsInOrder(other.Groups);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return groups?.Count.GetHashCode() ?? 0;
+            unchecked {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Groups?.Count.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
 
         #endregion
 
         public class Group : IEquatable<Group>
         {
-            public override string ToString() => $"{{error_code:{error_code},group_id:{group_id},state:{state},protocol_type:{protocol_type},protocol:{protocol},members:[{members.ToStrings()}]}}";
+            public override string ToString() => $"{{error_code:{Error},group_id:{GroupId},state:{State},protocol_type:{ProtocolType},protocol:{Protocol},members:[{Members.ToStrings()}]}}";
 
             public Group(ErrorCode errorCode, string groupId, string state, string protocolType, string protocol, IEnumerable<Member> members)
             {
-                error_code = errorCode;
-                group_id = groupId;
-                this.state = state;
-                protocol_type = protocolType;
-                this.protocol = protocol;
-                this.members = ImmutableList<Member>.Empty.AddNotNullRange(members);
+                Error = errorCode;
+                GroupId = groupId;
+                State = state;
+                ProtocolType = protocolType;
+                Protocol = protocol;
+                Members = ImmutableList<Member>.Empty.AddNotNullRange(members);
             }
 
-            public ErrorCode error_code { get; }
-            public string group_id { get; }
+            public ErrorCode Error { get; }
+            public string GroupId { get; }
 
             /// <summary>
             /// State machine for Coordinator
@@ -191,22 +203,22 @@ namespace KafkaClient.Protocol
             /// <summary>
             /// The current state of the group (one of: Dead, Stable, AwaitingSync, or PreparingRebalance, or empty if there is no active group)
             /// </summary>
-            public string state { get; }
+            public string State { get; }
 
             /// <summary>
             /// The current group protocol type (will be empty if there is no active group)
             /// </summary>
-            public string protocol_type { get; }
+            public string ProtocolType { get; }
 
             /// <summary>
             /// The current group protocol (only provided if the group is Stable)
             /// </summary>
-            public string protocol { get; }
+            public string Protocol { get; }
 
             /// <summary>
             /// Current group members (only provided if the group is not Dead)
             /// </summary>
-            public IImmutableList<Member> members { get; }
+            public IImmutableList<Member> Members { get; }
 
             #region Equality
 
@@ -221,24 +233,24 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return error_code == other.error_code 
-                       && String.Equals(group_id, other.group_id) 
-                       && String.Equals(state, other.state) 
-                       && String.Equals(protocol_type, other.protocol_type) 
-                       && String.Equals(protocol, other.protocol) 
-                       && members.HasEqualElementsInOrder(other.members);
+                return Error == other.Error 
+                       && string.Equals(GroupId, other.GroupId) 
+                       && string.Equals(State, other.State) 
+                       && string.Equals(ProtocolType, other.ProtocolType) 
+                       && string.Equals(Protocol, other.Protocol) 
+                       && Members.HasEqualElementsInOrder(other.Members);
             }
 
             /// <inheritdoc />
             public override int GetHashCode()
             {
                 unchecked {
-                    var hashCode = (int) error_code;
-                    hashCode = (hashCode*397) ^ (group_id?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (state?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (protocol_type?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (protocol?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ (members?.Count.GetHashCode() ?? 0);
+                    var hashCode = (int) Error;
+                    hashCode = (hashCode*397) ^ (GroupId?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (State?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (ProtocolType?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (Protocol?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ (Members?.Count.GetHashCode() ?? 0);
                     return hashCode;
                 }
             }

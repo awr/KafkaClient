@@ -30,7 +30,7 @@ namespace KafkaClient.Tests
             //setup mock IConnection
 #pragma warning disable 1998
             Connection1 = new FakeConnection(new Endpoint(new IPEndPoint(IPAddress.Loopback, 1))) {
-                { ApiKey.Produce, async _ => new ProduceResponse(new ProduceResponse.Topic(TestTopic, 0, ErrorCode.NONE, _offset1++)) },
+                { ApiKey.Produce, async _ => new ProduceResponse(new [] { new ProduceResponse.Topic(TestTopic, 0, ErrorCode.NONE, _offset1++) }) },
                 { ApiKey.Metadata, async _ => await MetadataResponse() },
                 { ApiKey.FindCoordinator, async _ => await GroupCoordinatorResponse() },
                 { ApiKey.Offsets, async _ => new OffsetsResponse(
@@ -51,7 +51,7 @@ namespace KafkaClient.Tests
             };
 
             Connection2 = new FakeConnection(new Endpoint(new IPEndPoint(IPAddress.Loopback, 2))) {
-                { ApiKey.Produce, async _ => new ProduceResponse(new ProduceResponse.Topic(TestTopic, 1, ErrorCode.NONE, _offset2++)) },
+                { ApiKey.Produce, async _ => new ProduceResponse(new [] { new ProduceResponse.Topic(TestTopic, 1, ErrorCode.NONE, _offset2++) }) },
                 { ApiKey.Metadata, async _ => await MetadataResponse() },
                 { ApiKey.FindCoordinator, async _ => await GroupCoordinatorResponse() },
                 { ApiKey.Offsets, async _ => new OffsetsResponse(

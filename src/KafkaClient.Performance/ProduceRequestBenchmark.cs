@@ -50,7 +50,7 @@ namespace KafkaClient.Performance
                                         .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec, version: MessageVersion)), 
                               Codec)));
 
-            var response = new ProduceResponse(new ProduceResponse.Topic("topic", 1, ErrorCode.NONE, 0));
+            var response = new ProduceResponse(new [] { new ProduceResponse.Topic("topic", 1, ErrorCode.NONE, 0) });
 
             var port = 10000;
             var endpoint = new Endpoint(new IPEndPoint(IPAddress.Loopback, port), "localhost");

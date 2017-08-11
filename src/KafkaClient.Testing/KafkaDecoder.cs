@@ -486,7 +486,7 @@ namespace KafkaClient.Testing
                 }
             }
             if (context.ApiVersion >= 1) {
-                writer.Write((int?)response.ThrottleTime?.TotalMilliseconds ?? 0);
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
             }
             return true;
         }
@@ -496,7 +496,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int?)response.ThrottleTime?.TotalMilliseconds ?? 0);
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -736,17 +736,20 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.groups.Count);
-            foreach (var group in response.groups) {
-                writer.Write(group.error_code)
-                    .Write(group.group_id)
-                    .Write(group.state)
-                    .Write(group.protocol_type)
-                    .Write(group.protocol);
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Groups.Count);
+            foreach (var group in response.Groups) {
+                writer.Write(group.Error)
+                    .Write(group.GroupId)
+                    .Write(group.State)
+                    .Write(group.ProtocolType)
+                    .Write(group.Protocol);
 
-                var encoder = context.GetEncoder(group.protocol_type);
-                writer.Write(group.members.Count);
-                foreach (var member in group.members) {
+                var encoder = context.GetEncoder(group.ProtocolType);
+                writer.Write(group.Members.Count);
+                foreach (var member in group.Members) {
                     writer.Write(member.member_id)
                         .Write(member.client_id)
                         .Write(member.client_host)
