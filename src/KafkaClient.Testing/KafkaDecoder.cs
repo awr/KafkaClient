@@ -780,9 +780,9 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code)
-                .Write(response.enabled_mechanisms.Count);
-            foreach (var mechanism in response.enabled_mechanisms) {
+            writer.Write(response.Error)
+                .Write(response.EnabledMechanisms.Count);
+            foreach (var mechanism in response.EnabledMechanisms) {
                 writer.Write(mechanism);
             }
             return true;
