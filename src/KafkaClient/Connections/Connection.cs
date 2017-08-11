@@ -124,12 +124,12 @@ namespace KafkaClient.Connections
                         return await _configuration.ConnectionRetry.TryAsync(
                             async (retryAttempt, elapsed) => {
                                 var response = await SendAsync(new ApiVersionsRequest(), cancellationToken, new RequestContext(version: 0)).ConfigureAwait(false);
-                                if (response.error_code.IsRetryable()) return RetryAttempt<short>.Retry;
-                                if (!response.error_code.IsSuccess()) return RetryAttempt<short>.Abort;
+                                if (response.Error.IsRetryable()) return RetryAttempt<short>.Retry;
+                                if (!response.Error.IsSuccess()) return RetryAttempt<short>.Abort;
 
-                                var supportedVersions = response.api_versions.ToImmutableDictionary(
-                                                                _ => _.api_key,
-                                                                _ => configuredSupport.UseMaxSupported ? _.max_version : _.min_version);
+                                var supportedVersions = response.ApiVersions.ToImmutableDictionary(
+                                                                _ => _.ApiKey,
+                                                                _ => configuredSupport.UseMaxSupported ? _.MaxVersion : _.MinVersion);
                                 _versionSupport = new VersionSupport(supportedVersions);
                                 return new RetryAttempt<short>(_versionSupport.GetVersion(apiKey).GetValueOrDefault());
                             },

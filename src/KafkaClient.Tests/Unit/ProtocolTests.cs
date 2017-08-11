@@ -1952,6 +1952,16 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void SaslHandshakeRequestEquality(
+            [Values("PLAIN")] string mechanism)
+        {
+            var request = new SaslHandshakeRequest(mechanism);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new SaslHandshakeRequest(mechanism + 1));
+        }
+
+        [Test]
         public void SaslHandshakeResponse(
             [Values(
                  ErrorCode.NONE,
@@ -1964,6 +1974,24 @@ namespace KafkaClient.Tests.Unit
 
             response.AssertCanEncodeDecodeResponse(0);
         }
+
+        [Test]
+        public void SaslHandshakeResponseEquality(
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode,
+            [Values(2)] int count)
+        {
+            var mechanisms = new[] { "EXTERNAL", "ANONYMOUS", "PLAIN", "OTP", "SKEY", "CRAM-MD5", "DIGEST-MD5", "SCRAM", "NTLM", "GSSAPI", "OAUTHBEARER" };
+            var response = new SaslHandshakeResponse(errorCode, mechanisms.Take(count));
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new SaslHandshakeResponse(errorCode + 1, mechanisms.Take(count)),
+                new SaslHandshakeResponse(errorCode, mechanisms.Take(count + 1)),
+                new SaslHandshakeResponse(errorCode, mechanisms.Skip(1).Take(count)));
+        }
+
         [Test]
         public void ApiVersionsRequest()
         {
@@ -1973,7 +2001,19 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void ApiVersionsRequestEquality()
+        {
+            var request = new ApiVersionsRequest();
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                new ApiVersionsRequest[] {
+                    null
+                });
+        }
+
+        [Test]
         public void ApiVersionsResponse(
+            [Values(0, 1)] short version,
             [Values(
                 ErrorCode.NONE,
                 ErrorCode.BROKER_NOT_AVAILABLE
@@ -1981,13 +2021,50 @@ namespace KafkaClient.Tests.Unit
         )
         {
             var supported = new List<ApiVersionsResponse.VersionSupport>();
-            for (short apiKey = 0; apiKey <= 18; apiKey++)
-            {
+            for (short apiKey = 0; apiKey <= 18; apiKey++) {
                 supported.Add(new ApiVersionsResponse.VersionSupport((ApiKey)apiKey, 0, (short)_randomizer.Next(0, 2)));
             }
-            var response = new ApiVersionsResponse(errorCode, supported);
+            var response = new ApiVersionsResponse(errorCode, supported, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void ApiVersionsResponseVersionSupportEquality()
+        {
+            var supported = new ApiVersionsResponse.VersionSupport((ApiKey)1, 0, (short)_randomizer.Next(0, 2));
+            supported.AssertEqualToSelf();
+            supported.AssertNotEqual(null,
+                new ApiVersionsResponse.VersionSupport(supported.ApiKey + 1, supported.MinVersion, supported.MaxVersion),
+                new ApiVersionsResponse.VersionSupport(supported.ApiKey, (short) (supported.MinVersion + 1), supported.MaxVersion),
+                new ApiVersionsResponse.VersionSupport(supported.ApiKey, supported.MinVersion, (short) (supported.MaxVersion + 1)));
+        }
+
+        [Test]
+        public void ApiVersionsResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.BROKER_NOT_AVAILABLE
+            )] ErrorCode errorCode
+        )
+        {
+            var supported = new List<ApiVersionsResponse.VersionSupport>();
+            for (short apiKey = 0; apiKey <= 18; apiKey++) {
+                supported.Add(new ApiVersionsResponse.VersionSupport((ApiKey)apiKey, 0, (short)_randomizer.Next(0, 2)));
+            }
+            var alternate = supported.Take(1).Select(s => new ApiVersionsResponse.VersionSupport(s.ApiKey, (short) (s.MinVersion + 1), (short) (s.MaxVersion + 1)));
+            var response = new ApiVersionsResponse(errorCode, supported, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new ApiVersionsResponse(errorCode + 1, supported, response.ThrottleTime),
+                new ApiVersionsResponse(errorCode, supported.Skip(1), response.ThrottleTime),
+                new ApiVersionsResponse(errorCode, alternate.Union(supported.Skip(1)), response.ThrottleTime));
+            if (version >= 1) {
+                response.AssertNotEqual(
+                    new ApiVersionsResponse(errorCode + 1, supported, TimeSpan.FromMilliseconds(10))
+                );
+            }
         }
 
         [Test]

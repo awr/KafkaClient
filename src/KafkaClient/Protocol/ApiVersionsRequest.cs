@@ -4,11 +4,15 @@ namespace KafkaClient.Protocol
 {
     /// <summary>
     /// ApiVersions Request => 
-    ///
-    /// From http://kafka.apache.org/protocol.html#protocol_messages
+    /// 
     /// A Protocol for requesting which versions are supported for each api key
     /// </summary>
-    public class ApiVersionsRequest : Request, IRequest<ApiVersionsResponse>
+    /// <remarks>
+    /// ApiVersions Request => 
+    /// 
+    /// From http://kafka.apache.org/protocol.html#The_Messages_ApiVersions
+    /// </remarks>
+    public class ApiVersionsRequest : Request, IRequest<ApiVersionsResponse>, IEquatable<ApiVersionsRequest>
     {
         public override string ToString() => $"{{Api:{ApiKey}}}";
 
@@ -17,6 +21,21 @@ namespace KafkaClient.Protocol
         public ApiVersionsRequest() 
             : base(ApiKey.ApiVersions)
         {
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ApiVersionsRequest);
+        }
+
+        public bool Equals(ApiVersionsRequest other)
+        {
+            return base.Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

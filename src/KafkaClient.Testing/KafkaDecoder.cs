@@ -792,12 +792,15 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code)
-                .Write(response.api_versions.Count);
-            foreach (var versionSupport in response.api_versions) {
-                writer.Write((short)versionSupport.api_key)
-                    .Write(versionSupport.min_version)
-                    .Write(versionSupport.max_version);
+            writer.Write(response.Error)
+                .Write(response.ApiVersions.Count);
+            foreach (var versionSupport in response.ApiVersions) {
+                writer.Write((short)versionSupport.ApiKey)
+                    .Write(versionSupport.MinVersion)
+                    .Write(versionSupport.MaxVersion);
+            }
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
             }
             return true;
         }
