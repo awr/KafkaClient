@@ -118,6 +118,10 @@ namespace KafkaClient.Protocol
             }
 
             public ErrorCode Error { get; }
+
+            /// <summary>
+            /// The group id.
+            /// </summary>
             public string GroupId { get; }
 
             /// <summary>

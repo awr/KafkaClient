@@ -1865,15 +1865,25 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
-        public void ListGroupsRequest()
+        public void ListGroupsRequest([Values(0, 1)] short version)
         {
             var request = new ListGroupsRequest();
-            request.AssertCanEncodeDecodeRequest(0);
-            request.AssertCanEncodeRequestDecodeResponse(0);
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void ListGroupsRequestEquality()
+        {
+            var request = new ListGroupsRequest();
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(
+                new ListGroupsRequest[] { null }
+            );
         }
 
         [Test]
         public void ListGroupsResponse(
+            [Values(0, 1)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.OFFSET_METADATA_TOO_LARGE
@@ -1886,9 +1896,49 @@ namespace KafkaClient.Tests.Unit
             for (var g = 0; g < count; g++) {
                 groups[g] = new ListGroupsResponse.Group(groupId + g, protocolType);
             }
-            var response = new ListGroupsResponse(errorCode, groups);
+            var response = new ListGroupsResponse(errorCode, groups, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void ListGroupsResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.OFFSET_METADATA_TOO_LARGE
+            )] ErrorCode errorCode,
+            [Values("test")] string groupId, 
+            [Values(3)] int count,
+            [Values("consumer")] string protocolType)
+        {
+            var groups = new ListGroupsResponse.Group[count];
+            for (var g = 0; g < count; g++) {
+                groups[g] = new ListGroupsResponse.Group(groupId + g, protocolType);
+            }
+            var alternate = groups.Take(1).Select(g => new ListGroupsResponse.Group(groupId, g.ProtocolType));
+            var response = new ListGroupsResponse(errorCode, groups, version >= 1 ? (TimeSpan?)TimeSpan.FromSeconds(1) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new ListGroupsResponse(errorCode + 1, groups, response.ThrottleTime),
+                new ListGroupsResponse(errorCode, groups.Skip(1), response.ThrottleTime),
+                new ListGroupsResponse(errorCode, alternate.Union(groups.Skip(1)), response.ThrottleTime)
+            );
+            if (version >= 1) {
+                response.AssertNotEqual(new ListGroupsResponse(errorCode, groups, TimeSpan.FromMilliseconds(200)));
+            }
+        }
+
+        [Test]
+        public void ListGroupsResponseGroupEquality(
+            [Values("consumer", "unknown")] string protocolType,
+            [Values("test", "a groupId")] string groupId)
+        {
+            var group = new ListGroupsResponse.Group(groupId, protocolType);
+            group.AssertEqualToSelf();
+            group.AssertNotEqual(null,
+                new ListGroupsResponse.Group(groupId + 1, protocolType),
+                new ListGroupsResponse.Group(groupId, protocolType + 1));
         }
 
         [Test]

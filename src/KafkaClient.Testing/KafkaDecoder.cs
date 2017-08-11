@@ -764,11 +764,14 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write(response.error_code)
-                .Write(response.groups.Count);
-            foreach (var group in response.groups) {
-                writer.Write(group.group_id)
-                    .Write(group.protocol_type);
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
+            writer.Write(response.Error)
+                .Write(response.Groups.Count);
+            foreach (var group in response.Groups) {
+                writer.Write(group.GroupId)
+                    .Write(group.ProtocolType);
             }
             return true;
         }
