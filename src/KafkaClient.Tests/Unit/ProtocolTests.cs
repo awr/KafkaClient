@@ -2268,22 +2268,43 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void DeleteTopicsRequest(
+            [Values(0, 1)] short version,
             [Values("test", "anotherNameForATopic")] string topicName,
             [Values(2, 3)] int count,
             [Values(0, 1, 20000)] int timeoutMilliseconds)
         {
             var topics = new string[count];
-            for (var t = 0; t < count; t++)
-            {
+            for (var t = 0; t < count; t++) {
                 topics[t] = topicName + t;
             }
             var request = new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
 
-            request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void DeleteTopicsRequestEquality(
+            [Values(0, 1)] short version,
+            [Values("test")] string topicName,
+            [Values(3)] int count,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new string[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = topicName + t;
+            }
+            var alternate = topics.Take(1).Select(_ => topicName);
+            var request = new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new DeleteTopicsRequest(topics.Skip(1), request.Timeout),
+                new DeleteTopicsRequest(alternate.Union(topics.Skip(1)), request.Timeout),
+                new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds + 1)));
         }
 
         [Test]
         public void DeleteTopicsResponse(
+            [Values(0, 1)] short version,
             [Values(
                 ErrorCode.NONE,
                 ErrorCode.NOT_CONTROLLER
@@ -2292,13 +2313,38 @@ namespace KafkaClient.Tests.Unit
             [Values(1, 5, 11)] int count)
         {
             var topics = new TopicsResponse.Topic[count];
-            for (var t = 0; t < count; t++)
-            {
+            for (var t = 0; t < count; t++) {
                 topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
             }
-            var response = new DeleteTopicsResponse(topics);
+            var response = new DeleteTopicsResponse(topics, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void DeleteTopicsResponseEquality(
+            [Values(0, 1)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new TopicsResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
+            }
+
+            var alternate = topics.Take(1).Select(t => new TopicsResponse.Topic(topicName, errorCode));
+            var response = new DeleteTopicsResponse(topics, version >= 1 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DeleteTopicsResponse(topics.Skip(1), response.ThrottleTime),
+                new DeleteTopicsResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime));
+            if (version >= 1) {
+                response.AssertNotEqual(new DeleteTopicsResponse(topics, TimeSpan.FromSeconds(100)));
+            }
         }
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

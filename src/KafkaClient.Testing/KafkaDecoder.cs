@@ -830,6 +830,9 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 1) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             writer.Write(response.Topics.Count);
             foreach (var topic in response.Topics) {
                 writer.Write(topic.TopicName)
