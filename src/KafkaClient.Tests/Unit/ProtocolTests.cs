@@ -2069,12 +2069,13 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void CreateTopicsRequest(
+            [Values(0, 1, 2)] short version,
             [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int partitionsPerTopic,
+            [Values(2)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
             [Values(1, 3)] short replicationFactor,
             [Values(0, 3)] int configCount,
-            [Values(0, 1, 20000)] int timeoutMilliseconds)
+            [Values(0, 20000)] int timeoutMilliseconds)
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -2087,25 +2088,23 @@ namespace KafkaClient.Tests.Unit
                 }
                 topics.Add(new CreateTopicsRequest.Topic(topicName + t, partitionsPerTopic, replicationFactor, configs));
             }
-            var request = new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+            var request = new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds), version >= 1 ? (bool?)(version == 1) : null);
 
-            request.AssertCanEncodeDecodeRequest(0);
+            request.AssertCanEncodeDecodeRequest(version);
         }
 
         [Test]
-        public void CreateTopicsRequestTopic(
+        public void CreateTopicsRequestTopicEquality(
             [Values("testTopic")] string topicName,
             [Values(1, 5)] int partitionsPerTopic,
             [Values(1, 3)] short replicationFactor,
             [Values(1, 3)] int configCount)
         {
             var configs = new Dictionary<string, string>();
-            for (var c = 0; c < configCount; c++)
-            {
+            for (var c = 0; c < configCount; c++) {
                 configs["config-" + c] = Guid.NewGuid().ToString("N");
             }
-            if (configs.Count == 0 && _randomizer.Next() % 2 == 0)
-            {
+            if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
                 configs = null;
             }
             var topic = new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, replicationFactor, configs);
@@ -2115,6 +2114,62 @@ namespace KafkaClient.Tests.Unit
                 new CreateTopicsRequest.Topic(topicName, partitionsPerTopic + 1, replicationFactor, configs),
                 new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, (short)(replicationFactor + 1), configs),
                 new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, replicationFactor, configs.Skip(1)));
+
+            var assignments = 2.Repeat(i => new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic, i.Repeat(x => x))).ToList();
+            var alternate = assignments.Take(1).Select(i => new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic + 1, i.Replicas));
+            var topicWithReplicas = new CreateTopicsRequest.Topic(topicName, assignments, configs);
+            topicWithReplicas.AssertEqualToSelf();
+            topicWithReplicas.AssertNotEqual(null,
+                new CreateTopicsRequest.Topic(topicName + 1, assignments, configs),
+                new CreateTopicsRequest.Topic(topicName, assignments.Skip(1), configs),
+                new CreateTopicsRequest.Topic(topicName, alternate.Union(assignments.Skip(1)), configs));
+        }
+
+        [Test]
+        public void CreateTopicsRequestReplicaAssignmentEquality([Values(5)] int partitionsPerTopic)
+        {
+            var replicas = partitionsPerTopic.Repeat(x => x).ToList();
+            var alternate = replicas.Take(1).Select(_ => 2);
+            var assignment = new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic, replicas);
+            assignment.AssertEqualToSelf();
+            assignment.AssertNotEqual(null,
+                new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic + 1, replicas),
+                new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic, replicas.Skip(1)),
+                new CreateTopicsRequest.ReplicaAssignment(partitionsPerTopic, alternate.Union(replicas.Skip(1))));
+        }
+
+        [Test]
+        public void CreateTopicsRequestEquality(
+            [Values(0, 1, 2)] short version,
+            [Values("testTopic")] string topicName,
+            [Values(2)] int topicsPerRequest,
+            [Values(5)] int partitionsPerTopic,
+            [Values(3)] short replicationFactor,
+            [Values(3)] int configCount,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new List<CreateTopicsRequest.Topic>();
+            for (var t = 0; t < topicsPerRequest; t++) {
+                var configs = new Dictionary<string, string>();
+                for (var c = 0; c < configCount; c++) {
+                    configs["config-" + c] = Guid.NewGuid().ToString("N");
+                }
+                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
+                    configs = null;
+                }
+                topics.Add(new CreateTopicsRequest.Topic(topicName + t, partitionsPerTopic, replicationFactor, configs));
+            }
+            var alternate = topics.Take(1).Select(t => new CreateTopicsRequest.Topic(topicName, t.NumPartitions, t.ReplicationFactor, t.Configs));
+            var request = new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds), version >= 1 ? (bool?)true : null);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new CreateTopicsRequest(topics.Skip(1), TimeSpan.FromMilliseconds(timeoutMilliseconds), request.ValidateOnly),
+                new CreateTopicsRequest(alternate.Union(topics.Skip(1)), TimeSpan.FromMilliseconds(timeoutMilliseconds), request.ValidateOnly),
+                new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds + 1), request.ValidateOnly));
+            if (version >= 1) {
+                request.AssertNotEqual(
+                    new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds), false));
+            }
         }
 
         [Test]
@@ -2151,6 +2206,7 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void CreateTopicsResponse(
+            [Values(0, 1, 2)] short version,
             [Values(
                  ErrorCode.NONE,
                  ErrorCode.INVALID_TOPIC_EXCEPTION,
@@ -2161,28 +2217,53 @@ namespace KafkaClient.Tests.Unit
         {
             var topics = new TopicsResponse.Topic[count];
             for (var t = 0; t < count; t++) {
-                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
+                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode, version >= 1 ? topicName : null);
             }
-            var response = new CreateTopicsResponse(topics);
+            var response = new CreateTopicsResponse(topics, version >= 2 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
 
-            response.AssertCanEncodeDecodeResponse(0);
+            response.AssertCanEncodeDecodeResponse(version);
         }
 
         [Test]
-        public void CreateTopicsResponseTopic(
+        public void CreateTopicsResponseTopicEquality(
+            [Values(
+                ErrorCode.INVALID_PARTITIONS
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(null, "something went wrong")] string errorMessage)
+        {
+            var topic = new TopicsResponse.Topic(topicName, errorCode, errorMessage);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new TopicsResponse.Topic(topicName + 1, errorCode, errorMessage),
+                new TopicsResponse.Topic(topicName, errorCode + 1, errorMessage),
+                new TopicsResponse.Topic(topicName, errorCode, "something else"));
+        }
+
+        [Test]
+        public void CreateTopicsResponseEquality(
+            [Values(0, 1, 2)] short version,
             [Values(
                 ErrorCode.NONE,
                 ErrorCode.INVALID_TOPIC_EXCEPTION,
                 ErrorCode.INVALID_PARTITIONS
             )] ErrorCode errorCode,
-            [Values("test", "anotherNameForATopic")] string topicName,
-            [Values(1, 5, 11)] int count)
+            [Values("test")] string topicName, 
+            [Values(5)] int count)
         {
-            var topic = new TopicsResponse.Topic(topicName, errorCode);
-            topic.AssertEqualToSelf();
-            topic.AssertNotEqual(null,
-                new TopicsResponse.Topic(topicName + 1, errorCode),
-                new TopicsResponse.Topic(topicName, errorCode + 1));
+            var topics = new TopicsResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new TopicsResponse.Topic(topicName + t, errorCode);
+            }
+            var alternate = topics.Take(1).Select(t => new TopicsResponse.Topic(topicName, errorCode));
+            var response = new CreateTopicsResponse(topics, version >= 2 ? (TimeSpan?)TimeSpan.FromMilliseconds(100) : null);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new CreateTopicsResponse(topics.Skip(1), response.ThrottleTime),
+                new CreateTopicsResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime));
+            if (version >= 2) {
+                response.AssertNotEqual(new CreateTopicsResponse(topics, TimeSpan.FromSeconds(100)));
+            }
         }
 
         [Test]

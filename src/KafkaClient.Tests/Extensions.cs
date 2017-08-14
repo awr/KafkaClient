@@ -124,5 +124,12 @@ namespace KafkaClient.Tests
         {
             return TimeSpan.FromMilliseconds(span.TotalMilliseconds * multiplier);
         }
+
+        public static IEnumerable<T> Repeat<T>(this int count, Func<int, T> producer)
+        {
+            for (var i = 0; i < count; i++) {
+                yield return producer(i);
+            }
+        }
     }
 }

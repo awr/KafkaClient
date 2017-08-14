@@ -412,8 +412,11 @@ namespace KafkaClient.Testing
                         : new CreateTopicsRequest.Topic(topicName, numPartitions, replicationFactor, configs);
                 }
                 var timeout = reader.ReadInt32();
-
-                return new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeout));
+                bool? validateOnly = null;
+                if (context.ApiVersion >= 1) {
+                    validateOnly = reader.ReadBoolean();
+                }
+                return new CreateTopicsRequest(topics, TimeSpan.FromMilliseconds(timeout), validateOnly);
             }
         }
         
@@ -809,10 +812,16 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
+            if (context.ApiVersion >= 2) {
+                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            }
             writer.Write(response.Topics.Count);
             foreach (var topic in response.Topics) {
                 writer.Write(topic.TopicName)
                     .Write(topic.ErrorCode);
+                if (context.ApiVersion >= 1) {
+                    writer.Write(topic.ErrorMessage);
+                }
             }
             return true;
         }
