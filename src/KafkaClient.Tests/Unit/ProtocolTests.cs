@@ -2704,7 +2704,65 @@ namespace KafkaClient.Tests.Unit
                 new AddPartitionsToTxnResponse(response.ThrottleTime.Value, topics.Skip(1)),
                 new AddPartitionsToTxnResponse(response.ThrottleTime.Value, alternate.Union(topics.Skip(1))));
         }
+        
+        [Test]
+        public void AddOffsetsToTxnRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int partitions,
+            [Values(2, short.MaxValue)] short epoch,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var request = new AddOffsetsToTxnRequest(topicName, partitions, epoch, topicName);
 
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void AddOffsetsToTxnRequestEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions,
+            [Values(5000)] short epoch,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var request = new AddOffsetsToTxnRequest(topicName, partitions, epoch, topicName);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new AddOffsetsToTxnRequest(topicName + 1, partitions, epoch, topicName),
+                new AddOffsetsToTxnRequest(topicName, partitions + 1, epoch, topicName),
+                new AddOffsetsToTxnRequest(topicName, partitions, (short)(epoch + 1), topicName),
+                new AddOffsetsToTxnRequest(topicName, partitions, epoch, topicName + 1));
+        }
+
+        [Test]
+        public void AddOffsetsToTxnResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 5, 11)] int count)
+        {
+            var response = new AddOffsetsToTxnResponse(TimeSpan.FromMilliseconds(count), errorCode);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void AddOffsetsToTxnResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 5, 11)] int count)
+        {
+            var response = new AddOffsetsToTxnResponse(TimeSpan.FromMilliseconds(count), errorCode);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new AddOffsetsToTxnResponse(TimeSpan.FromMilliseconds(count + 1), errorCode),
+                new AddOffsetsToTxnResponse(response.ThrottleTime.Value, errorCode + 1));
+        }
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

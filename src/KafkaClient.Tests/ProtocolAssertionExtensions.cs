@@ -110,6 +110,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(InitProducerIdResponse)) return ApiKey.InitProducerId;
             if (typeof(T) == typeof(OffsetForLeaderEpochResponse)) return ApiKey.OffsetForLeaderEpoch;
             if (typeof(T) == typeof(AddPartitionsToTxnResponse)) return ApiKey.AddPartitionsToTxn;
+            if (typeof(T) == typeof(AddOffsetsToTxnResponse)) return ApiKey.AddOffsetsToTxn;
             throw new InvalidOperationException();
         }
 

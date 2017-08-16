@@ -61,6 +61,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(InitProducerIdRequest)) return (T)InitProducerIdRequest(context, bytes);
             if (typeof(T) == typeof(OffsetForLeaderEpochRequest)) return (T)OffsetForLeaderEpochRequest(context, bytes);
             if (typeof(T) == typeof(AddPartitionsToTxnRequest)) return (T)AddPartitionsToTxnRequest(context, bytes);
+            if (typeof(T) == typeof(AddOffsetsToTxnRequest)) return (T)AddOffsetsToTxnRequest(context, bytes);
             return default(T);
         }
 
@@ -95,7 +96,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as DeleteRecordsResponse)
                 || TryEncodeResponse(writer, context, response as InitProducerIdResponse)
                 || TryEncodeResponse(writer, context, response as OffsetForLeaderEpochResponse)
-                || TryEncodeResponse(writer, context, response as AddPartitionsToTxnResponse);
+                || TryEncodeResponse(writer, context, response as AddPartitionsToTxnResponse)
+                || TryEncodeResponse(writer, context, response as AddOffsetsToTxnResponse);
 
                 return writer.ToSegment();
             }
@@ -512,6 +514,18 @@ namespace KafkaClient.Testing
             }
         }
         
+        private static IRequest AddOffsetsToTxnRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var transactionalId = reader.ReadString();
+                var producerId = reader.ReadInt64();
+                var producerEpoch = reader.ReadInt16();
+                var consumerGroupId = reader.ReadString();
+
+                return new AddOffsetsToTxnRequest(transactionalId, producerId, producerEpoch, consumerGroupId);
+            }
+        }
+
         private static IKafkaReader ReadHeader(ArraySegment<byte> data)
         {
             IRequestContext context;
@@ -986,6 +1000,15 @@ namespace KafkaClient.Testing
                           .Write(partition.Error);
                 }
             }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, AddOffsetsToTxnResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.Error);
             return true;
         }
 

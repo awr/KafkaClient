@@ -280,6 +280,8 @@ namespace KafkaClient.Protocol
                     return OffsetForLeaderEpochResponse.FromBytes(context, bytes);
                 case ApiKey.AddPartitionsToTxn:
                     return AddPartitionsToTxnResponse.FromBytes(context, bytes);
+                case ApiKey.AddOffsetsToTxn:
+                    return AddOffsetsToTxnResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }
