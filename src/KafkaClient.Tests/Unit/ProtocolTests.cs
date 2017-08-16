@@ -2514,6 +2514,115 @@ namespace KafkaClient.Tests.Unit
                 new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode, producerId, (short)(response.ProducerEpoch + 1)));
         }
 
+        [Test]
+        public void OffsetForLeaderEpochRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int partitions,
+            [Values(2, int.MaxValue)] int epoch,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var topics = new OffsetForLeaderEpochRequest.Topic[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new OffsetForLeaderEpochRequest.Topic(topicName + t, t, epoch);
+            }
+            var request = new OffsetForLeaderEpochRequest(topics);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void OffsetForLeaderEpochRequestEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions,
+            [Values(50000)] int epoch,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new OffsetForLeaderEpochRequest.Topic[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new OffsetForLeaderEpochRequest.Topic(topicName + t, t, epoch);
+            }
+            var alternate = topics.Take(1).Select(t => new OffsetForLeaderEpochRequest.Topic(topicName, t.PartitionId, t.LeaderEpoch));
+            var request = new OffsetForLeaderEpochRequest(topics);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new OffsetForLeaderEpochRequest(topics.Skip(1)),
+                new OffsetForLeaderEpochRequest(alternate.Union(topics.Skip(1))));
+        }
+
+        [Test]
+        public void OffsetForLeaderEpochRequestTopicEquality(
+            [Values("test")] string topicName,
+            [Values(50000)] int epoch)
+        {
+            var topic = new OffsetForLeaderEpochRequest.Topic(topicName, 1, epoch);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new OffsetForLeaderEpochRequest.Topic(topicName + 1, 1, epoch),
+                new OffsetForLeaderEpochRequest.Topic(topicName, 2, epoch),
+                new OffsetForLeaderEpochRequest.Topic(topicName, 1, epoch + 1));
+        }
+
+        [Test]
+        public void OffsetForLeaderEpochResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new OffsetForLeaderEpochResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new OffsetForLeaderEpochResponse.Topic(topicName + t, errorCode, t, count);
+            }
+            var response = new OffsetForLeaderEpochResponse(topics);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void OffsetForLeaderEpochResponseTopicEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName)
+        {
+            var topic = new OffsetForLeaderEpochResponse.Topic(topicName, errorCode, 1, 1234);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new OffsetForLeaderEpochResponse.Topic(topicName + 1, topic.Error, topic.PartitionId, topic.EndOffset),
+                new OffsetForLeaderEpochResponse.Topic(topicName, topic.Error + 1, topic.PartitionId + 1, topic.EndOffset),
+                new OffsetForLeaderEpochResponse.Topic(topicName, topic.Error, topic.PartitionId + 1, topic.EndOffset),
+                new OffsetForLeaderEpochResponse.Topic(topicName, topic.Error, topic.PartitionId, topic.EndOffset + 1));
+        }
+
+        [Test]
+        public void OffsetForLeaderEpochResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new OffsetForLeaderEpochResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new OffsetForLeaderEpochResponse.Topic(topicName + t, errorCode, t, count);
+            }
+
+            var alternate = topics.Take(1).Select(t => new OffsetForLeaderEpochResponse.Topic(topicName, errorCode, t.PartitionId, t.EndOffset));
+            var response = new OffsetForLeaderEpochResponse(topics);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new OffsetForLeaderEpochResponse(topics.Skip(1)),
+                new OffsetForLeaderEpochResponse(alternate.Union(topics.Skip(1))));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

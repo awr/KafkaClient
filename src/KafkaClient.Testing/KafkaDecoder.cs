@@ -59,6 +59,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(DeleteTopicsRequest)) return (T)DeleteTopicsRequest(context, bytes);
             if (typeof(T) == typeof(DeleteRecordsRequest)) return (T)DeleteRecordsRequest(context, bytes);
             if (typeof(T) == typeof(InitProducerIdRequest)) return (T)InitProducerIdRequest(context, bytes);
+            if (typeof(T) == typeof(OffsetForLeaderEpochRequest)) return (T)OffsetForLeaderEpochRequest(context, bytes);
             return default(T);
         }
 
@@ -91,7 +92,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as CreateTopicsResponse)
                 || TryEncodeResponse(writer, context, response as DeleteTopicsResponse)
                 || TryEncodeResponse(writer, context, response as DeleteRecordsResponse)
-                || TryEncodeResponse(writer, context, response as InitProducerIdResponse);
+                || TryEncodeResponse(writer, context, response as InitProducerIdResponse)
+                || TryEncodeResponse(writer, context, response as OffsetForLeaderEpochResponse);
 
                 return writer.ToSegment();
             }
@@ -464,6 +466,25 @@ namespace KafkaClient.Testing
                 var transactionTimeout = reader.ReadInt32();
 
                 return new InitProducerIdRequest(transactionalId, TimeSpan.FromMilliseconds(transactionTimeout));
+            }
+        }
+        
+        private static IRequest OffsetForLeaderEpochRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var groupedTopics = reader.ReadInt32();
+                var topics = new List<OffsetForLeaderEpochRequest.Topic>();
+                for (var t = 0; t < groupedTopics; t++) {
+                    var topicName = reader.ReadString();
+                    var partitionCount = reader.ReadInt32();
+                    for (var p = 0; p < partitionCount; p++) {
+                        var partitionId = reader.ReadInt32();
+                        var leaderEpoch = reader.ReadInt32();
+                        topics.Add(new OffsetForLeaderEpochRequest.Topic(topicName, partitionId, leaderEpoch));
+                    }
+                }
+
+                return new OffsetForLeaderEpochRequest(topics);
             }
         }
         
@@ -905,6 +926,26 @@ namespace KafkaClient.Testing
             writer.Write(response.ProducerEpoch);
             return true;
         }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, OffsetForLeaderEpochResponse response)
+        {
+            if (response == null) return false;
+
+            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
+            writer.Write(groupedTopics.Count);
+            foreach (var topic in groupedTopics) {
+                var partitions = topic.ToList();
+                writer.Write(topic.Key)
+                      .Write(partitions.Count); // partitionsPerTopic
+                foreach (var partition in partitions) {
+                    writer.Write(partition.Error)
+                          .Write(partition.PartitionId)
+                          .Write(partition.EndOffset);
+                }
+            }
+            return true;
+        }
+
 
         #endregion
     }

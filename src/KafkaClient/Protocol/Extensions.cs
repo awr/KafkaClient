@@ -266,6 +266,8 @@ namespace KafkaClient.Protocol
                     return DeleteRecordsResponse.FromBytes(context, bytes);
                 case ApiKey.InitProducerId:
                     return InitProducerIdResponse.FromBytes(context, bytes);
+                case ApiKey.OffsetForLeaderEpoch:
+                    return OffsetForLeaderEpochResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }
