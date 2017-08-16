@@ -44,7 +44,7 @@ namespace KafkaClient.Protocol
                           .Write(partition.Offset);
                 }
             }
-            writer.Write((int) Timeout.TotalMilliseconds);
+            writer.WriteMilliseconds(Timeout);
         }
 
         public DeleteRecordsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => DeleteRecordsResponse.FromBytes(context, bytes);

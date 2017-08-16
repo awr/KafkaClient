@@ -2623,6 +2623,88 @@ namespace KafkaClient.Tests.Unit
                 new OffsetForLeaderEpochResponse(alternate.Union(topics.Skip(1))));
         }
 
+        [Test]
+        public void AddPartitionsToTxnRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int partitions,
+            [Values(2, short.MaxValue)] short epoch,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var topics = new TopicPartition[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicPartition(topicName + t, t);
+            }
+            var request = new AddPartitionsToTxnRequest(topicName, partitions, epoch, topics);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void AddPartitionsToTxnRequestEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions,
+            [Values(5000)] short epoch,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new TopicPartition[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicPartition(topicName + t, t);
+            }
+            var alternate = topics.Take(1).Select(t => new TopicPartition(topicName, t.PartitionId));
+            var request = new AddPartitionsToTxnRequest(topicName, partitions, epoch, topics);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new AddPartitionsToTxnRequest(topicName + 1, partitions, epoch, topics),
+                new AddPartitionsToTxnRequest(topicName, partitions + 1, epoch, topics),
+                new AddPartitionsToTxnRequest(topicName, partitions, (short)(epoch + 1), topics),
+                new AddPartitionsToTxnRequest(topicName, partitions, epoch, topics.Skip(1)),
+                new AddPartitionsToTxnRequest(topicName, partitions, epoch, alternate.Union(topics.Skip(1))));
+        }
+
+        [Test]
+        public void AddPartitionsToTxnResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new TopicResponse[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new TopicResponse(topicName + t, t, errorCode);
+            }
+            var response = new AddPartitionsToTxnResponse(TimeSpan.FromMilliseconds(count), topics);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void AddPartitionsToTxnResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new TopicResponse[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new TopicResponse(topicName + t, t, errorCode);
+            }
+
+            var alternate = topics.Take(1).Select(t => new TopicResponse(topicName, t.PartitionId, errorCode));
+            var response = new AddPartitionsToTxnResponse(TimeSpan.FromMilliseconds(count), topics);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new AddPartitionsToTxnResponse(TimeSpan.FromMilliseconds(count + 1), topics),
+                new AddPartitionsToTxnResponse(response.ThrottleTime.Value, topics.Skip(1)),
+                new AddPartitionsToTxnResponse(response.ThrottleTime.Value, alternate.Union(topics.Skip(1))));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

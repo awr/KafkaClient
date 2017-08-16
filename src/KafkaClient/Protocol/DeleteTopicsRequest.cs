@@ -24,7 +24,7 @@ namespace KafkaClient.Protocol
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
             writer.Write(Topics, true)
-                  .Write((int) Timeout.TotalMilliseconds);
+                  .WriteMilliseconds(Timeout);
         }
 
         public DeleteTopicsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => DeleteTopicsResponse.FromBytes(context, bytes);

@@ -43,7 +43,7 @@ namespace KafkaClient.Protocol
                 writer.Write(TransactionalId);
             }
             writer.Write(Acks)
-                    .Write((int)Timeout.TotalMilliseconds)
+                    .WriteMilliseconds(Timeout)
                     .Write(groupedPayloads.Count);
 
             foreach (var groupedPayload in groupedPayloads) {

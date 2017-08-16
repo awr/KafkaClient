@@ -109,6 +109,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(DeleteRecordsResponse)) return ApiKey.DeleteRecords;
             if (typeof(T) == typeof(InitProducerIdResponse)) return ApiKey.InitProducerId;
             if (typeof(T) == typeof(OffsetForLeaderEpochResponse)) return ApiKey.OffsetForLeaderEpoch;
+            if (typeof(T) == typeof(AddPartitionsToTxnResponse)) return ApiKey.AddPartitionsToTxn;
             throw new InvalidOperationException();
         }
 

@@ -51,7 +51,7 @@ namespace KafkaClient.Protocol
                           .Write(config.Value);
                 }
             }
-            writer.Write((int)Timeout.TotalMilliseconds);
+            writer.WriteMilliseconds(Timeout);
             if (context.ApiVersion >= 1) {
                 writer.Write(ValidateOnly.GetValueOrDefault());
             }

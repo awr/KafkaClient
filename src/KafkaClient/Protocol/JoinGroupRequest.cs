@@ -52,10 +52,10 @@ namespace KafkaClient.Protocol
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
             writer.Write(GroupId)
-                    .Write((int)SessionTimeout.TotalMilliseconds);
+                    .WriteMilliseconds(SessionTimeout);
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int) RebalanceTimeout.TotalMilliseconds);
+                writer.WriteMilliseconds(RebalanceTimeout);
             }
             writer.Write(MemberId)
                     .Write(ProtocolType)

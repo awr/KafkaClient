@@ -19,7 +19,7 @@ namespace KafkaClient.Protocol
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
             writer.Write(TransactionId);
-            writer.Write((int) TransactionTimeout.TotalMilliseconds);
+            writer.WriteMilliseconds(TransactionTimeout);
         }
 
         public InitProducerIdResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => InitProducerIdResponse.FromBytes(context, bytes);

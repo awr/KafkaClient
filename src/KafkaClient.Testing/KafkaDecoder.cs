@@ -60,6 +60,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(DeleteRecordsRequest)) return (T)DeleteRecordsRequest(context, bytes);
             if (typeof(T) == typeof(InitProducerIdRequest)) return (T)InitProducerIdRequest(context, bytes);
             if (typeof(T) == typeof(OffsetForLeaderEpochRequest)) return (T)OffsetForLeaderEpochRequest(context, bytes);
+            if (typeof(T) == typeof(AddPartitionsToTxnRequest)) return (T)AddPartitionsToTxnRequest(context, bytes);
             return default(T);
         }
 
@@ -93,7 +94,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as DeleteTopicsResponse)
                 || TryEncodeResponse(writer, context, response as DeleteRecordsResponse)
                 || TryEncodeResponse(writer, context, response as InitProducerIdResponse)
-                || TryEncodeResponse(writer, context, response as OffsetForLeaderEpochResponse);
+                || TryEncodeResponse(writer, context, response as OffsetForLeaderEpochResponse)
+                || TryEncodeResponse(writer, context, response as AddPartitionsToTxnResponse);
 
                 return writer.ToSegment();
             }
@@ -488,6 +490,28 @@ namespace KafkaClient.Testing
             }
         }
         
+        private static IRequest AddPartitionsToTxnRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var transactionalId = reader.ReadString();
+                var producerId = reader.ReadInt64();
+                var producerEpoch = reader.ReadInt16();
+
+                var groupedTopics = reader.ReadInt32();
+                var topics = new List<TopicPartition>();
+                for (var t = 0; t < groupedTopics; t++) {
+                    var topicName = reader.ReadString();
+                    var partitionCount = reader.ReadInt32();
+                    for (var p = 0; p < partitionCount; p++) {
+                        var partitionId = reader.ReadInt32();
+                        topics.Add(new TopicPartition(topicName, partitionId));
+                    }
+                }
+
+                return new AddPartitionsToTxnRequest(transactionalId, producerId, producerEpoch, topics);
+            }
+        }
+        
         private static IKafkaReader ReadHeader(ArraySegment<byte> data)
         {
             IRequestContext context;
@@ -544,7 +568,7 @@ namespace KafkaClient.Testing
                 }
             }
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             return true;
         }
@@ -554,7 +578,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -599,7 +623,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 2) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -628,7 +652,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 3) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Brokers.Count);
             foreach (var broker in response.Brokers) {
@@ -674,7 +698,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 3) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -695,7 +719,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 3) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
@@ -721,7 +745,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Error);
             if (context.ApiVersion >= 1) {
@@ -738,7 +762,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 2) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Error)
                 .Write(response.GenerationId)
@@ -760,7 +784,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Error);
             return true;
@@ -771,7 +795,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Error);
             return true;
@@ -782,7 +806,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             var encoder = context.GetEncoder(context.ProtocolType);
             writer.Write(response.Error)
@@ -795,7 +819,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Groups.Count);
             foreach (var group in response.Groups) {
@@ -823,7 +847,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Error)
                 .Write(response.Groups.Count);
@@ -858,7 +882,7 @@ namespace KafkaClient.Testing
                     .Write(versionSupport.MaxVersion);
             }
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             return true;
         }
@@ -868,7 +892,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 2) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Topics.Count);
             foreach (var topic in response.Topics) {
@@ -886,7 +910,7 @@ namespace KafkaClient.Testing
             if (response == null) return false;
 
             if (context.ApiVersion >= 1) {
-                writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+                writer.WriteMilliseconds(response.ThrottleTime);
             }
             writer.Write(response.Topics.Count);
             foreach (var topic in response.Topics) {
@@ -900,7 +924,7 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            writer.WriteMilliseconds(response.ThrottleTime);
             var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
@@ -920,7 +944,7 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            writer.WriteMilliseconds(response.ThrottleTime);
             writer.Write(response.Error);
             writer.Write(response.ProducerId);
             writer.Write(response.ProducerEpoch);
@@ -946,6 +970,24 @@ namespace KafkaClient.Testing
             return true;
         }
 
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, AddPartitionsToTxnResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime);
+            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
+            writer.Write(groupedTopics.Count);
+            foreach (var topic in groupedTopics) {
+                var partitions = topic.ToList();
+                writer.Write(topic.Key)
+                      .Write(partitions.Count); // partitionsPerTopic
+                foreach (var partition in partitions) {
+                    writer.Write(partition.PartitionId)
+                          .Write(partition.Error);
+                }
+            }
+            return true;
+        }
 
         #endregion
     }

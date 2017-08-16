@@ -39,7 +39,7 @@ namespace KafkaClient.Protocol
         {
             var topicGroups = Topics.GroupBy(x => x.TopicName).ToList();
             writer.Write(-1) // replica_id -- see above
-                    .Write((int)Math.Min(int.MaxValue, MaxWaitTime.TotalMilliseconds))
+                    .WriteMilliseconds(MaxWaitTime)
                     .Write(MinBytes);
 
             if (context.ApiVersion >= 3) {

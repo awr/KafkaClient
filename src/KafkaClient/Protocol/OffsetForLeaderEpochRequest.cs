@@ -46,7 +46,7 @@ namespace KafkaClient.Protocol
         public OffsetForLeaderEpochResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => OffsetForLeaderEpochResponse.FromBytes(context, bytes);
 
         public OffsetForLeaderEpochRequest(IEnumerable<Topic> topics = null) 
-            : base(ApiKey.InitProducerId)
+            : base(ApiKey.OffsetForLeaderEpoch)
         {
             Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
         }

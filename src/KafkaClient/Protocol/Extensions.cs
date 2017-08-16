@@ -94,6 +94,16 @@ namespace KafkaClient.Protocol
             return writer.Write((short)errorCode);
         }
 
+        public static IKafkaWriter WriteMilliseconds(this IKafkaWriter writer, TimeSpan? span)
+        {
+            return writer.WriteMilliseconds(span.GetValueOrDefault());
+        }
+
+        public static IKafkaWriter WriteMilliseconds(this IKafkaWriter writer, TimeSpan span)
+        {
+            return writer.Write((int)Math.Min(int.MaxValue, span.TotalMilliseconds));
+        }
+
         public static IKafkaWriter Write(this IKafkaWriter writer, IEnumerable<string> values, bool includeLength = false)
         {
             if (includeLength) {
@@ -268,6 +278,8 @@ namespace KafkaClient.Protocol
                     return InitProducerIdResponse.FromBytes(context, bytes);
                 case ApiKey.OffsetForLeaderEpoch:
                     return OffsetForLeaderEpochResponse.FromBytes(context, bytes);
+                case ApiKey.AddPartitionsToTxn:
+                    return AddPartitionsToTxnResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }
