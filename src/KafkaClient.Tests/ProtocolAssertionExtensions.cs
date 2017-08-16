@@ -107,6 +107,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(CreateTopicsResponse)) return ApiKey.CreateTopics;
             if (typeof(T) == typeof(DeleteTopicsResponse)) return ApiKey.DeleteTopics;
             if (typeof(T) == typeof(DeleteRecordsResponse)) return ApiKey.DeleteRecords;
+            if (typeof(T) == typeof(InitProducerIdResponse)) return ApiKey.InitProducerId;
             throw new InvalidOperationException();
         }
 

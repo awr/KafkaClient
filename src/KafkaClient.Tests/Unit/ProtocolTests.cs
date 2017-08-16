@@ -2458,6 +2458,62 @@ namespace KafkaClient.Tests.Unit
                 new DeleteRecordsResponse(topics, TimeSpan.FromSeconds(100)));
         }
 
+        [Test]
+        public void InitProducerIdRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string id,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var request = new InitProducerIdRequest(id, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void InitProducerIdRequestEquality(
+            [Values("test")] string topicName,
+            [Values("test")] string id,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var request = new InitProducerIdRequest(id, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+            request.AssertNotEqual(null,
+                new InitProducerIdRequest(id + 1, request.TransactionTimeout),
+                new InitProducerIdRequest(id, TimeSpan.FromMilliseconds(timeoutMilliseconds + 1)));
+        }
+
+        [Test]
+        public void InitProducerIdResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 5, 11)] long producerId,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var response = new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode, producerId, (short)(producerId % 256));
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void InitProducerIdResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(5)] long producerId,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var response = new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode, producerId, (short)(producerId % 256));
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds + 1), errorCode, producerId, response.ProducerEpoch),
+                new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode + 1, producerId, response.ProducerEpoch),
+                new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode, producerId + 1, response.ProducerEpoch),
+                new InitProducerIdResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), errorCode, producerId, (short)(response.ProducerEpoch + 1)));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

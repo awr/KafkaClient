@@ -58,6 +58,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(CreateTopicsRequest)) return (T)CreateTopicsRequest(context, bytes);
             if (typeof(T) == typeof(DeleteTopicsRequest)) return (T)DeleteTopicsRequest(context, bytes);
             if (typeof(T) == typeof(DeleteRecordsRequest)) return (T)DeleteRecordsRequest(context, bytes);
+            if (typeof(T) == typeof(InitProducerIdRequest)) return (T)InitProducerIdRequest(context, bytes);
             return default(T);
         }
 
@@ -89,7 +90,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as ApiVersionsResponse)
                 || TryEncodeResponse(writer, context, response as CreateTopicsResponse)
                 || TryEncodeResponse(writer, context, response as DeleteTopicsResponse)
-                || TryEncodeResponse(writer, context, response as DeleteRecordsResponse);
+                || TryEncodeResponse(writer, context, response as DeleteRecordsResponse)
+                || TryEncodeResponse(writer, context, response as InitProducerIdResponse);
 
                 return writer.ToSegment();
             }
@@ -452,6 +454,16 @@ namespace KafkaClient.Testing
                 var timeout = reader.ReadInt32();
 
                 return new DeleteRecordsRequest(topics, TimeSpan.FromMilliseconds(timeout));
+            }
+        }
+        
+        private static IRequest InitProducerIdRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var transactionalId = reader.ReadString();
+                var transactionTimeout = reader.ReadInt32();
+
+                return new InitProducerIdRequest(transactionalId, TimeSpan.FromMilliseconds(transactionTimeout));
             }
         }
         
@@ -880,6 +892,17 @@ namespace KafkaClient.Testing
                           .Write(partition.Error);
                 }
             }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, InitProducerIdResponse response)
+        {
+            if (response == null) return false;
+
+            writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            writer.Write(response.Error);
+            writer.Write(response.ProducerId);
+            writer.Write(response.ProducerEpoch);
             return true;
         }
 

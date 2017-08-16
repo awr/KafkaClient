@@ -264,6 +264,8 @@ namespace KafkaClient.Protocol
                     return DeleteTopicsResponse.FromBytes(context, bytes);
                 case ApiKey.DeleteRecords:
                     return DeleteRecordsResponse.FromBytes(context, bytes);
+                case ApiKey.InitProducerId:
+                    return InitProducerIdResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }
@@ -301,7 +303,8 @@ namespace KafkaClient.Protocol
                 || code == ErrorCode.NOT_COORDINATOR_FOR_GROUP
                 || code == ErrorCode.NOT_ENOUGH_REPLICAS
                 || code == ErrorCode.NOT_ENOUGH_REPLICAS_AFTER_APPEND
-                || code == ErrorCode.NOT_CONTROLLER;
+                || code == ErrorCode.NOT_CONTROLLER
+                || code == ErrorCode.DUPLICATE_SEQUENCE_NUMBER;
         }
 
         public static bool IsFromStaleMetadata(this ErrorCode code)
