@@ -2347,6 +2347,119 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
+        [Test]
+        public void DeleteRecordsRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int partitions,
+            [Values(2, long.MaxValue)] long offset,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var topics = new DeleteRecordsRequest.Topic[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new DeleteRecordsRequest.Topic(topicName + t, t, offset);
+            }
+            var request = new DeleteRecordsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void DeleteRecordsRequestEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions,
+            [Values(50000)] long offset,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new DeleteRecordsRequest.Topic[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new DeleteRecordsRequest.Topic(topicName + t, t, offset);
+            }
+            var alternate = topics.Take(1).Select(t => new DeleteRecordsRequest.Topic(topicName, t.PartitionId, t.Offset));
+            var request = new DeleteRecordsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new DeleteRecordsRequest(topics.Skip(1), request.Timeout),
+                new DeleteRecordsRequest(alternate.Union(topics.Skip(1)), request.Timeout),
+                new DeleteRecordsRequest(topics, TimeSpan.FromMilliseconds(timeoutMilliseconds + 1)));
+        }
+
+        [Test]
+        public void DeleteRecordsRequestTopicEquality(
+            [Values("test")] string topicName,
+            [Values(50000)] long offset)
+        {
+            var topic = new DeleteRecordsRequest.Topic(topicName, 1, offset);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new DeleteRecordsRequest.Topic(topicName + 1, 1, offset),
+                new DeleteRecordsRequest.Topic(topicName, 2, offset),
+                new DeleteRecordsRequest.Topic(topicName, 1, offset + 1));
+        }
+
+        [Test]
+        public void DeleteRecordsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new DeleteRecordsResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new DeleteRecordsResponse.Topic(topicName + t, t, count, errorCode);
+            }
+            var response = new DeleteRecordsResponse(topics, TimeSpan.FromMilliseconds(100));
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void DeleteRecordsResponseTopicEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName)
+        {
+            var topic = new DeleteRecordsResponse.Topic(topicName, 1, 1234, errorCode);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new DeleteRecordsResponse.Topic(topicName + 1, topic.PartitionId, topic.LowWatermark, topic.Error),
+                new DeleteRecordsResponse.Topic(topicName, topic.PartitionId + 1, topic.LowWatermark, topic.Error),
+                new DeleteRecordsResponse.Topic(topicName, topic.PartitionId, topic.LowWatermark + 1, topic.Error),
+                new DeleteRecordsResponse.Topic(topicName, topic.PartitionId, topic.LowWatermark, topic.Error + 1));
+        }
+
+        [Test]
+        public void DeleteRecordsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var topics = new DeleteRecordsResponse.Topic[count];
+            for (var t = 0; t < count; t++) {
+                topics[t] = new DeleteRecordsResponse.Topic(topicName + t, t, count, errorCode);
+            }
+
+            var alternate = topics.Take(1).Select(t => new DeleteRecordsResponse.Topic(topicName, t.PartitionId, t.LowWatermark, errorCode));
+            var response = new DeleteRecordsResponse(topics, TimeSpan.FromMilliseconds(100));
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DeleteRecordsResponse(topics.Skip(1), response.ThrottleTime),
+                new DeleteRecordsResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime),
+                new DeleteRecordsResponse(topics, TimeSpan.FromSeconds(100)));
+        }
+
+        #region Message Helpers
+
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)
         {
             var first = true;
@@ -2375,6 +2488,8 @@ namespace KafkaClient.Tests.Unit
             }
             return messages;
         }
+
+        #endregion
 
 #endregion
     }

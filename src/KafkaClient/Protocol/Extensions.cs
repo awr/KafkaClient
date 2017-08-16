@@ -262,6 +262,8 @@ namespace KafkaClient.Protocol
                     return CreateTopicsResponse.FromBytes(context, bytes);
                 case ApiKey.DeleteTopics:
                     return DeleteTopicsResponse.FromBytes(context, bytes);
+                case ApiKey.DeleteRecords:
+                    return DeleteRecordsResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }

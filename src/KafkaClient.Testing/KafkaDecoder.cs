@@ -57,6 +57,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(ApiVersionsRequest)) return (T)ApiVersionsRequest(context, bytes);
             if (typeof(T) == typeof(CreateTopicsRequest)) return (T)CreateTopicsRequest(context, bytes);
             if (typeof(T) == typeof(DeleteTopicsRequest)) return (T)DeleteTopicsRequest(context, bytes);
+            if (typeof(T) == typeof(DeleteRecordsRequest)) return (T)DeleteRecordsRequest(context, bytes);
             return default(T);
         }
 
@@ -87,7 +88,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as SaslHandshakeResponse)
                 || TryEncodeResponse(writer, context, response as ApiVersionsResponse)
                 || TryEncodeResponse(writer, context, response as CreateTopicsResponse)
-                || TryEncodeResponse(writer, context, response as DeleteTopicsResponse);
+                || TryEncodeResponse(writer, context, response as DeleteTopicsResponse)
+                || TryEncodeResponse(writer, context, response as DeleteRecordsResponse);
 
                 return writer.ToSegment();
             }
@@ -430,6 +432,26 @@ namespace KafkaClient.Testing
                 var timeout = reader.ReadInt32();
 
                 return new DeleteTopicsRequest(topics, TimeSpan.FromMilliseconds(timeout));
+            }
+        }
+        
+        private static IRequest DeleteRecordsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var groupedTopics = reader.ReadInt32();
+                var topics = new List<DeleteRecordsRequest.Topic>();
+                for (var t = 0; t < groupedTopics; t++) {
+                    var topicName = reader.ReadString();
+                    var partitionCount = reader.ReadInt32();
+                    for (var p = 0; p < partitionCount; p++) {
+                        var partitionId = reader.ReadInt32();
+                        var offset = reader.ReadInt64();
+                        topics.Add(new DeleteRecordsRequest.Topic(topicName, partitionId, offset));
+                    }
+                }
+                var timeout = reader.ReadInt32();
+
+                return new DeleteRecordsRequest(topics, TimeSpan.FromMilliseconds(timeout));
             }
         }
         
@@ -836,7 +858,27 @@ namespace KafkaClient.Testing
             writer.Write(response.Topics.Count);
             foreach (var topic in response.Topics) {
                 writer.Write(topic.TopicName)
-                    .Write(topic.ErrorCode);
+                      .Write(topic.ErrorCode);
+            }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, DeleteRecordsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.Write((int)response.ThrottleTime.GetValueOrDefault().TotalMilliseconds);
+            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
+            writer.Write(groupedTopics.Count);
+            foreach (var topic in groupedTopics) {
+                var partitions = topic.ToList();
+                writer.Write(topic.Key)
+                      .Write(partitions.Count); // partitionsPerTopic
+                foreach (var partition in partitions) {
+                    writer.Write(partition.PartitionId)
+                          .Write(partition.LowWatermark)
+                          .Write(partition.Error);
+                }
             }
             return true;
         }
