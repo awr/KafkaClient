@@ -282,6 +282,8 @@ namespace KafkaClient.Protocol
                     return AddPartitionsToTxnResponse.FromBytes(context, bytes);
                 case ApiKey.AddOffsetsToTxn:
                     return AddOffsetsToTxnResponse.FromBytes(context, bytes);
+                case ApiKey.EndTxn:
+                    return EndTxnResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }

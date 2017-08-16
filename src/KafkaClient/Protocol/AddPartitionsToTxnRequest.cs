@@ -20,7 +20,7 @@ namespace KafkaClient.Protocol
     /// 
     /// From http://kafka.apache.org/protocol.html#The_Messages_AddPartitionsToTxn
     /// </remarks>
-    public class AddPartitionsToTxnRequest : Request, IRequest<AddPartitionsToTxnResponse>, IEquatable<AddPartitionsToTxnRequest>
+    public class AddPartitionsToTxnRequest : TransactionRequest, IRequest<AddPartitionsToTxnResponse>, IEquatable<AddPartitionsToTxnRequest>
     {
         public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},topics:[{Topics.ToStrings()}]}}";
 
@@ -49,28 +49,10 @@ namespace KafkaClient.Protocol
         public AddPartitionsToTxnResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => AddPartitionsToTxnResponse.FromBytes(context, bytes);
 
         public AddPartitionsToTxnRequest(string transactionId, long producerId, short producerEpoch, IEnumerable<TopicPartition> topics = null) 
-            : base(ApiKey.AddPartitionsToTxn)
+            : base(ApiKey.AddPartitionsToTxn, transactionId, producerId, producerEpoch)
         {
-            TransactionId = transactionId;
-            ProducerId = producerId;
-            ProducerEpoch = producerEpoch;
             Topics = ImmutableList<TopicPartition>.Empty.AddNotNullRange(topics);
         }
-
-        /// <summary>
-        /// The transactional id corresponding to the transaction.
-        /// </summary>
-        public string TransactionId { get; }
-
-        /// <summary>
-        /// Current producer id in use by the transactional id.
-        /// </summary>
-        public long ProducerId { get; }
-
-        /// <summary>
-        /// Current epoch associated with the producer id.
-        /// </summary>
-        public short ProducerEpoch { get; }
 
         /// <summary>
         /// The partitions to add to the transaction.
@@ -90,9 +72,7 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return TransactionId == other.TransactionId
-                && ProducerId == other.ProducerId
-                && ProducerEpoch == other.ProducerEpoch
+            return Equals((TransactionRequest)other)
                 && Topics.HasEqualElementsInOrder(other.Topics);
         }
 
@@ -100,9 +80,7 @@ namespace KafkaClient.Protocol
         public override int GetHashCode()
         {
             unchecked {
-                var hashCode = TransactionId?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ ProducerId.GetHashCode(); 
-                hashCode = (hashCode * 397) ^ ProducerEpoch.GetHashCode();
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ Topics.Count.GetHashCode();
                 return hashCode;
             }

@@ -111,6 +111,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(OffsetForLeaderEpochResponse)) return ApiKey.OffsetForLeaderEpoch;
             if (typeof(T) == typeof(AddPartitionsToTxnResponse)) return ApiKey.AddPartitionsToTxn;
             if (typeof(T) == typeof(AddOffsetsToTxnResponse)) return ApiKey.AddOffsetsToTxn;
+            if (typeof(T) == typeof(EndTxnResponse)) return ApiKey.EndTxn;
             throw new InvalidOperationException();
         }
 

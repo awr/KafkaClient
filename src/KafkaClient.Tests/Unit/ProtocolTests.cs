@@ -2763,6 +2763,64 @@ namespace KafkaClient.Tests.Unit
                 new AddOffsetsToTxnResponse(TimeSpan.FromMilliseconds(count + 1), errorCode),
                 new AddOffsetsToTxnResponse(response.ThrottleTime.Value, errorCode + 1));
         }
+        
+        [Test]
+        public void EndTxnRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(2, 3)] int partitions,
+            [Values(2, short.MaxValue)] short epoch)
+        {
+            var request = new EndTxnRequest(topicName, partitions, epoch, partitions % 2 == 0);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void EndTxnRequestEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions,
+            [Values(5000)] short epoch)
+        {
+            var request = new EndTxnRequest(topicName, partitions, epoch, partitions % 2 == 0);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new EndTxnRequest(topicName + 1, partitions, epoch, request.TransactionResult),
+                new EndTxnRequest(topicName, partitions + 1, epoch, request.TransactionResult),
+                new EndTxnRequest(topicName, partitions, (short)(epoch + 1), request.TransactionResult),
+                new EndTxnRequest(topicName, partitions, epoch, !request.TransactionResult));
+        }
+
+        [Test]
+        public void EndTxnResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 5, 11)] int count)
+        {
+            var response = new EndTxnResponse(TimeSpan.FromMilliseconds(count), errorCode);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void EndTxnResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 5, 11)] int count)
+        {
+            var response = new EndTxnResponse(TimeSpan.FromMilliseconds(count), errorCode);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new EndTxnResponse(TimeSpan.FromMilliseconds(count + 1), errorCode),
+                new EndTxnResponse(response.ThrottleTime.Value, errorCode + 1));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)
