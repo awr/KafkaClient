@@ -63,6 +63,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(AddPartitionsToTxnRequest)) return (T)AddPartitionsToTxnRequest(context, bytes);
             if (typeof(T) == typeof(AddOffsetsToTxnRequest)) return (T)AddOffsetsToTxnRequest(context, bytes);
             if (typeof(T) == typeof(EndTxnRequest)) return (T)EndTxnRequest(context, bytes);
+            if (typeof(T) == typeof(WriteTxnMarkersRequest)) return (T)WriteTxnMarkersRequest(context, bytes);
             return default(T);
         }
 
@@ -99,7 +100,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as OffsetForLeaderEpochResponse)
                 || TryEncodeResponse(writer, context, response as AddPartitionsToTxnResponse)
                 || TryEncodeResponse(writer, context, response as AddOffsetsToTxnResponse)
-                || TryEncodeResponse(writer, context, response as EndTxnResponse);
+                || TryEncodeResponse(writer, context, response as EndTxnResponse)
+                || TryEncodeResponse(writer, context, response as WriteTxnMarkersResponse);
 
                 return writer.ToSegment();
             }
@@ -540,6 +542,34 @@ namespace KafkaClient.Testing
             }
         }
 
+        private static IRequest WriteTxnMarkersRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var markers = new WriteTxnMarkersRequest.TransactionMarker[reader.ReadInt32()];
+                for (var m = 0; m < markers.Length; m++) {
+                    var producerId = reader.ReadInt64();
+                    var producerEpoch = reader.ReadInt16();
+                    var transactionResult = reader.ReadBoolean();
+
+                    var groupedTopics = reader.ReadInt32();
+                    var topics = new List<TopicPartition>();
+                    for (var t = 0; t < groupedTopics; t++) {
+                        var topicName = reader.ReadString();
+                        var partitionCount = reader.ReadInt32();
+                        for (var p = 0; p < partitionCount; p++) {
+                            var partitionId = reader.ReadInt32();
+                            topics.Add(new TopicPartition(topicName, partitionId));
+                        }
+                    }
+                    var coordinatorEpoch = reader.ReadInt32();
+
+                    markers[m] = new WriteTxnMarkersRequest.TransactionMarker(producerId, producerEpoch, transactionResult, topics, coordinatorEpoch);
+                }
+
+                return new WriteTxnMarkersRequest(markers);
+            }
+        }
+
         private static IKafkaReader ReadHeader(ArraySegment<byte> data)
         {
             IRequestContext context;
@@ -952,19 +982,13 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.WriteMilliseconds(response.ThrottleTime);
-            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
-            writer.Write(groupedTopics.Count);
-            foreach (var topic in groupedTopics) {
-                var partitions = topic.ToList();
-                writer.Write(topic.Key)
-                      .Write(partitions.Count); // partitionsPerTopic
-                foreach (var partition in partitions) {
-                    writer.Write(partition.PartitionId)
-                          .Write(partition.LowWatermark)
-                          .Write(partition.Error);
-                }
-            }
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .WriteGroupedTopics(response.Topics,
+                      partition => {
+                          writer.Write(partition.PartitionId)
+                                .Write(partition.LowWatermark)
+                                .Write(partition.Error);
+                      });
             return true;
         }
 
@@ -983,18 +1007,13 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
-            writer.Write(groupedTopics.Count);
-            foreach (var topic in groupedTopics) {
-                var partitions = topic.ToList();
-                writer.Write(topic.Key)
-                      .Write(partitions.Count); // partitionsPerTopic
-                foreach (var partition in partitions) {
+            writer.WriteGroupedTopics(
+                response.Topics,
+                partition => {
                     writer.Write(partition.Error)
                           .Write(partition.PartitionId)
                           .Write(partition.EndOffset);
-                }
-            }
+                });
             return true;
         }
 
@@ -1002,18 +1021,13 @@ namespace KafkaClient.Testing
         {
             if (response == null) return false;
 
-            writer.WriteMilliseconds(response.ThrottleTime);
-            var groupedTopics = response.Topics.GroupBy(t => t.TopicName).ToList();
-            writer.Write(groupedTopics.Count);
-            foreach (var topic in groupedTopics) {
-                var partitions = topic.ToList();
-                writer.Write(topic.Key)
-                      .Write(partitions.Count); // partitionsPerTopic
-                foreach (var partition in partitions) {
-                    writer.Write(partition.PartitionId)
-                          .Write(partition.Error);
-                }
-            }
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .WriteGroupedTopics(
+                      response.Topics,
+                      partition => {
+                          writer.Write(partition.PartitionId)
+                                .Write(partition.Error);
+                      });
             return true;
         }
 
@@ -1032,6 +1046,22 @@ namespace KafkaClient.Testing
 
             writer.WriteMilliseconds(response.ThrottleTime)
                   .Write(response.Error);
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, WriteTxnMarkersResponse response)
+        {
+            if (response == null) return false;
+
+            writer.Write(response.TransactionMarkers.Count);
+            foreach (var marker in response.TransactionMarkers) {
+                writer.Write(marker.ProducerId)
+                      .WriteGroupedTopics(marker.Topics,
+                          partition => {
+                              writer.Write(partition.PartitionId)
+                                    .Write(partition.Error);
+                          });
+            }
             return true;
         }
 

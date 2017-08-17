@@ -161,6 +161,25 @@ namespace KafkaClient.Protocol
             }
         }
 
+        public static IKafkaWriter WriteGroupedTopics<T>(this IKafkaWriter writer, IEnumerable<T> topics, Action<T> partitionWriter = null) where T : TopicPartition
+        {
+            var groupedTopics = topics.GroupBy(t => t.TopicName).ToList();
+            writer.Write(groupedTopics.Count);
+            foreach (var topic in groupedTopics) {
+                var partitions = topic.ToList();
+                writer.Write(topic.Key)
+                      .Write(partitions.Count);
+                foreach (var partition in partitions) {
+                    if (partitionWriter != null) {
+                        partitionWriter(partition);
+                    } else {
+                        writer.Write(partition.PartitionId);
+                    }
+                }
+            }
+            return writer;
+        }
+
         #endregion
 
         #region Decoding
@@ -284,6 +303,8 @@ namespace KafkaClient.Protocol
                     return AddOffsetsToTxnResponse.FromBytes(context, bytes);
                 case ApiKey.EndTxn:
                     return EndTxnResponse.FromBytes(context, bytes);
+                case ApiKey.WriteTxnMarkers:
+                    return WriteTxnMarkersResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }

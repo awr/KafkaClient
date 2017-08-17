@@ -28,22 +28,8 @@ namespace KafkaClient.Protocol
         {
             writer.Write(TransactionId)
                   .Write(ProducerId)
-                  .Write(ProducerEpoch);
-
-            var groupedTopics = (from t in Topics
-                                 group t by t.TopicName
-                                 into tpc select tpc
-            ).ToList();
-
-            writer.Write(groupedTopics.Count);
-            foreach (var topic in groupedTopics) {
-                var topics = topic.ToList();
-                writer.Write(topic.Key)
-                      .Write(topics.Count);
-                foreach (var partition in topics) {
-                    writer.Write(partition.PartitionId);
-                }
-            }
+                  .Write(ProducerEpoch)
+                  .WriteGroupedTopics(Topics);
         }
 
         public AddPartitionsToTxnResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => AddPartitionsToTxnResponse.FromBytes(context, bytes);

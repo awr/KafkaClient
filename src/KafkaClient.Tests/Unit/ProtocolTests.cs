@@ -2821,6 +2821,151 @@ namespace KafkaClient.Tests.Unit
                 new EndTxnResponse(response.ThrottleTime.Value, errorCode + 1));
         }
 
+        [Test]
+        public void WriteTxnMarkersRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(4)] int markerCount,
+            [Values(2, 3)] int partitions,
+            [Values(2, int.MaxValue)] int epoch,
+            [Values(0, 1, 20000)] int timeoutMilliseconds)
+        {
+            var markers = new WriteTxnMarkersRequest.TransactionMarker[markerCount];
+            for (var m = 0; m < markerCount; m++) {
+                var topics = new TopicPartition[partitions];
+                for (var t = 0; t < partitions; t++) {
+                    topics[t] = new TopicPartition(topicName + t, t);
+                }
+                markers[m] = new WriteTxnMarkersRequest.TransactionMarker(m, 0, m % 2 ==0, topics, m);
+            }
+            var request = new WriteTxnMarkersRequest(markers);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void WriteTxnMarkersRequestEquality(
+            [Values("test")] string topicName,
+            [Values(4)] int markerCount,
+            [Values(3)] int partitions,
+            [Values(50000)] int epoch,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var markers = new WriteTxnMarkersRequest.TransactionMarker[markerCount];
+            for (var m = 0; m < markerCount; m++) {
+                var topics = new TopicPartition[partitions];
+                for (var t = 0; t < partitions; t++) {
+                    topics[t] = new TopicPartition(topicName + t, t);
+                }
+                markers[m] = new WriteTxnMarkersRequest.TransactionMarker(m, 0, m % 2 == 0, topics, m);
+            }
+            var alternate = markers.Take(1).Select(t => new WriteTxnMarkersRequest.TransactionMarker(t.ProducerId + 1, t.ProducerEpoch, t.TransactionResult, t.Topics, t.CoordinatorEpoch));
+            var request = new WriteTxnMarkersRequest(markers);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new WriteTxnMarkersRequest(markers.Skip(1)),
+                new WriteTxnMarkersRequest(alternate.Union(markers.Skip(1))));
+        }
+
+        [Test]
+        public void WriteTxnMarkersRequestTransactionMarkerEquality(
+            [Values("test")] string topicName,
+            [Values(4)] int markerCount,
+            [Values(3)] int partitions,
+            [Values(50000)] int epoch)
+        {
+            var topics = new TopicPartition[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicPartition(topicName + t, t);
+            }
+            var alternate = topics.Take(1).Select(t => new TopicPartition(topicName, t.PartitionId));
+            var marker = new WriteTxnMarkersRequest.TransactionMarker(partitions, 0, true, topics, partitions);
+            marker.AssertEqualToSelf();
+            marker.AssertNotEqual(null,
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId + 1, marker.ProducerEpoch, marker.TransactionResult, topics, marker.CoordinatorEpoch),
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId, (short)(marker.ProducerEpoch + 1), marker.TransactionResult, topics, marker.CoordinatorEpoch),
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId, marker.ProducerEpoch, !marker.TransactionResult, topics, marker.CoordinatorEpoch),
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId, marker.ProducerEpoch, marker.TransactionResult, topics.Skip(1), marker.CoordinatorEpoch),
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId, marker.ProducerEpoch, marker.TransactionResult, alternate.Union(topics.Skip(1)), marker.CoordinatorEpoch),
+                new WriteTxnMarkersRequest.TransactionMarker(marker.ProducerId, marker.ProducerEpoch, marker.TransactionResult, topics, marker.CoordinatorEpoch + 1));
+        }
+
+        [Test]
+        public void WriteTxnMarkersResponse(
+            [Values(0)] short version,
+            [Values(4)] int markerCount,
+            [Values(3)] int partitions,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var markers = new WriteTxnMarkersResponse.TransactionMarker[markerCount];
+            for (var m = 0; m < markerCount; m++) {
+                var topics = new TopicResponse[partitions];
+                for (var t = 0; t < partitions; t++) {
+                    topics[t] = new TopicResponse(topicName + t, t, errorCode);
+                }
+                markers[m] = new WriteTxnMarkersResponse.TransactionMarker(m, topics);
+            }
+            var response = new WriteTxnMarkersResponse(markers);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void WriteTxnMarkersResponseTransactionMarkerEquality(
+            [Values(0)] short version,
+            [Values(3)] int partitions,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName)
+        {
+            var topics = new TopicResponse[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicResponse(topicName + t, t, errorCode);
+            }
+            var alternate = topics.Take(1).Select(t => new TopicResponse(topicName, t.PartitionId, t.Error));
+            var marker = new WriteTxnMarkersResponse.TransactionMarker(partitions, topics);
+            marker.AssertEqualToSelf();
+            marker.AssertNotEqual(null,
+                new WriteTxnMarkersResponse.TransactionMarker(partitions + 1, topics),
+                new WriteTxnMarkersResponse.TransactionMarker(partitions, topics.Skip(1)),
+                new WriteTxnMarkersResponse.TransactionMarker(partitions, alternate.Union(topics.Skip(1))));
+        }
+
+        [Test]
+        public void WriteTxnMarkersResponseEquality(
+            [Values(0)] short version,
+            [Values(4)] int markerCount,
+            [Values(3)] int partitions,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(1, 5, 11)] int count)
+        {
+            var markers = new WriteTxnMarkersResponse.TransactionMarker[markerCount];
+            for (var m = 0; m < markerCount; m++) {
+                var topics = new TopicResponse[partitions];
+                for (var t = 0; t < partitions; t++) {
+                    topics[t] = new TopicResponse(topicName + t, t, errorCode);
+                }
+                markers[m] = new WriteTxnMarkersResponse.TransactionMarker(m, topics);
+            }
+            var alternate = markers.Take(1).Select(t => new WriteTxnMarkersResponse.TransactionMarker(t.ProducerId + 1, t.Topics));
+            var response = new WriteTxnMarkersResponse(markers);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new WriteTxnMarkersResponse(markers.Skip(1)),
+                new WriteTxnMarkersResponse(alternate.Union(markers.Skip(1))));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

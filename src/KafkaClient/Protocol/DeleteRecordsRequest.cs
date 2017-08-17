@@ -28,22 +28,13 @@ namespace KafkaClient.Protocol
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            var groupedTopics = (from t in Topics
-                                   group t by t.TopicName
-                                   into tpc select tpc
-                                ).ToList();
-
-            writer.Write(groupedTopics.Count);
-            foreach (var topic in groupedTopics) {
-                var topics = topic.ToList();
-                writer.Write(topic.Key)
-                        .Write(topics.Count);
-                foreach (var partition in topics) {
+            writer.WriteGroupedTopics(
+                Topics,
+                partition => {
                     writer.Write(partition.PartitionId)
                           .Write(partition.Offset);
-                }
-            }
-            writer.WriteMilliseconds(Timeout);
+                })
+                  .WriteMilliseconds(Timeout);
         }
 
         public DeleteRecordsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => DeleteRecordsResponse.FromBytes(context, bytes);
