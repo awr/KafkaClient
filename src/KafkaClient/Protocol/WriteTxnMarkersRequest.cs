@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
@@ -32,22 +31,9 @@ namespace KafkaClient.Protocol
             foreach (var marker in TransactionMarkers) {
                 writer.Write(marker.ProducerId)
                       .Write(marker.ProducerEpoch)
-                      .Write(marker.TransactionResult);
-
-                var groupedTopics = (from t in marker.Topics
-                                     group t by t.TopicName
-                                     into tpc select tpc).ToList();
-                writer.Write(groupedTopics.Count);
-                foreach (var topic in groupedTopics) {
-                    var topics = topic.ToList();
-                    writer.Write(topic.Key)
-                          .Write(topics.Count);
-                    foreach (var partition in topics) {
-                        writer.Write(partition.PartitionId);
-                    }
-                }
-
-                writer.Write(marker.CoordinatorEpoch);
+                      .Write(marker.TransactionResult)
+                      .WriteGroupedTopics(marker.Topics)
+                      .Write(marker.CoordinatorEpoch);
             }
         }
 
