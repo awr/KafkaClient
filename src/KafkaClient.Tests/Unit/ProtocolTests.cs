@@ -3069,6 +3069,332 @@ namespace KafkaClient.Tests.Unit
                 new TxnOffsetCommitResponse(response.ThrottleTime.Value, alternate.Union(topics.Skip(1))));
         }
 
+        [Test]
+        public void DescribeAclsRequest(
+            [Values(0)] short version,
+            [Values("test", "anotherName")] string name,
+            [Values(2, 3)] byte operationOrType)
+        {
+            var request = new DescribeAclsRequest(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void DescribeAclsRequestEquality(
+            [Values(0)] short version,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var request = new DescribeAclsRequest(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new DescribeAclsRequest((byte)(request.ResourceType + 1), request.ResourceName, request.Principal, request.Host, request.Operation, request.PermissionType),
+                new DescribeAclsRequest(request.ResourceType, request.ResourceName + 1, request.Principal, request.Host, request.Operation, request.PermissionType),
+                new DescribeAclsRequest(request.ResourceType, request.ResourceName, request.Principal + 1, request.Host, request.Operation, request.PermissionType),
+                new DescribeAclsRequest(request.ResourceType, request.ResourceName, request.Principal, request.Host + 1, request.Operation, request.PermissionType),
+                new DescribeAclsRequest(request.ResourceType, request.ResourceName, request.Principal, request.Host, (byte)(request.Operation + 1), request.PermissionType),
+                new DescribeAclsRequest(request.ResourceType, request.ResourceName, request.Principal, request.Host, request.Operation, (byte)(request.PermissionType + 1)));
+        }
+
+        [Test]
+        public void DescribeAclsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(3)] byte operationOrType,
+            [Values(0, 1, 20000)] int timeout)
+        {
+            var resources = new AclResource[resourceCount];
+            for (var r = 0; r < resourceCount; r++) {
+                resources[r] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var response = new DescribeAclsResponse(TimeSpan.FromMilliseconds(timeout), errorCode, name, resources);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void DescribeAclsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(3)] byte operationOrType,
+            [Values(20000)] int timeout)
+        {
+            var resources = new AclResource[resourceCount];
+            for (var r = 0; r < resourceCount; r++) {
+                resources[r] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var alternate = resources.Take(1).Select(r => new AclResource(r.ResourceType, r.ResourceName + 1, r.Principal, r.Host, r.Operation, r.PermissionType));
+            var response = new DescribeAclsResponse(TimeSpan.FromMilliseconds(timeout), errorCode, name, resources);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DescribeAclsResponse(TimeSpan.FromMilliseconds(timeout + 1), response.Error, response.ErrorMessage, response.Resources),
+                new DescribeAclsResponse(response.ThrottleTime.Value, response.Error + 1, response.ErrorMessage, response.Resources),
+                new DescribeAclsResponse(response.ThrottleTime.Value, response.Error, response.ErrorMessage + 1, response.Resources),
+                new DescribeAclsResponse(response.ThrottleTime.Value, response.Error, response.ErrorMessage, response.Resources.Skip(1)),
+                new DescribeAclsResponse(response.ThrottleTime.Value, response.Error, response.ErrorMessage, alternate.Union(response.Resources.Skip(1))));
+        }
+
+        [Test]
+        public void CreateAclsRequest(
+            [Values(0)] short version,
+            [Values(1, 5)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(2, 3)] byte operationOrType)
+        {
+            var resources = new AclResource[resourceCount];
+            for (var r = 0; r < resourceCount; r++) {
+                resources[r] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var request = new CreateAclsRequest(resources);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void AclResourceEquality(
+            [Values(0)] short version,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resource = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new AclResource((byte)(resource.ResourceType + 1), resource.ResourceName, resource.Principal, resource.Host, resource.Operation, resource.PermissionType),
+                new AclResource(resource.ResourceType, resource.ResourceName + 1, resource.Principal, resource.Host, resource.Operation, resource.PermissionType),
+                new AclResource(resource.ResourceType, resource.ResourceName, resource.Principal + 1, resource.Host, resource.Operation, resource.PermissionType),
+                new AclResource(resource.ResourceType, resource.ResourceName, resource.Principal, resource.Host + 1, resource.Operation, resource.PermissionType),
+                new AclResource(resource.ResourceType, resource.ResourceName, resource.Principal, resource.Host, (byte)(resource.Operation + 1), resource.PermissionType),
+                new AclResource(resource.ResourceType, resource.ResourceName, resource.Principal, resource.Host, resource.Operation, (byte)(resource.PermissionType + 1)));
+        }
+
+        [Test]
+        public void CreateAclsRequestEquality(
+            [Values(0)] short version,
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resources = new AclResource[resourceCount];
+            for (var r = 0; r < resourceCount; r++) {
+                resources[r] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var alternate = resources.Take(1).Select(r => new AclResource(r.ResourceType, r.ResourceName + 1, r.Principal, r.Host, r.Operation, r.PermissionType));
+            var request = new CreateAclsRequest(resources);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new CreateAclsRequest(resources.Skip(1)),
+                new CreateAclsRequest(alternate.Union(resources.Skip(1))));
+        }
+
+        [Test]
+        public void CreateAclsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values("test", "anotherName")] string name,
+            [Values(0, 1, 20000)] int timeout)
+        {
+            var errors = new CreateAclsResponse.ErrorResponse[count];
+            for (var r = 0; r < count; r++) {
+                errors[r] = new CreateAclsResponse.ErrorResponse(errorCode, name);
+            }
+            var response = new CreateAclsResponse(TimeSpan.FromMilliseconds(timeout), errors);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void CreateAclsResponseErrorResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values("test")] string name)
+        {
+            var resource = new CreateAclsResponse.ErrorResponse(errorCode, name);
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new CreateAclsResponse.ErrorResponse(errorCode + 1, name),
+                new CreateAclsResponse.ErrorResponse(errorCode, name + 1));
+        }
+
+        [Test]
+        public void CreateAclsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] int count,
+            [Values("test", "anotherName")] string name,
+            [Values(20000)] int timeout)
+        {
+            var errors = new CreateAclsResponse.ErrorResponse[count];
+            for (var r = 0; r < count; r++) {
+                errors[r] = new CreateAclsResponse.ErrorResponse(errorCode, name);
+            }
+            var alternate = errors.Take(1).Select(r => new CreateAclsResponse.ErrorResponse(r.Error + 1, r.ErrorMessage));
+            var response = new CreateAclsResponse(TimeSpan.FromMilliseconds(timeout), errors);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new CreateAclsResponse(TimeSpan.FromMilliseconds(timeout + 1), errors),
+                new CreateAclsResponse(response.ThrottleTime.Value, errors.Skip(1)),
+                new CreateAclsResponse(response.ThrottleTime.Value, alternate.Union(errors.Skip(1))));
+        }
+
+        [Test]
+        public void DeleteAclsRequest(
+            [Values(0)] short version,
+            [Values(1, 5)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(2, 3)] byte operationOrType)
+        {
+            var filters = new AclResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                filters[f] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var request = new DeleteAclsRequest(filters);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void DeleteAclsRequestEquality(
+            [Values(0)] short version,
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var filters = new AclResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                filters[f] = new AclResource(operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var alternate = filters.Take(1).Select(r => new AclResource(r.ResourceType, r.ResourceName + 1, r.Principal, r.Host, r.Operation, r.PermissionType));
+            var request = new DeleteAclsRequest(filters);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new DeleteAclsRequest(filters.Skip(1)),
+                new DeleteAclsRequest(alternate.Union(filters.Skip(1))));
+        }
+
+        [Test]
+        public void DeleteAclsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values("test", "anotherName")] string name,
+            [Values(3)] byte operationOrType,
+            [Values(0, 1, 20000)] int timeout)
+        {
+            var errors = new DeleteAclsResponse.FilterResponse[count];
+            for (var r = 0; r < count; r++) {
+                var acls = new DeleteAclsResponse.MatchingAcl[count];
+                for (var a = 0; a < count; a++) {
+                    acls[a] = new DeleteAclsResponse.MatchingAcl(errorCode, name, operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+                }
+                errors[r] = new DeleteAclsResponse.FilterResponse(errorCode, name, acls);
+            }
+            var response = new DeleteAclsResponse(TimeSpan.FromMilliseconds(timeout), errors);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void DeleteAclsResponseMatchingAclEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] byte operationOrType,
+            [Values("test")] string name)
+        {
+            var acl = new DeleteAclsResponse.MatchingAcl(errorCode, name, operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            acl.AssertEqualToSelf();
+            acl.AssertNotEqual(null,
+                new DeleteAclsResponse.MatchingAcl(errorCode + 1, acl.ErrorMessage, acl.ResourceType, acl.ResourceName, acl.Principal, acl.Host, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage + 1, acl.ResourceType, acl.ResourceName, acl.Principal, acl.Host, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, (byte)(acl.ResourceType + 1), acl.ResourceName, acl.Principal, acl.Host, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, acl.ResourceType, acl.ResourceName + 1, acl.Principal, acl.Host, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, acl.ResourceType, acl.ResourceName, acl.Principal + 1, acl.Host, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, acl.ResourceType, acl.ResourceName, acl.Principal, acl.Host + 1, acl.Operation, acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, acl.ResourceType, acl.ResourceName, acl.Principal, acl.Host, (byte)(acl.Operation + 1), acl.PermissionType),
+                new DeleteAclsResponse.MatchingAcl(errorCode, acl.ErrorMessage, acl.ResourceType, acl.ResourceName, acl.Principal, acl.Host, acl.Operation, (byte)(acl.PermissionType + 1)));
+        }
+        
+        [Test]
+        public void DeleteAclsResponseFilterResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test")] string name)
+        {
+            var acls = new DeleteAclsResponse.MatchingAcl[count];
+            for (var a = 0; a < count; a++) {
+                acls[a] = new DeleteAclsResponse.MatchingAcl(errorCode, name, operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+            }
+            var alternate = acls.Take(1).Select(a => new DeleteAclsResponse.MatchingAcl(a.Error + 1, a.ErrorMessage, a.ResourceType, a.ResourceName, a.Principal, a.Host, a.Operation, a.PermissionType));
+            var filter = new DeleteAclsResponse.FilterResponse(errorCode, name, acls);
+            filter.AssertEqualToSelf();
+            filter.AssertNotEqual(null,
+                new DeleteAclsResponse.FilterResponse(errorCode + 1, name, acls),
+                new DeleteAclsResponse.FilterResponse(errorCode, name + 1, acls),
+                new DeleteAclsResponse.FilterResponse(errorCode, name, acls.Skip(1)),
+                new DeleteAclsResponse.FilterResponse(errorCode, name, alternate.Union(acls.Skip(1))));
+        }
+
+        [Test]
+        public void DeleteAclsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test", "anotherName")] string name,
+            [Values(20000)] int timeout)
+        {
+            var errors = new DeleteAclsResponse.FilterResponse[count];
+            for (var r = 0; r < count; r++) {
+                var acls = new DeleteAclsResponse.MatchingAcl[count];
+                for (var a = 0; a < count; a++) {
+                    acls[a] = new DeleteAclsResponse.MatchingAcl(errorCode, name, operationOrType, $"{name}resource", $"{name}principal", $"{name}host", operationOrType, operationOrType);
+                }
+                errors[r] = new DeleteAclsResponse.FilterResponse(errorCode, name, acls);
+            }
+            var alternate = errors.Take(1).Select(r => new DeleteAclsResponse.FilterResponse(r.Error + 1, r.ErrorMessage, r.MatchingAcls));
+            var response = new DeleteAclsResponse(TimeSpan.FromMilliseconds(timeout), errors);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DeleteAclsResponse(TimeSpan.FromMilliseconds(timeout + 1), errors),
+                new DeleteAclsResponse(response.ThrottleTime.Value, errors.Skip(1)),
+                new DeleteAclsResponse(response.ThrottleTime.Value, alternate.Union(errors.Skip(1))));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

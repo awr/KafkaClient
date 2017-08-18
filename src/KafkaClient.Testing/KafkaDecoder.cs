@@ -65,6 +65,9 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(EndTxnRequest)) return (T)EndTxnRequest(context, bytes);
             if (typeof(T) == typeof(WriteTxnMarkersRequest)) return (T)WriteTxnMarkersRequest(context, bytes);
             if (typeof(T) == typeof(TxnOffsetCommitRequest)) return (T)TxnOffsetCommitRequest(context, bytes);
+            if (typeof(T) == typeof(DescribeAclsRequest)) return (T)DescribeAclsRequest(context, bytes);
+            if (typeof(T) == typeof(CreateAclsRequest)) return (T)CreateAclsRequest(context, bytes);
+            if (typeof(T) == typeof(DeleteAclsRequest)) return (T)DeleteAclsRequest(context, bytes);
             return default(T);
         }
 
@@ -103,7 +106,10 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as AddOffsetsToTxnResponse)
                 || TryEncodeResponse(writer, context, response as EndTxnResponse)
                 || TryEncodeResponse(writer, context, response as WriteTxnMarkersResponse)
-                || TryEncodeResponse(writer, context, response as TxnOffsetCommitResponse);
+                || TryEncodeResponse(writer, context, response as TxnOffsetCommitResponse)
+                || TryEncodeResponse(writer, context, response as DescribeAclsResponse)
+                || TryEncodeResponse(writer, context, response as CreateAclsResponse)
+                || TryEncodeResponse(writer, context, response as DeleteAclsResponse);
 
                 return writer.ToSegment();
             }
@@ -594,6 +600,58 @@ namespace KafkaClient.Testing
                 }
 
                 return new TxnOffsetCommitRequest(transactionalId, producerId, producerEpoch, consumerGroupId, topics);
+            }
+        }
+
+        private static IRequest DescribeAclsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var resourceType = reader.ReadByte();
+                var resourceName = reader.ReadString();
+                var principal = reader.ReadString();
+                var host = reader.ReadString();
+                var operation = reader.ReadByte();
+                var permissionType = reader.ReadByte();
+
+                return new DescribeAclsRequest(resourceType, resourceName, principal, host, operation, permissionType);
+            }
+        }
+
+        private static IRequest CreateAclsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var resources = new AclResource[reader.ReadInt32()];
+                for (var r = 0; r < resources.Length; r++) {
+                    var resourceType = reader.ReadByte();
+                    var resourceName = reader.ReadString();
+                    var principal = reader.ReadString();
+                    var host = reader.ReadString();
+                    var operation = reader.ReadByte();
+                    var permissionType = reader.ReadByte();
+
+                    resources[r] = new AclResource(resourceType, resourceName, principal, host, operation, permissionType);
+                }
+
+                return new CreateAclsRequest(resources);
+            }
+        }
+
+        private static IRequest DeleteAclsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var filters = new AclResource[reader.ReadInt32()];
+                for (var f = 0; f < filters.Length; f++) {
+                    var resourceType = reader.ReadByte();
+                    var resourceName = reader.ReadString();
+                    var principal = reader.ReadString();
+                    var host = reader.ReadString();
+                    var operation = reader.ReadByte();
+                    var permissionType = reader.ReadByte();
+
+                    filters[f] = new AclResource(resourceType, resourceName, principal, host, operation, permissionType);
+                }
+
+                return new DeleteAclsRequest(filters);
             }
         }
 
@@ -1102,6 +1160,68 @@ namespace KafkaClient.Testing
                           writer.Write(partition.PartitionId)
                                 .Write(partition.Error);
                       });
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, DescribeAclsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.Error)
+                  .Write(response.ErrorMessage);
+            var grouped = response.Resources.GroupBy(r => new {r.ResourceType, r.ResourceName}).ToList();
+            writer.Write(grouped.Count);
+            foreach (var resource in grouped) {
+                var acls = resource.ToList();
+                writer.Write(resource.Key.ResourceType)
+                      .Write(resource.Key.ResourceName)
+                      .Write(acls.Count);
+                foreach (var acl in acls) {
+                    writer.Write(acl.Principal)
+                          .Write(acl.Host)
+                          .Write(acl.Operation)
+                          .Write(acl.PermissionType);
+                }
+            }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, CreateAclsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.Responses.Count);
+            foreach (var error in response.Responses) {
+                writer.Write(error.Error)
+                      .Write(error.ErrorMessage);
+            }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, DeleteAclsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.FilterResponses.Count);
+
+            foreach (var filter in response.FilterResponses) {
+                writer.Write(filter.Error)
+                      .Write(filter.ErrorMessage)
+                      .Write(filter.MatchingAcls.Count);
+                foreach (var acl in filter.MatchingAcls) {
+                    writer.Write(acl.Error)
+                          .Write(acl.ErrorMessage)
+                          .Write(acl.ResourceType)
+                          .Write(acl.ResourceName)
+                          .Write(acl.Principal)
+                          .Write(acl.Host)
+                          .Write(acl.Operation)
+                          .Write(acl.PermissionType);
+                }
+            }
             return true;
         }
 

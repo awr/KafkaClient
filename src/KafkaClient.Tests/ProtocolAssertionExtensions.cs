@@ -114,6 +114,9 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(EndTxnResponse)) return ApiKey.EndTxn;
             if (typeof(T) == typeof(WriteTxnMarkersResponse)) return ApiKey.WriteTxnMarkers;
             if (typeof(T) == typeof(TxnOffsetCommitResponse)) return ApiKey.TxnOffsetCommit;
+            if (typeof(T) == typeof(DescribeAclsResponse)) return ApiKey.DescribeAcls;
+            if (typeof(T) == typeof(CreateAclsResponse)) return ApiKey.CreateAcls;
+            if (typeof(T) == typeof(DeleteAclsResponse)) return ApiKey.DeleteAcls;
             throw new InvalidOperationException();
         }
     }
