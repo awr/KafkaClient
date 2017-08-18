@@ -2965,6 +2965,109 @@ namespace KafkaClient.Tests.Unit
                 new WriteTxnMarkersResponse(markers.Skip(1)),
                 new WriteTxnMarkersResponse(alternate.Union(markers.Skip(1))));
         }
+        
+        [Test]
+        public void TxnOffsetCommitRequest(
+            [Values(0)] short version,
+            [Values("group1", "group2")] string groupId,
+            [Values(0, 5)] short epoch,
+            [Values("testTopic")] string topicName,
+            [Values(2)] int topicCount,
+            [Values(5)] int partitions,
+            [Values(null, "something useful for the client")] string metadata)
+        {
+            var topics = new TxnOffsetCommitRequest.Topic[topicCount];
+            for (var t = 0; t < topicCount; t++) {
+                topics[t] = new TxnOffsetCommitRequest.Topic(topicName + t, t % partitions, _randomizer.Next(0, int.MaxValue), metadata);
+            }
+            var request = new TxnOffsetCommitRequest(topicName, partitions, epoch, groupId, topics);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void TxnOffsetCommitRequestEquality(
+            [Values("group1")] string groupId,
+            [Values(0, 5)] short epoch,
+            [Values("testTopic")] string topicName,
+            [Values(2)] int topicCount,
+            [Values(5)] int partitions,
+            [Values(null, "something useful for the client")] string metadata)
+        {
+            var topics = new TxnOffsetCommitRequest.Topic[topicCount];
+            for (var t = 0; t < topicCount; t++) {
+                topics[t] = new TxnOffsetCommitRequest.Topic(topicName + t, t % partitions, _randomizer.Next(0, int.MaxValue), metadata);
+            }
+            var alternate = topics.Take(1).Select(t => new TxnOffsetCommitRequest.Topic(topicName, t.PartitionId, t.Offset, t.Metadata));
+            var request = new TxnOffsetCommitRequest(topicName, partitions, epoch, groupId, topics);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new TxnOffsetCommitRequest(topicName + 1, partitions, epoch, groupId, topics),
+                new TxnOffsetCommitRequest(topicName, partitions + 1, epoch, groupId, topics),
+                new TxnOffsetCommitRequest(topicName, partitions, (short)(epoch + 1), groupId, topics),
+                new TxnOffsetCommitRequest(topicName, partitions, epoch, groupId + 1, topics),
+                new TxnOffsetCommitRequest(topicName, partitions, epoch, groupId, topics.Skip(1)),
+                new TxnOffsetCommitRequest(topicName, partitions, epoch, groupId, alternate.Union(topics.Skip(1))));
+        }
+
+        [Test]
+        public void TxnOffsetCommitRequestTopicEquality(
+            [Values("test")] string topicName,
+            [Values(3)] int partitions)
+        {
+            var topic = new TxnOffsetCommitRequest.Topic(topicName, partitions, _randomizer.Next(0, int.MaxValue), topicName);
+            topic.AssertEqualToSelf();
+            topic.AssertNotEqual(null,
+                new TxnOffsetCommitRequest.Topic(topicName + 1, partitions, topic.Offset, topicName),
+                new TxnOffsetCommitRequest.Topic(topicName, partitions + 1, topic.Offset, topicName),
+                new TxnOffsetCommitRequest.Topic(topicName, partitions, topic.Offset + 1, topicName),
+                new TxnOffsetCommitRequest.Topic(topicName, partitions, topic.Offset, (topicName ?? "stuff") + 1)
+            );
+        }
+
+        [Test]
+        public void TxnOffsetCommitResponse(
+            [Values(0)] short version,
+            [Values(3)] int partitions,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new TopicResponse[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicResponse(topicName + t, t, errorCode);
+            }
+            var response = new TxnOffsetCommitResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), topics);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void TxnOffsetCommitResponseEquality(
+            [Values(0)] short version,
+            [Values(3)] int partitions,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values("test", "anotherNameForATopic")] string topicName,
+            [Values(20000)] int timeoutMilliseconds)
+        {
+            var topics = new TopicResponse[partitions];
+            for (var t = 0; t < partitions; t++) {
+                topics[t] = new TopicResponse(topicName + t, t, errorCode);
+            }
+            var alternate = topics.Take(1).Select(t => new TopicResponse(topicName, t.PartitionId, t.Error));
+            var response = new TxnOffsetCommitResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds), topics);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new TxnOffsetCommitResponse(TimeSpan.FromMilliseconds(timeoutMilliseconds + 1), topics),
+                new TxnOffsetCommitResponse(response.ThrottleTime.Value, topics.Skip(1)),
+                new TxnOffsetCommitResponse(response.ThrottleTime.Value, alternate.Union(topics.Skip(1))));
+        }
 
         #region Message Helpers
 

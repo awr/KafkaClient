@@ -305,6 +305,8 @@ namespace KafkaClient.Protocol
                     return EndTxnResponse.FromBytes(context, bytes);
                 case ApiKey.WriteTxnMarkers:
                     return WriteTxnMarkersResponse.FromBytes(context, bytes);
+                case ApiKey.TxnOffsetCommit:
+                    return TxnOffsetCommitResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }

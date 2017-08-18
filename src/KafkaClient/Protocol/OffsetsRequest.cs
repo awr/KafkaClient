@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
@@ -34,29 +33,20 @@ namespace KafkaClient.Protocol
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            var topicGroups = Topics.GroupBy(x => x.TopicName).ToList();
             writer.Write(-1); // replica_id -- see above for rationale
             if (context.ApiVersion >= 2) {
                 writer.Write(IsolationLevel);
             }
-            writer.Write(topicGroups.Count);
+            writer.WriteGroupedTopics(
+                Topics,
+                partition => {
+                    writer.Write(partition.PartitionId)
+                          .Write(partition.Timestamp);
 
-            foreach (var topicGroup in topicGroups) {
-                var partitions = topicGroup.GroupBy(x => x.PartitionId).ToList();
-                writer.Write(topicGroup.Key)
-                      .Write(partitions.Count);
-
-                foreach (var partition in partitions) {
-                    foreach (var offset in partition) {
-                        writer.Write(partition.Key)
-                              .Write(offset.Timestamp);
-
-                        if (context.ApiVersion == 0) {
-                            writer.Write(offset.MaxNumOffsets);
-                        }
+                    if (context.ApiVersion == 0) {
+                        writer.Write(partition.MaxNumOffsets);
                     }
-                }
-            }
+                });
         }
 
         public OffsetsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => OffsetsResponse.FromBytes(context, bytes);

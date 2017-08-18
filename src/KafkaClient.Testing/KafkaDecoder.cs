@@ -64,6 +64,7 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(AddOffsetsToTxnRequest)) return (T)AddOffsetsToTxnRequest(context, bytes);
             if (typeof(T) == typeof(EndTxnRequest)) return (T)EndTxnRequest(context, bytes);
             if (typeof(T) == typeof(WriteTxnMarkersRequest)) return (T)WriteTxnMarkersRequest(context, bytes);
+            if (typeof(T) == typeof(TxnOffsetCommitRequest)) return (T)TxnOffsetCommitRequest(context, bytes);
             return default(T);
         }
 
@@ -101,7 +102,8 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as AddPartitionsToTxnResponse)
                 || TryEncodeResponse(writer, context, response as AddOffsetsToTxnResponse)
                 || TryEncodeResponse(writer, context, response as EndTxnResponse)
-                || TryEncodeResponse(writer, context, response as WriteTxnMarkersResponse);
+                || TryEncodeResponse(writer, context, response as WriteTxnMarkersResponse)
+                || TryEncodeResponse(writer, context, response as TxnOffsetCommitResponse);
 
                 return writer.ToSegment();
             }
@@ -567,6 +569,31 @@ namespace KafkaClient.Testing
                 }
 
                 return new WriteTxnMarkersRequest(markers);
+            }
+        }
+
+        private static IRequest TxnOffsetCommitRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var transactionalId = reader.ReadString();
+                var consumerGroupId = reader.ReadString();
+                var producerId = reader.ReadInt64();
+                var producerEpoch = reader.ReadInt16();
+
+                var groupedTopics = reader.ReadInt32();
+                var topics = new List<TxnOffsetCommitRequest.Topic>();
+                for (var t = 0; t < groupedTopics; t++) {
+                    var topicName = reader.ReadString();
+                    var partitionCount = reader.ReadInt32();
+                    for (var p = 0; p < partitionCount; p++) {
+                        var partitionId = reader.ReadInt32();
+                        var offset = reader.ReadInt64();
+                        var metadata = reader.ReadString();
+                        topics.Add(new TxnOffsetCommitRequest.Topic(topicName, partitionId, offset, metadata));
+                    }
+                }
+
+                return new TxnOffsetCommitRequest(transactionalId, producerId, producerEpoch, consumerGroupId, topics);
             }
         }
 
@@ -1062,6 +1089,19 @@ namespace KafkaClient.Testing
                                     .Write(partition.Error);
                           });
             }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, TxnOffsetCommitResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .WriteGroupedTopics(response.Topics,
+                      partition => {
+                          writer.Write(partition.PartitionId)
+                                .Write(partition.Error);
+                      });
             return true;
         }
 

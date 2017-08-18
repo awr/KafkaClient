@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
@@ -49,25 +48,15 @@ namespace KafkaClient.Protocol
                 }
             }
 
-            var topicGroups = Topics.GroupBy(x => x.TopicName).ToList();
-            writer.Write(topicGroups.Count);
-
-            foreach (var topicGroup in topicGroups) {
-                var partitions = topicGroup.GroupBy(x => x.PartitionId).ToList();
-                writer.Write(topicGroup.Key)
-                        .Write(partitions.Count);
-
-                foreach (var partition in partitions) {
-                    foreach (var commit in partition) {
-                        writer.Write(partition.Key)
-                                .Write(commit.Offset);
-                        if (context.ApiVersion == 1) {
-                            writer.Write(commit.TimeStamp.GetValueOrDefault(-1));
-                        }
-                        writer.Write(commit.Metadata);
+            writer.WriteGroupedTopics(Topics,
+                partition => {
+                    writer.Write(partition.PartitionId)
+                          .Write(partition.Offset);
+                    if (context.ApiVersion == 1) {
+                        writer.Write(partition.TimeStamp.GetValueOrDefault(-1));
                     }
-                }
-            }
+                    writer.Write(partition.Metadata);
+                });
         }
 
         public OffsetCommitResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => OffsetCommitResponse.FromBytes(context, bytes);
