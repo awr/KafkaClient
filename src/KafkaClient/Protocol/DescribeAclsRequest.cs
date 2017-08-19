@@ -43,10 +43,10 @@ namespace KafkaClient.Protocol
             PermissionType = permissionType;
         }
 
-        /// <inheritdoc cref="IAclResource.ResourceType"/>
+        /// <inheritdoc cref="IResource.ResourceType"/>
         public byte ResourceType { get; }
 
-        /// <inheritdoc cref="IAclResource.ResourceName"/>
+        /// <inheritdoc cref="IResource.ResourceName"/>
         public string ResourceName { get; }
 
         /// <inheritdoc cref="IAcl.Principal"/>

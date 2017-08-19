@@ -313,6 +313,10 @@ namespace KafkaClient.Protocol
                     return CreateAclsResponse.FromBytes(context, bytes);
                 case ApiKey.DeleteAcls:
                     return DeleteAclsResponse.FromBytes(context, bytes);
+                case ApiKey.DescribeConfigs:
+                    return DescribeConfigsResponse.FromBytes(context, bytes);
+                case ApiKey.AlterConfigs:
+                    return AlterConfigsResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }

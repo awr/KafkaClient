@@ -117,6 +117,8 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(DescribeAclsResponse)) return ApiKey.DescribeAcls;
             if (typeof(T) == typeof(CreateAclsResponse)) return ApiKey.CreateAcls;
             if (typeof(T) == typeof(DeleteAclsResponse)) return ApiKey.DeleteAcls;
+            if (typeof(T) == typeof(DescribeConfigsResponse)) return ApiKey.DescribeConfigs;
+            if (typeof(T) == typeof(AlterConfigsResponse)) return ApiKey.AlterConfigs;
             throw new InvalidOperationException();
         }
     }

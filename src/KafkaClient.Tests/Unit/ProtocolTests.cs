@@ -3395,6 +3395,292 @@ namespace KafkaClient.Tests.Unit
                 new DeleteAclsResponse(response.ThrottleTime.Value, alternate.Union(errors.Skip(1))));
         }
 
+        [Test]
+        public void DescribeConfigsRequest(
+            [Values(0)] short version,
+            [Values(1, 5)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(2, 3)] byte operationOrType)
+        {
+            var resources = new DescribeConfigsRequest.ConfigResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                resources[f] = new DescribeConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => name + i));
+            }
+            var request = new DescribeConfigsRequest(resources);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void DescribeConfigsRequestEquality(
+            [Values(0)] short version,
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resources = new DescribeConfigsRequest.ConfigResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                resources[f] = new DescribeConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => name + i));
+            }
+            var alternate = resources.Take(1).Select(r => new DescribeConfigsRequest.ConfigResource(r.ResourceType, r.ResourceName + 1, r.ConfigNames));
+            var request = new DescribeConfigsRequest(resources);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new DescribeConfigsRequest(resources.Skip(1)),
+                new DescribeConfigsRequest(alternate.Union(resources.Skip(1))));
+        }
+
+        [Test]
+        public void DescribeConfigsRequestConfigResourceEquality(
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resource = new DescribeConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => name + i));
+            
+            var alternate = resource.ConfigNames.Take(1).Select(r => name);
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new DescribeConfigsRequest.ConfigResource((byte)(resource.ResourceType + 1), resource.ResourceName, resource.ConfigNames),
+                new DescribeConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName + 1, resource.ConfigNames),
+                new DescribeConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName, resource.ConfigNames.Skip(1)),
+                new DescribeConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName, alternate.Union(resource.ConfigNames.Skip(1))));
+        }
+
+        [Test]
+        public void DescribeConfigsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values("test", "anotherName")] string name,
+            [Values(3)] byte operationOrType,
+            [Values(0, 1, 20000)] int timeout)
+        {
+            var resources = new DescribeConfigsResponse.ConfigResource[count];
+            for (var r = 0; r < count; r++) {
+                var entries = new DescribeConfigsResponse.ConfigEntry[count];
+                for (var e = 0; e < count; e++) {
+                    entries[e] = new DescribeConfigsResponse.ConfigEntry(name + e, name + e, e % 2 == 0, count % 2 == 0, e % 3 == 0);
+                }
+                resources[r] = new DescribeConfigsResponse.ConfigResource(errorCode, name, operationOrType, name, entries);
+            }
+            var response = new DescribeConfigsResponse(TimeSpan.FromMilliseconds(timeout), resources);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void DescribeConfigsResponseConfigEntryEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] byte operationOrType,
+            [Values("test")] string name)
+        {
+            var entry = new DescribeConfigsResponse.ConfigEntry($"{name}name", $"{name}value", true, true, true);
+            entry.AssertEqualToSelf();
+            entry.AssertNotEqual(null,
+                new DescribeConfigsResponse.ConfigEntry(entry.ConfigName + 1, entry.ConfigValue, entry.ReadOnly, entry.IsDefault, entry.IsSensitive),
+                new DescribeConfigsResponse.ConfigEntry(entry.ConfigName, entry.ConfigValue + 1, entry.ReadOnly, entry.IsDefault, entry.IsSensitive),
+                new DescribeConfigsResponse.ConfigEntry(entry.ConfigName, entry.ConfigValue, !entry.ReadOnly, entry.IsDefault, entry.IsSensitive),
+                new DescribeConfigsResponse.ConfigEntry(entry.ConfigName, entry.ConfigValue, entry.ReadOnly, !entry.IsDefault, entry.IsSensitive),
+                new DescribeConfigsResponse.ConfigEntry(entry.ConfigName, entry.ConfigValue, entry.ReadOnly, entry.IsDefault, !entry.IsSensitive));
+        }
+        
+        [Test]
+        public void DescribeConfigsResponseConfigResourceEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test")] string name)
+        {
+            var entries = new DescribeConfigsResponse.ConfigEntry[count];
+            for (var e = 0; e < count; e++) {
+                entries[e] = new DescribeConfigsResponse.ConfigEntry(name + e, name + e, e % 2 == 0, count % 2 == 0, e % 3 == 0);
+            }
+            var alternate = entries.Take(1).Select(entry => new DescribeConfigsResponse.ConfigEntry(entry.ConfigName + 1, entry.ConfigValue, entry.ReadOnly, entry.IsDefault, entry.IsSensitive));
+            var resource = new DescribeConfigsResponse.ConfigResource(errorCode, name, operationOrType, name, entries);
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new DescribeConfigsResponse.ConfigResource(errorCode + 1, name, operationOrType, name, entries),
+                new DescribeConfigsResponse.ConfigResource(errorCode, name + 1, operationOrType, name, entries),
+                new DescribeConfigsResponse.ConfigResource(errorCode, name, (byte)(operationOrType + 1), name, entries),
+                new DescribeConfigsResponse.ConfigResource(errorCode, name, operationOrType, name + 1, entries),
+                new DescribeConfigsResponse.ConfigResource(errorCode, name, operationOrType, name, entries.Skip(1)),
+                new DescribeConfigsResponse.ConfigResource(errorCode, name, operationOrType, name, alternate.Union(entries.Skip(1))));
+        }
+
+        [Test]
+        public void DescribeConfigsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test", "anotherName")] string name,
+            [Values(20000)] int timeout)
+        {
+            var resources = new DescribeConfigsResponse.ConfigResource[count];
+            for (var r = 0; r < count; r++) {
+                var entries = new DescribeConfigsResponse.ConfigEntry[count];
+                for (var e = 0; e < count; e++) {
+                    entries[e] = new DescribeConfigsResponse.ConfigEntry(name + e, name + e, e % 2 == 0, count % 2 == 0, e % 3 == 0);
+                }
+                resources[r] = new DescribeConfigsResponse.ConfigResource(errorCode, name + r, operationOrType, name, entries);
+            }
+            var alternate = resources.Take(1).Select(r => new DescribeConfigsResponse.ConfigResource(r.Error + 1, r.ErrorMessage, r.ResourceType, r.ResourceName, r.ConfigEntries));
+            var response = new DescribeConfigsResponse(TimeSpan.FromMilliseconds(timeout), resources);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new DescribeConfigsResponse(TimeSpan.FromMilliseconds(timeout + 1), resources),
+                new DescribeConfigsResponse(response.ThrottleTime.Value, resources.Skip(1)),
+                new DescribeConfigsResponse(response.ThrottleTime.Value, alternate.Union(resources.Skip(1))));
+        }
+        
+        [Test]
+        public void AlterConfigsRequest(
+            [Values(0)] short version,
+            [Values(1, 5)] int resourceCount,
+            [Values("test", "anotherName")] string name,
+            [Values(2, 3)] byte operationOrType)
+        {
+            var resources = new AlterConfigsRequest.ConfigResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                resources[f] = new AlterConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => new ConfigEntry(name + i, name)));
+            }
+            var request = new AlterConfigsRequest(resources, operationOrType % 2 == 0);
+
+            request.AssertCanEncodeDecodeRequest(version);
+        }
+
+        [Test]
+        public void AlterConfigsRequestEquality(
+            [Values(0)] short version,
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resources = new AlterConfigsRequest.ConfigResource[resourceCount];
+            for (var f = 0; f < resourceCount; f++) {
+                resources[f] = new AlterConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => new ConfigEntry(name + i, name)));
+            }
+            var alternate = resources.Take(1).Select(r => new AlterConfigsRequest.ConfigResource(r.ResourceType, r.ResourceName + 1, r.ConfigEntries));
+            var request = new AlterConfigsRequest(resources, operationOrType % 2 == 0);
+            request.AssertEqualToSelf();
+            request.AssertNotEqual(null,
+                new AlterConfigsRequest(resources.Skip(1), request.ValidateOnly),
+                new AlterConfigsRequest(alternate.Union(resources.Skip(1)), request.ValidateOnly),
+                new AlterConfigsRequest(resources, !request.ValidateOnly));
+        }
+
+        [Test]
+        public void AlterConfigsRequestConfigResourceEquality(
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var resource = new AlterConfigsRequest.ConfigResource(operationOrType, $"{name}resource", resourceCount.Repeat(i => new ConfigEntry(name + i, name)));
+            
+            var alternate = resource.ConfigEntries.Take(1).Select(r => new ConfigEntry(name, r.ConfigValue));
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new AlterConfigsRequest.ConfigResource((byte)(resource.ResourceType + 1), resource.ResourceName, resource.ConfigEntries),
+                new AlterConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName + 1, resource.ConfigEntries),
+                new AlterConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName, resource.ConfigEntries.Skip(1)),
+                new AlterConfigsRequest.ConfigResource(resource.ResourceType, resource.ResourceName, alternate.Union(resource.ConfigEntries.Skip(1))));
+        }
+
+        [Test]
+        public void ConfigEntryEquality(
+            [Values(3)] int resourceCount,
+            [Values("test")] string name,
+            [Values(3)] byte operationOrType)
+        {
+            var entry = new ConfigEntry(name + name, name);
+            
+            entry.AssertEqualToSelf();
+            entry.AssertNotEqual(null,
+                new ConfigEntry(entry.ConfigName + 1, entry.ConfigValue),
+                new ConfigEntry(entry.ConfigName, entry.ConfigValue + 1));
+        }
+
+        [Test]
+        public void AlterConfigsResponse(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values("test", "anotherName")] string name,
+            [Values(3)] byte operationOrType,
+            [Values(0, 1, 20000)] int timeout)
+        {
+            var resources = new ConfigResource[count];
+            for (var r = 0; r < count; r++) {
+                resources[r] = new ConfigResource(errorCode, name, operationOrType, name);
+            }
+            var response = new AlterConfigsResponse(TimeSpan.FromMilliseconds(timeout), resources);
+
+            response.AssertCanEncodeDecodeResponse(version);
+        }
+
+        [Test]
+        public void ConfigResourceEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(1, 10)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test")] string name)
+        {
+            var resource = new ConfigResource(errorCode, name, operationOrType, name);
+            resource.AssertEqualToSelf();
+            resource.AssertNotEqual(null,
+                new ConfigResource(errorCode + 1, name, operationOrType, name),
+                new ConfigResource(errorCode, name + 1, operationOrType, name),
+                new ConfigResource(errorCode, name, (byte)(operationOrType + 1), name),
+                new ConfigResource(errorCode, name, operationOrType, name + 1));
+        }
+
+        [Test]
+        public void AlterConfigsResponseEquality(
+            [Values(0)] short version,
+            [Values(
+                ErrorCode.NONE,
+                ErrorCode.NOT_CONTROLLER
+            )] ErrorCode errorCode,
+            [Values(3)] int count,
+            [Values(3)] byte operationOrType,
+            [Values("test", "anotherName")] string name,
+            [Values(20000)] int timeout)
+        {
+            var resources = new ConfigResource[count];
+            for (var r = 0; r < count; r++) {
+                resources[r] = new ConfigResource(errorCode, name, operationOrType, name);
+            }
+            var alternate = resources.Take(1).Select(r => new ConfigResource(r.Error + 1, r.ErrorMessage, r.ResourceType, r.ResourceName));
+            var response = new AlterConfigsResponse(TimeSpan.FromMilliseconds(timeout), resources);
+            response.AssertEqualToSelf();
+            response.AssertNotEqual(null,
+                new AlterConfigsResponse(TimeSpan.FromMilliseconds(timeout + 1), resources),
+                new AlterConfigsResponse(response.ThrottleTime.Value, resources.Skip(1)),
+                new AlterConfigsResponse(response.ThrottleTime.Value, alternate.Union(resources.Skip(1))));
+        }
+
         #region Message Helpers
 
         private IEnumerable<Message> ModifyMessages(IEnumerable<Message> messages)

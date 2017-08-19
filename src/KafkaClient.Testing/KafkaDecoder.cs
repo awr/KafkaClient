@@ -68,6 +68,8 @@ namespace KafkaClient.Testing
             if (typeof(T) == typeof(DescribeAclsRequest)) return (T)DescribeAclsRequest(context, bytes);
             if (typeof(T) == typeof(CreateAclsRequest)) return (T)CreateAclsRequest(context, bytes);
             if (typeof(T) == typeof(DeleteAclsRequest)) return (T)DeleteAclsRequest(context, bytes);
+            if (typeof(T) == typeof(DescribeConfigsRequest)) return (T)DescribeConfigsRequest(context, bytes);
+            if (typeof(T) == typeof(AlterConfigsRequest)) return (T)AlterConfigsRequest(context, bytes);
             return default(T);
         }
 
@@ -109,7 +111,9 @@ namespace KafkaClient.Testing
                 || TryEncodeResponse(writer, context, response as TxnOffsetCommitResponse)
                 || TryEncodeResponse(writer, context, response as DescribeAclsResponse)
                 || TryEncodeResponse(writer, context, response as CreateAclsResponse)
-                || TryEncodeResponse(writer, context, response as DeleteAclsResponse);
+                || TryEncodeResponse(writer, context, response as DeleteAclsResponse)
+                || TryEncodeResponse(writer, context, response as DescribeConfigsResponse)
+                || TryEncodeResponse(writer, context, response as AlterConfigsResponse);
 
                 return writer.ToSegment();
             }
@@ -652,6 +656,47 @@ namespace KafkaClient.Testing
                 }
 
                 return new DeleteAclsRequest(filters);
+            }
+        }
+
+        private static IRequest DescribeConfigsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var resources = new DescribeConfigsRequest.ConfigResource[reader.ReadInt32()];
+                for (var r = 0; r < resources.Length; r++) {
+                    var resourceType = reader.ReadByte();
+                    var resourceName = reader.ReadString();
+                    var configs = new string[reader.ReadInt32()];
+                    for (var c = 0; c < configs.Length; c++) {
+                        configs[c] = reader.ReadString();
+                    }
+                    resources[r] = new DescribeConfigsRequest.ConfigResource(resourceType, resourceName, configs);
+                    
+                }
+
+                return new DescribeConfigsRequest(resources);
+            }
+        }
+
+        private static IRequest AlterConfigsRequest(IRequestContext context, ArraySegment<byte> payload)
+        {
+            using (var reader = ReadHeader(payload)) {
+                var resources = new AlterConfigsRequest.ConfigResource[reader.ReadInt32()];
+                for (var r = 0; r < resources.Length; r++) {
+                    var resourceType = reader.ReadByte();
+                    var resourceName = reader.ReadString();
+                    var configEntries = new ConfigEntry[reader.ReadInt32()];
+                    for (var c = 0; c < configEntries.Length; c++) {
+                        var configName = reader.ReadString();
+                        var configValue = reader.ReadString();
+                        configEntries[c] = new ConfigEntry(configName, configValue);
+                    }
+                    resources[r] = new AlterConfigsRequest.ConfigResource(resourceType, resourceName, configEntries);
+                    
+                }
+                var validateOnly = reader.ReadBoolean();
+
+                return new AlterConfigsRequest(resources, validateOnly);
             }
         }
 
@@ -1221,6 +1266,46 @@ namespace KafkaClient.Testing
                           .Write(acl.Operation)
                           .Write(acl.PermissionType);
                 }
+            }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, DescribeConfigsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.Resources.Count);
+
+            foreach (var resource in response.Resources) {
+                writer.Write(resource.Error)
+                      .Write(resource.ErrorMessage)
+                      .Write(resource.ResourceType)
+                      .Write(resource.ResourceName)
+                      .Write(resource.ConfigEntries.Count);
+                foreach (var entry in resource.ConfigEntries) {
+                    writer.Write(entry.ConfigName)
+                          .Write(entry.ConfigValue)
+                          .Write(entry.ReadOnly)
+                          .Write(entry.IsDefault)
+                          .Write(entry.IsSensitive);
+                }
+            }
+            return true;
+        }
+
+        private static bool TryEncodeResponse(IKafkaWriter writer, IRequestContext context, AlterConfigsResponse response)
+        {
+            if (response == null) return false;
+
+            writer.WriteMilliseconds(response.ThrottleTime)
+                  .Write(response.Resources.Count);
+
+            foreach (var resource in response.Resources) {
+                writer.Write(resource.Error)
+                      .Write(resource.ErrorMessage)
+                      .Write(resource.ResourceType)
+                      .Write(resource.ResourceName);
             }
             return true;
         }
