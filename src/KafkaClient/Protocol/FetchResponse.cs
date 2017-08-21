@@ -77,8 +77,8 @@ namespace KafkaClient.Protocol
         public FetchResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
+            Responses = topics.ToSafeImmutableList();
+            Errors = Responses.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -124,8 +124,8 @@ namespace KafkaClient.Protocol
                 HighWatermark = highWatermark;
                 LastStableOffset = lastStableOffset;
                 LogStartOffset = logStartOffset;
-                Messages = ImmutableList<Message>.Empty.AddNotNullRange(messages);
-                AbortedTransactions = ImmutableList<AbortedTransaction>.Empty.AddNotNullRange(abortedTransactions);
+                Messages = messages.ToSafeImmutableList();
+                AbortedTransactions = abortedTransactions.ToSafeImmutableList();
             }
 
             /// <summary>

@@ -69,7 +69,7 @@ namespace KafkaClient.Protocol
             GroupProtocol = groupProtocol;
             LeaderId = leaderId;
             MemberId = memberId;
-            Members = ImmutableList<Member>.Empty.AddNotNullRange(members);
+            Members = members.ToSafeImmutableList();
         }
 
         /// <inheritdoc />

@@ -46,7 +46,7 @@ namespace KafkaClient.Protocol
         public SyncGroupRequest(string groupId, int generationId, string memberId, IEnumerable<GroupAssignment> groupAssignments = null) 
             : base(ApiKey.SyncGroup, groupId, memberId, generationId)
         {
-            GroupAssignments = ImmutableList<GroupAssignment>.Empty.AddNotNullRange(groupAssignments);
+            GroupAssignments = groupAssignments.ToSafeImmutableList();
         }
 
         public IImmutableList<GroupAssignment> GroupAssignments { get; }

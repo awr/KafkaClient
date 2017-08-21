@@ -36,7 +36,7 @@ namespace KafkaClient.Protocol
         public DescribeConfigsRequest(IEnumerable<ConfigResource> resources = null) 
             : base(ApiKey.DescribeConfigs)
         {
-            Resources = ImmutableList<ConfigResource>.Empty.AddNotNullRange(resources);
+            Resources = resources.ToSafeImmutableList();
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace KafkaClient.Protocol
             {
                 ResourceType = resourceType;
                 ResourceName = resourceName;
-                ConfigNames = ImmutableList<string>.Empty.AddNotNullRange(configNames);
+                ConfigNames = configNames.ToSafeImmutableList();
             }
 
             /// <inheritdoc cref="IResource.ResourceType"/>

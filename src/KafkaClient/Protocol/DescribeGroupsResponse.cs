@@ -66,8 +66,8 @@ namespace KafkaClient.Protocol
         public DescribeGroupsResponse(IEnumerable<Group> groups, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Groups = ImmutableList<Group>.Empty.AddNotNullRange(groups);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Groups.Select(g => g.Error));
+            Groups = groups.ToSafeImmutableList();
+            Errors = Groups.Select(g => g.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -114,7 +114,7 @@ namespace KafkaClient.Protocol
                 State = state;
                 ProtocolType = protocolType;
                 Protocol = protocol;
-                Members = ImmutableList<Member>.Empty.AddNotNullRange(members);
+                Members = members.ToSafeImmutableList();
             }
 
             public ErrorCode Error { get; }

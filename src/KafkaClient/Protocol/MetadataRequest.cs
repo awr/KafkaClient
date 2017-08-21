@@ -40,7 +40,7 @@ namespace KafkaClient.Protocol
         public MetadataRequest(IEnumerable<string> topics = null, bool? allowTopicAutoCreation = null) 
             : base(ApiKey.Metadata)
         {
-            Topics = ImmutableList<string>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
             AllowTopicAutoCreation = allowTopicAutoCreation;
         }
 

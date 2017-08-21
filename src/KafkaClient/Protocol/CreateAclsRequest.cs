@@ -42,7 +42,7 @@ namespace KafkaClient.Protocol
         public CreateAclsRequest(IEnumerable<AclResource> creations = null) 
             : base(ApiKey.CreateAcls)
         {
-            Creations = ImmutableList<AclResource>.Empty.AddNotNullRange(creations);
+            Creations = creations.ToSafeImmutableList();
         }
 
         public IImmutableList<AclResource> Creations { get; }

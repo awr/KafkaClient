@@ -53,8 +53,8 @@ namespace KafkaClient.Protocol
 
         public WriteTxnMarkersResponse(IEnumerable<TransactionMarker> transactionMarkers = null)
         {
-            TransactionMarkers = ImmutableList<TransactionMarker>.Empty.AddNotNullRange(transactionMarkers);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(TransactionMarkers.SelectMany(t => t.Topics.Select(p => p.Error)));
+            TransactionMarkers = transactionMarkers.ToSafeImmutableList();
+            Errors = TransactionMarkers.SelectMany(t => t.Topics.Select(p => p.Error)).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -99,7 +99,7 @@ namespace KafkaClient.Protocol
             public TransactionMarker(long producerId, IEnumerable<TopicResponse> topics)
             {
                 ProducerId = producerId;
-                Topics = ImmutableList<TopicResponse>.Empty.AddRange(topics);
+                Topics = topics.ToSafeImmutableList();
             }
 
             /// <summary>

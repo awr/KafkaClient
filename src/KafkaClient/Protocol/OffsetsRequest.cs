@@ -59,7 +59,7 @@ namespace KafkaClient.Protocol
         public OffsetsRequest(IEnumerable<Topic> offsets, byte? isolationLevel = null) 
             : base(ApiKey.Offsets)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(offsets);
+            Topics = offsets.ToSafeImmutableList();
             IsolationLevel = isolationLevel.GetValueOrDefault();
         }
 

@@ -33,7 +33,7 @@ namespace KafkaClient
         public Consumer(IEnumerable<TopicPartition> partitions, IRouter router, IConsumerConfiguration configuration = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
         {
             Router = router;
-            _topicPartitions = ImmutableList<TopicPartition>.Empty.AddNotNullRange(partitions);
+            _topicPartitions = partitions.ToSafeImmutableList();
             _leaveRouterOpen = leaveRouterOpen.GetValueOrDefault(true);
             AutoConsume = autoConsume.GetValueOrDefault(true);
             Configuration = configuration ?? ConsumerConfiguration.Default;

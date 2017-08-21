@@ -62,7 +62,7 @@ namespace KafkaClient.Protocol
         public CreateTopicsRequest(IEnumerable<Topic> topics = null, TimeSpan? timeout = null, bool? validateOnly = null)
             : base(ApiKey.CreateTopics)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
             Timeout = timeout ?? TimeSpan.Zero;
             ValidateOnly = validateOnly;
         }
@@ -126,13 +126,13 @@ namespace KafkaClient.Protocol
             {
                 NumPartitions = -1;
                 ReplicationFactor = -1;
-                ReplicaAssignments = ImmutableList<ReplicaAssignment>.Empty.AddNotNullRange(replicaAssignments);
+                ReplicaAssignments = replicaAssignments.ToSafeImmutableList();
             }
 
             private Topic(string topicName, IEnumerable<KeyValuePair<string, string>> configs)
             {
                 TopicName = topicName;
-                Configs = ImmutableDictionary<string, string>.Empty.AddNotNullRange(configs);
+                Configs = configs.ToSafeImmutableDictionary();
             }
 
             /// <summary>
@@ -201,7 +201,7 @@ namespace KafkaClient.Protocol
             public ReplicaAssignment(int partitionId, IEnumerable<int> replicas = null)
             {
                 PartitionId = partitionId;
-                Replicas = ImmutableList<int>.Empty.AddNotNullRange(replicas);
+                Replicas = replicas.ToSafeImmutableList();
             }
 
             public int PartitionId { get; }

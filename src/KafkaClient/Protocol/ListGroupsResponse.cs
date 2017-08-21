@@ -44,7 +44,7 @@ namespace KafkaClient.Protocol
         {
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
-            Groups = ImmutableList<Group>.Empty.AddNotNullRange(groups);
+            Groups = groups.ToSafeImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

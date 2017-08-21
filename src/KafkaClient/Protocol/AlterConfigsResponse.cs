@@ -45,8 +45,8 @@ namespace KafkaClient.Protocol
         public AlterConfigsResponse(TimeSpan throttleTime, IEnumerable<ConfigResource> resources = null)
             : base(throttleTime)
         {
-            Resources = ImmutableList<ConfigResource>.Empty.AddNotNullRange(resources);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Resources.Select(r => r.Error));
+            Resources = resources.ToSafeImmutableList();
+            Errors = Resources.Select(r => r.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

@@ -36,7 +36,7 @@ namespace KafkaClient.Protocol
         {
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
-            EnabledMechanisms = ImmutableList<string>.Empty.AddNotNullRange(enabledMechanisms);
+            EnabledMechanisms = enabledMechanisms.ToSafeImmutableList();
         }
 
         /// <inheritdoc />

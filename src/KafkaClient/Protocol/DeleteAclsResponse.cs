@@ -61,7 +61,7 @@ namespace KafkaClient.Protocol
         public DeleteAclsResponse(TimeSpan throttleTime, IEnumerable<FilterResponse> filterResponses = null)
             : base(throttleTime)
         {
-            FilterResponses = ImmutableList<FilterResponse>.Empty.AddNotNullRange(filterResponses);
+            FilterResponses = filterResponses.ToSafeImmutableList();
             Errors = ImmutableList<ErrorCode>.Empty
                 .AddRange(FilterResponses.Select(r => r.Error))
                 .AddRange(FilterResponses.SelectMany(r => r.MatchingAcls.Select(m => m.Error)));
@@ -108,7 +108,7 @@ namespace KafkaClient.Protocol
             {
                 Error = errorCode;
                 ErrorMessage = errorMessage;
-                MatchingAcls = ImmutableList<MatchingAcl>.Empty.AddNotNullRange(matchingAcls);
+                MatchingAcls = matchingAcls.ToSafeImmutableList();
             }
 
             /// <summary>

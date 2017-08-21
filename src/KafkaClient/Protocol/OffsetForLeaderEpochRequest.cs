@@ -37,7 +37,7 @@ namespace KafkaClient.Protocol
         public OffsetForLeaderEpochRequest(IEnumerable<Topic> topics = null) 
             : base(ApiKey.OffsetForLeaderEpoch)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
         }
 
         /// <summary>

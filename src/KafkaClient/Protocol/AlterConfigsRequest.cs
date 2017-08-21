@@ -44,7 +44,7 @@ namespace KafkaClient.Protocol
         public AlterConfigsRequest(IEnumerable<ConfigResource> resources, bool validateOnly) 
             : base(ApiKey.AlterConfigs)
         {
-            Resources = ImmutableList<ConfigResource>.Empty.AddNotNullRange(resources);
+            Resources = resources.ToSafeImmutableList();
             ValidateOnly = validateOnly;
         }
 
@@ -89,7 +89,7 @@ namespace KafkaClient.Protocol
             {
                 ResourceType = resourceType;
                 ResourceName = resourceName;
-                ConfigEntries = ImmutableList<ConfigEntry>.Empty.AddNotNullRange(configEntries);
+                ConfigEntries = configEntries.ToSafeImmutableList();
             }
 
             /// <inheritdoc cref="IResource.ResourceType"/>

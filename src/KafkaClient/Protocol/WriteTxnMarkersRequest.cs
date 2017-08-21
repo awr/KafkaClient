@@ -42,7 +42,7 @@ namespace KafkaClient.Protocol
         public WriteTxnMarkersRequest(IEnumerable<TransactionMarker> transactionMarkers = null) 
             : base(ApiKey.WriteTxnMarkers)
         {
-            TransactionMarkers = ImmutableList<TransactionMarker>.Empty.AddNotNullRange(transactionMarkers);
+            TransactionMarkers = transactionMarkers.ToSafeImmutableList();
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace KafkaClient.Protocol
                 ProducerId = producerId;
                 ProducerEpoch = producerEpoch;
                 TransactionResult = transactionResult;
-                Topics = ImmutableList<TopicPartition>.Empty.AddRange(topics);
+                Topics = topics.ToSafeImmutableList();
                 CoordinatorEpoch = coordinatorEpoch;
             }
 

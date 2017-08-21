@@ -78,7 +78,7 @@ namespace KafkaClient.Protocol
             RebalanceTimeout = rebalanceTimeout ?? SessionTimeout;
             MemberId = memberId ?? "";
             ProtocolType = protocolType;
-            GroupProtocols = ImmutableList<GroupProtocol>.Empty.AddNotNullRange(groupProtocols);
+            GroupProtocols = groupProtocols.ToSafeImmutableList();
         }
 
         /// <summary>

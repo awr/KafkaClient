@@ -544,8 +544,8 @@ namespace KafkaClient
 
             public CachedResults(IEnumerable<T> hits = null, IEnumerable<string> misses = null)
             {
-                Hits = ImmutableList<T>.Empty.AddNotNullRange(hits);
-                Misses = ImmutableList<string>.Empty.AddNotNullRange(misses);
+                Hits = hits.ToSafeImmutableList();
+                Misses = misses.ToSafeImmutableList();
             }
 
             public static CachedResults<T> ProduceResults(IEnumerable<string> keys, Func<string, T> producer)

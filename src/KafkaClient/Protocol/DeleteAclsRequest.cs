@@ -42,7 +42,7 @@ namespace KafkaClient.Protocol
         public DeleteAclsRequest(IEnumerable<AclResource> filters = null) 
             : base(ApiKey.DeleteAcls)
         {
-            Filters = ImmutableList<AclResource>.Empty.AddNotNullRange(filters);
+            Filters = filters.ToSafeImmutableList();
         }
 
         public IImmutableList<AclResource> Filters { get; }

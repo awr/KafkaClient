@@ -70,7 +70,7 @@ namespace KafkaClient.Protocol
         public OffsetFetchResponse(IEnumerable<Topic> topics = null, ErrorCode? errorCode = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Responses = topics.ToSafeImmutableList();
             Errors = ImmutableList<ErrorCode>.Empty;
             if (errorCode.HasValue) {
                 Error = errorCode;

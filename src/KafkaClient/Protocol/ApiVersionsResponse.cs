@@ -46,7 +46,7 @@ namespace KafkaClient.Protocol
         {
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
-            ApiVersions = ImmutableList<VersionSupport>.Empty.AddNotNullRange(supportedVersions);
+            ApiVersions = supportedVersions.ToSafeImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

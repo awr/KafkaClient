@@ -52,8 +52,8 @@ namespace KafkaClient.Protocol
         public DeleteRecordsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Topics.Select(t => t.Error));
+            Topics = topics.ToSafeImmutableList();
+            Errors = Topics.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

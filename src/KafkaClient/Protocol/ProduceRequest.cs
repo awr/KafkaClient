@@ -145,7 +145,7 @@ namespace KafkaClient.Protocol
                 : base(topicName, partitionId)
             {
                 Codec = codec;
-                Messages = ImmutableList<Message>.Empty.AddNotNullRange(messages);
+                Messages = messages.ToSafeImmutableList();
             }
 
             public MessageCodec Codec { get; }

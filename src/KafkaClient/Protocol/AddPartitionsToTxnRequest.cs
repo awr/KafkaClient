@@ -36,7 +36,7 @@ namespace KafkaClient.Protocol
         public AddPartitionsToTxnRequest(string transactionId, long producerId, short producerEpoch, IEnumerable<TopicPartition> topics = null) 
             : base(ApiKey.AddPartitionsToTxn, transactionId, producerId, producerEpoch)
         {
-            Topics = ImmutableList<TopicPartition>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
         }
 
         /// <summary>

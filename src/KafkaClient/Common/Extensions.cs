@@ -236,11 +236,16 @@ namespace KafkaClient.Common
             return list.AddRange(items);
         }
 
-        public static IImmutableDictionary<T, TValue> AddNotNullRange<T, TValue>(this IImmutableDictionary<T, TValue> dictionary, IEnumerable<KeyValuePair<T, TValue>> items)
+        public static IImmutableList<T> ToSafeImmutableList<T>(this IEnumerable<T> items)
         {
-            if (items == null) return dictionary;
-            if (ReferenceEquals(dictionary, ImmutableDictionary<T, TValue>.Empty)) return items.ToImmutableDictionary();
-            return dictionary.AddRange(items);
+            if (items == null) return ImmutableList<T>.Empty;
+            return items.ToImmutableList();
+        }
+
+        public static IImmutableDictionary<T, TValue> ToSafeImmutableDictionary<T, TValue>(this IEnumerable<KeyValuePair<T, TValue>> items)
+        {
+            if (items == null) return ImmutableDictionary<T, TValue>.Empty;
+            return items.ToImmutableDictionary();
         }
 
         public static bool HasEqualElementsInOrder<T>(this IReadOnlyCollection<T> self, IReadOnlyCollection<T> other)

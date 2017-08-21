@@ -13,8 +13,8 @@ namespace KafkaClient.Protocol
         protected TopicsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Topics.Select(t => t.ErrorCode));
+            Topics = topics.ToSafeImmutableList();
+            Errors = Topics.Select(t => t.ErrorCode).ToImmutableList();
         }
 
         public IImmutableList<Topic> Topics { get; } 

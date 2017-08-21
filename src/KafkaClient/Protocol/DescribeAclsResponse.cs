@@ -60,7 +60,7 @@ namespace KafkaClient.Protocol
             Error = errorCode;
             Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
             ErrorMessage = errorMessage;
-            Resources = ImmutableList<AclResource>.Empty.AddNotNullRange(resources);
+            Resources = resources.ToSafeImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

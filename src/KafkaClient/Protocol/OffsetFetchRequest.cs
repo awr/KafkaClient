@@ -43,7 +43,7 @@ namespace KafkaClient.Protocol
             if (string.IsNullOrEmpty(groupId)) throw new ArgumentNullException(nameof(groupId));
 
             GroupId = groupId;
-            Topics = ImmutableList<TopicPartition>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
         }
 
         /// <summary>

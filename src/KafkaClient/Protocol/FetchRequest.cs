@@ -73,7 +73,7 @@ namespace KafkaClient.Protocol
             MinBytes = minBytes.GetValueOrDefault(DefaultMinBlockingByteBufferSize);
             MaxBytes = maxBytes.GetValueOrDefault(MinBytes);
             IsolationLevel = isolationLevel.GetValueOrDefault();
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(fetches);
+            Topics = fetches.ToSafeImmutableList();
         }
 
         internal const int DefaultMinBlockingByteBufferSize = 4096;

@@ -65,7 +65,7 @@ namespace KafkaClient.Protocol
             : base(ApiKey.OffsetCommit, groupId, memberId ?? "", generationId)
         {
             RetentionTime = retentionTime;
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(offsetCommits);
+            Topics = offsetCommits.ToSafeImmutableList();
         }
 
         /// <summary>

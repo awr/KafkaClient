@@ -32,7 +32,7 @@ namespace KafkaClient.Assignment
         public ConsumerMemberAssignment(IEnumerable<TopicPartition> partitionAssignments, ArraySegment<byte> userData, short version = 0)
         {
             Version = version;
-            PartitionAssignments = ImmutableList<TopicPartition>.Empty.AddNotNullRange(partitionAssignments);
+            PartitionAssignments = partitionAssignments.ToSafeImmutableList();
             UserData = userData;
         }
 

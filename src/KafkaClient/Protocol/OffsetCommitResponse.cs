@@ -50,8 +50,8 @@ namespace KafkaClient.Protocol
         public OffsetCommitResponse(IEnumerable<TopicResponse> topics = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Responses = ImmutableList<TopicResponse>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(t => t.Error));
+            Responses = topics.ToSafeImmutableList();
+            Errors = Responses.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

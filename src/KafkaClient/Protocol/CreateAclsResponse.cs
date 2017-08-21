@@ -40,8 +40,8 @@ namespace KafkaClient.Protocol
         public CreateAclsResponse(TimeSpan throttleTime, IEnumerable<ErrorResponse> responses = null)
             : base(throttleTime)
         {
-            Responses = ImmutableList<ErrorResponse>.Empty.AddNotNullRange(responses);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Responses.Select(r => r.Error));
+            Responses = responses.ToSafeImmutableList();
+            Errors = Responses.Select(r => r.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

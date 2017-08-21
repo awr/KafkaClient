@@ -44,7 +44,7 @@ namespace KafkaClient.Assignment
         {
             AssignmentStrategy = assignmentStrategy;
             Version = version;
-            Subscriptions = ImmutableList<string>.Empty.AddNotNullRange(topicNames);
+            Subscriptions = topicNames.ToSafeImmutableList();
             UserData = userData;
         }
 

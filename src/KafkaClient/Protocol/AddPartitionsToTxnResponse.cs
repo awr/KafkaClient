@@ -49,8 +49,8 @@ namespace KafkaClient.Protocol
         public AddPartitionsToTxnResponse(TimeSpan throttleTime, IEnumerable<TopicResponse> topics = null)
             : base(throttleTime)
         {
-            Topics = ImmutableList<TopicResponse>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Topics.Select(t => t.Error));
+            Topics = topics.ToSafeImmutableList();
+            Errors = Topics.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }

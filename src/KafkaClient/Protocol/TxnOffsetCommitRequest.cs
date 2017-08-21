@@ -47,7 +47,7 @@ namespace KafkaClient.Protocol
             : base(ApiKey.TxnOffsetCommit, transactionId, producerId, producerEpoch)
         {
             GroupId = consumerGroupId;
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Topics = topics.ToSafeImmutableList();
         }
 
         /// <summary>

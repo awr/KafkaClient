@@ -102,11 +102,11 @@ namespace KafkaClient.Protocol
         public MetadataResponse(IEnumerable<Server> brokers = null, IEnumerable<Topic> topics = null, int? controllerId = null, string clusterId = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
-            Brokers = ImmutableList<Server>.Empty.AddNotNullRange(brokers);
-            TopicMetadata = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
+            Brokers = brokers.ToSafeImmutableList();
+            TopicMetadata = topics.ToSafeImmutableList();
             ControllerId = controllerId;
             ClusterId = clusterId;
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(TopicMetadata.Select(t => t.TopicError));
+            Errors = TopicMetadata.Select(t => t.TopicError).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -171,7 +171,7 @@ namespace KafkaClient.Protocol
                 TopicError = errorCode;
                 TopicName = topicName;
                 IsInternal = isInternal;
-                PartitionMetadata = ImmutableList<Partition>.Empty.AddNotNullRange(partitions);
+                PartitionMetadata = partitions.ToSafeImmutableList();
             }
 
             /// <summary>
@@ -235,8 +235,8 @@ namespace KafkaClient.Protocol
                 PartitionError = errorCode;
                 PartitionId = partitionId;
                 Leader = leaderId;
-                Replicas = ImmutableList<int>.Empty.AddNotNullRange(replicas);
-                Isr = ImmutableList<int>.Empty.AddNotNullRange(isrs);
+                Replicas = replicas.ToSafeImmutableList();
+                Isr = isrs.ToSafeImmutableList();
             }
 
             /// <summary>

@@ -38,7 +38,7 @@ namespace KafkaClient.Protocol
         public DescribeGroupsRequest(IEnumerable<string> groupIds) 
             : base(ApiKey.DescribeGroups)
         {
-            GroupIds = ImmutableList<string>.Empty.AddNotNullRange(groupIds);
+            GroupIds = groupIds.ToSafeImmutableList();
         }
 
         public IImmutableList<string> GroupIds { get; }

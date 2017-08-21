@@ -62,8 +62,8 @@ namespace KafkaClient.Protocol
         public DescribeConfigsResponse(TimeSpan throttleTime, IEnumerable<ConfigResource> resources = null)
             : base(throttleTime)
         {
-            Resources = ImmutableList<ConfigResource>.Empty.AddNotNullRange(resources);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Resources.Select(r => r.Error));
+            Resources = resources.ToSafeImmutableList();
+            Errors = Resources.Select(r => r.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -109,7 +109,7 @@ namespace KafkaClient.Protocol
             public ConfigResource(ErrorCode errorCode, string errorMessage, byte resourceType, string resourceName, IEnumerable<ConfigEntry> configEntries = null)
                 : base(errorCode, errorMessage, resourceType, resourceName)
             {
-                ConfigEntries = ImmutableList<ConfigEntry>.Empty.AddNotNullRange(configEntries);
+                ConfigEntries = configEntries.ToSafeImmutableList();
             }
 
             public IImmutableList<ConfigEntry> ConfigEntries { get; }

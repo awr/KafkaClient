@@ -1,10 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text;
 using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
+    /// Record => Length Attributes TimestampDelta OffsetDelta Key Value [Header] 
+    /// </summary>
+    /// <remarks>
+    /// Version 2+:
+    /// Record => Length Attributes TimestampDelta OffsetDelta Key Value [Header] 
+    ///   Length => varint
+    ///   Attributes => int8
+    ///   TimestampDelta => varint
+    ///   OffsetDelta => varint
+    ///   KeyLen => varint
+    ///   Key => data
+    ///   ValueLen => varint
+    ///   Value => data
+    ///   Headers => [Header]
+    /// 
+    /// Version 0-1:
     /// Message represents the data from a single event occurance.
     /// Message => Crc MagicByte Attributes Key Value
     ///   Crc => int32
@@ -22,16 +40,27 @@ namespace KafkaClient.Protocol
     ///   Timestamp => int64
     ///   Key => bytes
     ///   Value => bytes
-    /// </summary>
+    /// 
+    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Messagesets
+    /// </remarks>>
     public class Message : IEquatable<Message>
     {
         public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
 
         public void WriteTo(IKafkaWriter writer)
         {
+            if (MessageVersion >= 2) {
+                WriteRecord(writer);
+            } else {
+                WriteMessage(writer);
+            }
+        }
+
+        private void WriteMessage(IKafkaWriter writer)
+        {
             using (writer.MarkForCrc()) {
                 writer.Write(MessageVersion)
-                      .Write((byte)0);
+                      .Write((byte) 0);
                 if (MessageVersion >= 1) {
                     writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
                 }
@@ -40,12 +69,24 @@ namespace KafkaClient.Protocol
             }
         }
 
+        private void WriteRecord(IKafkaWriter writer)
+        {
+            using (writer.MarkForCrc()) {
+                writer.Write(MessageVersion)
+                      .Write((byte) 0);
+                if (MessageVersion >= 1) {
+                    writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
+                }
+                writer.Write(Key)
+                      .Write(Value);
+            }
+        }
         public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null)
             : this(value, EmptySegment, attribute, offset, version, timestamp)
         {
         }
 
-        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null)
+        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null, IEnumerable<MessageHeader> headers = null)
         {
             Offset = offset;
             MessageVersion = version;
@@ -53,6 +94,7 @@ namespace KafkaClient.Protocol
             Key = key.Count > 0 ? key : EmptySegment;
             Value = value;
             Timestamp = timestamp;
+            Headers = headers.ToSafeImmutableList();
         }
 
         /// <summary>
@@ -62,14 +104,13 @@ namespace KafkaClient.Protocol
         /// <param name="key">The key value for the message.  Can be null.</param>
         /// <param name="value">The main content data of this message.</param>
         public Message(string value, string key = null)
+            : this(ToSegment(value), ToSegment(key), 0)
         {
-            Key = ToSegment(key);
-            Value = ToSegment(value);
         }
 
         private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
 
-        private ArraySegment<byte> ToSegment(string value)
+        private static ArraySegment<byte> ToSegment(string value)
         {
             if (string.IsNullOrEmpty(value)) return EmptySegment;
             return new ArraySegment<byte>(Encoding.UTF8.GetBytes(value));
@@ -77,6 +118,10 @@ namespace KafkaClient.Protocol
 
         /// <summary>
         /// The log offset of this message as stored by the Kafka server.
+        /// Version 0-1: When the producer is sending non compressed messages, it can set the offsets to anything. 
+        ///              When the producer is sending compressed messages, to avoid server side recompression, each 
+        ///              compressed message should have offset starting from 0 and increasing by one for each inner 
+        ///              message in the compressed message.
         /// </summary>
         public long Offset { get; }
 
@@ -114,6 +159,12 @@ namespace KafkaClient.Protocol
         /// </summary>
         public DateTimeOffset? Timestamp { get; }
 
+        /// <summary>
+        /// Application level record level headers
+        /// Version 2+ only.
+        /// </summary>
+        public IImmutableList<MessageHeader> Headers { get; }
+
         #region Equality
 
         /// <inheritdoc />
@@ -132,7 +183,8 @@ namespace KafkaClient.Protocol
                 && Attribute == other.Attribute 
                 && Key.HasEqualElementsInOrder(other.Key)
                 && Value.HasEqualElementsInOrder(other.Value) 
-                && Timestamp?.ToUnixTimeMilliseconds() == other.Timestamp?.ToUnixTimeMilliseconds();
+                && Timestamp?.ToUnixTimeMilliseconds() == other.Timestamp?.ToUnixTimeMilliseconds()
+                && Headers.HasEqualElementsInOrder(other.Headers);
         }
 
         /// <inheritdoc />
@@ -145,6 +197,7 @@ namespace KafkaClient.Protocol
                 hashCode = (hashCode*397) ^ Key.Count.GetHashCode();
                 hashCode = (hashCode*397) ^ Value.Count.GetHashCode();
                 hashCode = (hashCode*397) ^ Timestamp.GetHashCode();
+                hashCode = (hashCode*397) ^ Headers.Count.GetHashCode();
                 return hashCode;
             }
         }
