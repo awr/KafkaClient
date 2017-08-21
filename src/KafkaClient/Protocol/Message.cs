@@ -47,9 +47,10 @@ namespace KafkaClient.Protocol
     {
         public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
 
-        public void WriteTo(IKafkaWriter writer)
+        public void WriteTo(IKafkaWriter writer, byte version, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
         {
-            if (MessageVersion >= 2) {
+            // Record was introduced with version 2, and is significantly different from the Message approach (see above)
+            if (version >= 2) {
                 WriteRecord(writer);
             } else {
                 WriteMessage(writer);
@@ -123,7 +124,7 @@ namespace KafkaClient.Protocol
         ///              compressed message should have offset starting from 0 and increasing by one for each inner 
         ///              message in the compressed message.
         /// </summary>
-        public long Offset { get; }
+        public long? Offset { get; }
 
         /// <summary>
         /// This is a version id used to allow backwards compatible evolution of the message binary format.
