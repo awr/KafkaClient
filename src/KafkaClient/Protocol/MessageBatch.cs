@@ -42,11 +42,9 @@ namespace KafkaClient.Protocol
         public int WriteTo(IKafkaWriter writer, byte version)
         {
             // RecordBatch was introduced with version 2, and is significantly different from the MessageSet approach (see above)
-            if (version >= 2) {
-                return WriteRecordBatchTo(writer, version);
-            } else {
-                return WriteMessageSetTo(writer, version);
-            }
+            return version >= 2
+                ? WriteRecordBatchTo(writer, version)
+                : WriteMessageSetTo(writer, version);
         }
 
         private int WriteRecordBatchTo(IKafkaWriter writer, byte version)
@@ -57,7 +55,7 @@ namespace KafkaClient.Protocol
             {
                 messageWriter.Write(Messages.Count);
                 foreach (var message in Messages) {
-                    message.WriteTo(messageWriter, version, firstOffset, timestamp);
+                    message.WriteTo(messageWriter, version, _codec, firstOffset, timestamp);
                 }
             }
 
@@ -66,8 +64,8 @@ namespace KafkaClient.Protocol
                 writer.Write(0) // PartitionLeaderEpoch int32
                       .Write(version); // AKA Magic
 
-                // TODO: does the CRC only include the record data, or ... ?
-                using (writer.MarkForCrc()) {
+                // the CRC includes everything from the attribute on
+                using (writer.MarkForCrc()) { // TODO: This MUST use CRC32C algorithm instead
                     writer.Write(attributes)
                           .Write(lastOffsetDelta)
                           .Write(firstTimestamp)
@@ -81,16 +79,13 @@ namespace KafkaClient.Protocol
                         return 0;
                     }
 
-                    // TODO: how are the compressed records supposed to be written ??
                     using (var messageWriter = new KafkaWriter()) {
                         WriteUncompressedTo(messageWriter);
-                        var records = messageWriter.ToSegment(false);
-                        using (writer.MarkForLength()) { // messageset
-                            var initialPosition = writer.Position;
-                            writer.WriteCompressed(records, _codec);
-                            var compressedMessageLength = writer.Position - initialPosition;
-                            return records.Count - compressedMessageLength;
-                        }
+                        var recordsValue = messageWriter.ToSegment(false);
+                        var compressedMessage = new Message(recordsValue, (byte)_codec, firstOffset);
+
+                        writer.Write(1); // record count = 1 for compressed set
+                        return compressedMessage.WriteTo(writer, version, _codec);
                     }                    
                 }
             }
@@ -126,7 +121,7 @@ namespace KafkaClient.Protocol
             // The timestamp of the last Record in the batch. This is used by the broker to ensure the correct behavior even when Records within the batch are compacted out.
             var maxTimestamp = 0L;
             if (Messages.Count > 0) {
-                firstOffset = Messages[0].Offset ?? firstOffset;
+                firstOffset = Messages[0].Offset;
                 timestamp = Messages[0].Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
                 var first = timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
                 firstTimestamp = first.ToUnixTimeMilliseconds();
@@ -143,8 +138,8 @@ namespace KafkaClient.Protocol
             {
                 var index = 0L;
                 foreach (var message in Messages) {
-                    messageWriter.Write(index++);
-                    using (messageWriter.MarkForLength()) {
+                    messageWriter.Write(index); // offset does not increase, even though docs claim it does ...
+                    using (messageWriter.MarkForLength()) { // message length
                         message.WriteTo(messageWriter, version);
                     }
                 }
@@ -159,21 +154,12 @@ namespace KafkaClient.Protocol
             using (var messageWriter = new KafkaWriter()) {
                 WriteUncompressedTo(messageWriter);
                 var messageSet = messageWriter.ToSegment(false);
+                var compressedMessage = new Message(messageSet, (byte)_codec);
 
                 using (writer.MarkForLength()) { // messageset
                     writer.Write(0L); // offset
-                    using (writer.MarkForLength()) { // message
-                        using (writer.MarkForCrc()) {
-                            writer.Write(version) // message version
-                                  .Write((byte)_codec) // attribute
-                                  .Write(-1); // key  -- null, so -1 length
-                            using (writer.MarkForLength()) { // value
-                                var initialPosition = writer.Position;
-                                writer.WriteCompressed(messageSet, _codec);
-                                var compressedMessageLength = writer.Position - initialPosition;
-                                return messageSet.Count - compressedMessageLength;
-                            }
-                        }
+                    using (writer.MarkForLength()) { // message length
+                        return compressedMessage.WriteTo(writer, version, _codec);
                     }
                 }
             }

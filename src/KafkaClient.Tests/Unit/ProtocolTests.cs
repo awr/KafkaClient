@@ -34,7 +34,7 @@ namespace KafkaClient.Tests.Unit
 
             using (var writer = new KafkaWriter())
             {
-                testMessage.WriteTo(writer);
+                testMessage.WriteTo(writer, 0);
                 var encoded = writer.ToSegment(false);
                 encoded.Array[encoded.Offset] += 1;
                 using (var reader = new KafkaReader(encoded))
@@ -70,7 +70,7 @@ namespace KafkaClient.Tests.Unit
 
             using (var writer = new KafkaWriter())
             {
-                testMessage.WriteTo(writer);
+                testMessage.WriteTo(writer, 0);
                 var encoded = writer.ToSegment(false);
                 using (var reader = new KafkaReader(encoded))
                 {
@@ -102,8 +102,11 @@ namespace KafkaClient.Tests.Unit
 
             using (var writer = new KafkaWriter())
             {
-                writer.Write(messages);
+                var messageBatch = new Protocol.MessageBatch(messages);
+                messageBatch.WriteTo(writer, 0);
                 var result = writer.ToSegment(false);
+                // need to skip the int32 sized length
+                result = new ArraySegment<byte>(result.Array, result.Offset + 4, result.Count - 4);
                 Assert.AreEqual(expected, result);
             }
         }
@@ -153,7 +156,7 @@ namespace KafkaClient.Tests.Unit
                 writer.Write(0L);
                 using (writer.MarkForLength())
                 {
-                    new Message(expectedPayloadBytes, new ArraySegment<byte>(new byte[] { 0 }), 0, version: 0).WriteTo(writer);
+                    new Message(expectedPayloadBytes, new ArraySegment<byte>(new byte[] { 0 }), 0).WriteTo(writer, 0);
                 }
                 var segment = writer.ToSegment();
 
@@ -185,18 +188,17 @@ namespace KafkaClient.Tests.Unit
             }
             random.NextBytes(value);
 
-            var message = new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, version: version, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null);
+            var message = new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null);
             message.AssertEqualToSelf();
             message.AssertNotEqual(new Message[] { null });
-            message.AssertNotEqual(new Message(new ArraySegment<byte>(value, 1, valueLength - 1), message.Key, message.Attribute, message.Offset, message.MessageVersion, message.Timestamp));
+            message.AssertNotEqual(new Message(new ArraySegment<byte>(value, 1, valueLength - 1), message.Key, message.Attribute, message.Offset, message.Timestamp));
             if (keyLength > 0) {
-                message.AssertNotEqual(new Message(message.Value, new ArraySegment<byte>(key, 1, keyLength - 1), message.Attribute, message.Offset, message.MessageVersion, message.Timestamp));
+                message.AssertNotEqual(new Message(message.Value, new ArraySegment<byte>(key, 1, keyLength - 1), message.Attribute, message.Offset, message.Timestamp));
             }
-            message.AssertNotEqual(new Message(message.Value, message.Key, (byte)(message.Attribute + 1), message.Offset, message.MessageVersion, message.Timestamp));
-            message.AssertNotEqual(new Message(message.Value, message.Key, message.Attribute, message.Offset + 1L, message.MessageVersion, message.Timestamp));
-            message.AssertNotEqual(new Message(message.Value, message.Key, message.Attribute, message.Offset, (byte) (message.MessageVersion + 1), message.Timestamp));
+            message.AssertNotEqual(new Message(message.Value, message.Key, (byte)(message.Attribute + 1), message.Offset, message.Timestamp));
+            message.AssertNotEqual(new Message(message.Value, message.Key, message.Attribute, message.Offset + 1L, message.Timestamp));
             if (version > 0) {
-                message.AssertNotEqual(new Message(message.Value, message.Key, message.Attribute, message.Offset, message.MessageVersion, null));
+                message.AssertNotEqual(new Message(message.Value, message.Key, message.Attribute, message.Offset, null));
             }
         }
 
@@ -248,7 +250,7 @@ namespace KafkaClient.Tests.Unit
             }
             var request = new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeoutMilliseconds), acks, version >= 3 ? topicName : null);
             var requestWithUpdatedAttribute = new ProduceRequest(request.Topics.Select(t => new ProduceRequest.Topic(t.TopicName, t.PartitionId,
-                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)))),
+                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.Timestamp)))),
                 request.Timeout, request.Acks, request.TransactionalId);
 
             request.AssertCanEncodeDecodeRequest(version, forComparison: requestWithUpdatedAttribute);
@@ -436,7 +438,7 @@ namespace KafkaClient.Tests.Unit
             }
             var response = new FetchResponse(topics, version >= 1 ? TimeSpan.FromMilliseconds(throttleTime) : (TimeSpan?)null);
             var responseWithUpdatedAttribute = new FetchResponse(response.Responses.Select(t => new FetchResponse.Topic(t.TopicName, t.PartitionId, t.HighWatermark, t.Error, t.LastStableOffset, t.LogStartOffset,
-                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.MessageVersion, m.Timestamp)), t.AbortedTransactions)), 
+                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.Timestamp)), t.AbortedTransactions)), 
                 response.ThrottleTime);
 
             response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
@@ -3688,7 +3690,7 @@ namespace KafkaClient.Tests.Unit
             var first = true;
             foreach (var message in messages) {
                 if (first) {
-                    yield return new Message(message.Value, message.Key, message.Attribute, message.Offset + 1, message.MessageVersion, message.Timestamp);
+                    yield return new Message(message.Value, message.Key, message.Attribute, message.Offset + 1, message.Timestamp);
                     first = false;
                 }
                 yield return message;
@@ -3707,7 +3709,7 @@ namespace KafkaClient.Tests.Unit
                 }
                 random.NextBytes(value);
 
-                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, version: version, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null));
+                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null));
             }
             return messages;
         }

@@ -24,7 +24,7 @@ namespace KafkaClient.Protocol
     /// 
     /// Version 0-1:
     /// Message represents the data from a single event occurance.
-    /// Message => Crc MagicByte Attributes Key Value
+    /// Message => Crc MagicByte Attributes *Timestamp Key Value
     ///   Crc => int32
     ///   MagicByte => int8
     ///   Attributes => int8
@@ -41,57 +41,76 @@ namespace KafkaClient.Protocol
     ///   Key => bytes
     ///   Value => bytes
     /// 
+    /// Version 1 only: Timestamp
     /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Messagesets
     /// </remarks>>
     public class Message : IEquatable<Message>
     {
         public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
 
-        public void WriteTo(IKafkaWriter writer, byte version, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
+        public int WriteTo(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
         {
             // Record was introduced with version 2, and is significantly different from the Message approach (see above)
-            if (version >= 2) {
-                WriteRecord(writer);
-            } else {
-                WriteMessage(writer);
-            }
+            return version >= 2 
+                ? WriteRecord(writer, version, codec, firstOffset, firstTimestamp) 
+                : WriteMessage(writer, version, codec);
         }
 
-        private void WriteMessage(IKafkaWriter writer)
+        private int WriteMessage(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None)
         {
             using (writer.MarkForCrc()) {
-                writer.Write(MessageVersion)
-                      .Write((byte) 0);
-                if (MessageVersion >= 1) {
+                writer.Write(version)
+                      .Write((byte) codec);
+                if (version >= 1) {
                     writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
                 }
-                writer.Write(Key)
-                      .Write(Value);
+                writer.Write(Key);
+
+                if (codec == MessageCodec.None) {
+                    writer.Write(Value);
+                    return 0;
+                }
+                using (writer.MarkForLength()) {
+                    var initialPosition = writer.Position;
+                    writer.WriteCompressed(Value, codec);
+                    var compressedMessageLength = writer.Position - initialPosition;
+                    return Value.Count - compressedMessageLength;
+                }
             }
         }
 
-        private void WriteRecord(IKafkaWriter writer)
+        private int WriteRecord(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
         {
+            // TODO: lots of work needed here ...
             using (writer.MarkForCrc()) {
-                writer.Write(MessageVersion)
+                writer.Write(version)
                       .Write((byte) 0);
-                if (MessageVersion >= 1) {
+                if (version >= 1) {
                     writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
                 }
-                writer.Write(Key)
-                      .Write(Value);
+                writer.Write(Key);
+            }
+            if (codec == MessageCodec.None) {
+                writer.Write(Value);
+                return 0;
+            }
+            using (writer.MarkForLength()) {
+                var initialPosition = writer.Position;
+                writer.WriteCompressed(Value, codec);
+                var compressedMessageLength = writer.Position - initialPosition;
+                return Value.Count - compressedMessageLength;
             }
         }
-        public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null)
-            : this(value, EmptySegment, attribute, offset, version, timestamp)
+
+        public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)
+            : this(value, EmptySegment, attribute, offset, timestamp)
         {
         }
 
-        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null, IEnumerable<MessageHeader> headers = null)
+        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null, IEnumerable<MessageHeader> headers = null)
         {
             Offset = offset;
-            MessageVersion = version;
-            Attribute = (byte)(attribute & CodecMask);
+            Attribute = (byte)(attribute & MessageBatch.CodecMask);
             Key = key.Count > 0 ? key : EmptySegment;
             Value = value;
             Timestamp = timestamp;
@@ -124,12 +143,7 @@ namespace KafkaClient.Protocol
         ///              compressed message should have offset starting from 0 and increasing by one for each inner 
         ///              message in the compressed message.
         /// </summary>
-        public long? Offset { get; }
-
-        /// <summary>
-        /// This is a version id used to allow backwards compatible evolution of the message binary format.
-        /// </summary>
-        public byte MessageVersion { get; }
+        public long Offset { get; }
 
         /// <summary>
         /// Attribute value outside message body used for added codec/compression info.
@@ -139,11 +153,6 @@ namespace KafkaClient.Protocol
         /// All other bits should be set to 0.
         /// </summary>
         public byte Attribute { get; }
-
-        /// <summary>
-        ///  The lowest 2 bits contain the compression codec used for the message. The other bits should be set to 0.
-        /// </summary>
-        public const byte CodecMask = 0x3;
 
         /// <summary>
         /// Key value used for routing message to partitions.
@@ -180,7 +189,6 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Offset == other.Offset 
-                && MessageVersion == other.MessageVersion 
                 && Attribute == other.Attribute 
                 && Key.HasEqualElementsInOrder(other.Key)
                 && Value.HasEqualElementsInOrder(other.Value) 
@@ -193,7 +201,6 @@ namespace KafkaClient.Protocol
         {
             unchecked {
                 var hashCode = Offset.GetHashCode();
-                hashCode = (hashCode*397) ^ MessageVersion.GetHashCode();
                 hashCode = (hashCode*397) ^ Attribute.GetHashCode();
                 hashCode = (hashCode*397) ^ Key.Count.GetHashCode();
                 hashCode = (hashCode*397) ^ Value.Count.GetHashCode();

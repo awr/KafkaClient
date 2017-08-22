@@ -768,6 +768,14 @@ namespace KafkaClient.Testing
             if (context.ApiVersion >= 1) {
                 writer.WriteMilliseconds(response.ThrottleTime);
             }
+            byte messageVersion = 0;
+            if (context.ApiVersion >= 2) {
+                if (context.ApiVersion >= 5) {
+                    messageVersion = 2;
+                } else {
+                    messageVersion = 1;
+                }
+            }
             var groupedTopics = response.Responses.GroupBy(t => t.TopicName).ToList();
             writer.Write(groupedTopics.Count);
             foreach (var topic in groupedTopics) {
@@ -794,12 +802,12 @@ namespace KafkaClient.Testing
 
                     if (partition.Messages.Count > 0) {
                         // assume all are the same codec
-                        var codec = (MessageCodec) (partition.Messages[0].Attribute & Message.CodecMask);
-                        writer.Write(partition.Messages, codec);
+                        var codec = (MessageCodec) (partition.Messages[0].Attribute & Protocol.MessageBatch.CodecMask);
+                        var messageBatch = new Protocol.MessageBatch(partition.Messages, codec);
+                        messageBatch.WriteTo(writer, messageVersion);
                     } else {
-                        using (writer.MarkForLength()) {
-                            writer.Write(partition.Messages);
-                        }
+                        var messageBatch = new Protocol.MessageBatch(partition.Messages);
+                        messageBatch.WriteTo(writer, messageVersion);
                     }
                 }
             }

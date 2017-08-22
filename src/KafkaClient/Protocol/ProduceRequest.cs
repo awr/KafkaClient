@@ -46,13 +46,24 @@ namespace KafkaClient.Protocol
                     .WriteMilliseconds(Timeout)
                     .Write(groupedPayloads.Count);
 
+            byte version = 0;
+            if (context.ApiVersion >= 2) {
+                if (context.ApiVersion >= 3) {
+                    version = 2;
+                } else {
+                    version = 1;
+                }
+            }
+
             foreach (var groupedPayload in groupedPayloads) {
                 var topics = groupedPayload.ToList();
                 writer.Write(groupedPayload.Key.topic)
                         .Write(topics.Count)
                         .Write(groupedPayload.Key.partition_id);
 
-                var compressedBytes = writer.Write(topics.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
+                // TODO: Add Txn related stuff to the context (?)
+                var messageBatch = new MessageBatch(topics.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
+                var compressedBytes = messageBatch.WriteTo(writer, version);
                 Interlocked.Add(ref totalCompressedBytes, compressedBytes);
             }
 

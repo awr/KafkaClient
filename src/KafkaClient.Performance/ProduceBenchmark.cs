@@ -24,8 +24,6 @@ namespace KafkaClient.Performance
 
         public short Version { get; } = 0;
 
-        public byte MessageVersion { get; } = 0;
-
         private ProduceRequest _request;
 
         [GlobalSetup]
@@ -38,7 +36,7 @@ namespace KafkaClient.Performance
                                       "topic", 
                                       partitionId, 
                                       Enumerable.Range(1, Messages)
-                                                .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec, version: MessageVersion)), 
+                                                .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec)), 
                                       Codec)));
         }
 

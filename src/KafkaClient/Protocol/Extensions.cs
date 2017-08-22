@@ -119,48 +119,6 @@ namespace KafkaClient.Protocol
             return writer;
         }
 
-        public static IKafkaWriter Write(this IKafkaWriter writer, IEnumerable<Message> messages)
-        {
-            foreach (var message in messages) {
-                writer.Write(0L);
-                using (writer.MarkForLength()) {
-                    message.WriteTo(writer);
-                }
-            }
-            return writer;
-        }
-
-        public static int Write(this IKafkaWriter writer, IEnumerable<Message> messages, MessageCodec codec)
-        {
-            if (codec == MessageCodec.None) {
-                using (writer.MarkForLength()) {
-                    writer.Write(messages);
-                }
-                return 0;
-            }
-            using (var messageWriter = new KafkaWriter()) {
-                messageWriter.Write(messages);
-                var messageSet = messageWriter.ToSegment(false);
-
-                using (writer.MarkForLength()) { // messageset
-                    writer.Write(0L); // offset
-                    using (writer.MarkForLength()) { // message
-                        using (writer.MarkForCrc()) {
-                            writer.Write((byte)0) // message version
-                                    .Write((byte)codec) // attribute
-                                    .Write(-1); // key  -- null, so -1 length
-                            using (writer.MarkForLength()) { // value
-                                var initialPosition = writer.Position;
-                                writer.WriteCompressed(messageSet, codec);
-                                var compressedMessageLength = writer.Position - initialPosition;
-                                return messageSet.Count - compressedMessageLength;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         public static IKafkaWriter WriteGroupedTopics<T>(this IKafkaWriter writer, IEnumerable<T> topics, Action<T> partitionWriter = null) where T : TopicPartition
         {
             var groupedTopics = topics.GroupBy(t => t.TopicName).ToList();
@@ -244,9 +202,9 @@ namespace KafkaClient.Protocol
             var key = reader.ReadBytes();
             var value = reader.ReadBytes();
 
-            var codec = (MessageCodec)(Message.CodecMask & attribute);
+            var codec = (MessageCodec)(MessageBatch.CodecMask & attribute);
             if (codec == MessageCodec.None) {
-                return ImmutableList<Message>.Empty.Add(new Message(value, key, attribute, offset, messageVersion, timestamp));
+                return ImmutableList<Message>.Empty.Add(new Message(value, key, attribute, offset, timestamp));
             }
             var uncompressedBytes = value.ToUncompressed(codec);
             using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
