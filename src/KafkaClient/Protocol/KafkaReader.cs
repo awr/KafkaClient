@@ -55,12 +55,12 @@ namespace KafkaClient.Protocol
             return ToSegment(2).ToInt16();
         }
 
-        public int ReadInt32()
+        public int ReadInt32(bool varint = false)
         {
             return ToSegment(4).ToInt32();
         }
 
-        public long ReadInt64()
+        public long ReadInt64(bool varint = false)
         {
             return ToSegment(8).ToInt64();
         }
@@ -70,7 +70,7 @@ namespace KafkaClient.Protocol
             return ToSegment(4).ToUInt32();
         }
 
-        public string ReadString()
+        public string ReadString(bool varint = false)
         {
             var size = ReadInt16();
             if (size == KafkaNullSize) return null;
@@ -80,7 +80,7 @@ namespace KafkaClient.Protocol
             return result;
         }
 
-        public ArraySegment<byte> ReadBytes()
+        public ArraySegment<byte> ReadBytes(bool varint = false)
         {
             var size = ReadInt32();
             if (size == KafkaNullSize) { return EmptySegment; }
@@ -89,7 +89,7 @@ namespace KafkaClient.Protocol
             return result;
         }
 
-        public uint ReadCrc(int count)
+        public uint ReadCrc(int count, bool castagnoli = false)
         {
             if (count < 0) throw new EndOfStreamException();
 

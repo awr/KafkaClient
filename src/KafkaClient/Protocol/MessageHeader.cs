@@ -34,9 +34,9 @@ namespace KafkaClient.Protocol
 
         public bool Equals(MessageHeader other)
         {
-            if (Object.ReferenceEquals(null, other)) return false;
-            if (Object.ReferenceEquals(this, other)) return true;
-            return string.Equals((string) Key, (string) other.Key) 
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return string.Equals(Key, other.Key) 
                 && Value.Equals(other.Value);
         }
 

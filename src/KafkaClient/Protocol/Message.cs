@@ -81,25 +81,32 @@ namespace KafkaClient.Protocol
 
         private int WriteRecord(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
         {
-            // TODO: lots of work needed here ...
-            using (writer.MarkForCrc()) {
-                writer.Write(version)
-                      .Write((byte) 0);
-                if (version >= 1) {
-                    writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
+            var timestampDelta = firstTimestamp.HasValue && Timestamp.HasValue
+                ? (long) Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds
+                : 0L;
+
+            var compressionAmount = 0;
+            using (writer.MarkForLength(varint: true)) {
+                writer.Write((byte) 0) // attributes
+                      .Write(timestampDelta, varint: true)
+                      .Write(Math.Max(0L, Offset - firstOffset), varint: true)
+                      .Write(Key, varint: true);
+                if (codec == MessageCodec.None) {
+                    writer.Write(Value, varint: true);
                 }
-                writer.Write(Key);
+                using (writer.MarkForLength(varint: true)) {
+                    var initialPosition = writer.Position;
+                    writer.WriteCompressed(Value, codec);
+                    var compressedMessageLength = writer.Position - initialPosition;
+                    compressionAmount = Value.Count - compressedMessageLength;
+                }
+                writer.Write(Headers.Count); // TODO: varint length (?)
+                foreach (var header in Headers) {
+                    writer.Write(header.Key, varint: true)
+                          .Write(header.Value, varint: true);
+                }
             }
-            if (codec == MessageCodec.None) {
-                writer.Write(Value);
-                return 0;
-            }
-            using (writer.MarkForLength()) {
-                var initialPosition = writer.Position;
-                writer.WriteCompressed(Value, codec);
-                var compressedMessageLength = writer.Position - initialPosition;
-                return Value.Count - compressedMessageLength;
-            }
+            return compressionAmount;
         }
 
         public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)

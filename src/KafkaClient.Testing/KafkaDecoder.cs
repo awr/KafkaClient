@@ -139,9 +139,9 @@ namespace KafkaClient.Testing
                     var partitionCount = reader.ReadInt32();
                     for (var j = 0; j < partitionCount; j++) {
                         var partitionId = reader.ReadInt32();
-                        var messages = reader.ReadMessages();
+                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader);
 
-                        payloads.Add(new ProduceRequest.Topic(topicName, partitionId, messages));
+                        payloads.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
                     }
                 }
                 return new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeout), acks, transaction_id);
@@ -422,7 +422,7 @@ namespace KafkaClient.Testing
                     for (var a = 0; a < assignments.Length; a++) {
                         var partitionId = reader.ReadInt32();
                         var replicaCount = reader.ReadInt32();
-                        var replicas = replicaCount.Repeat(reader.ReadInt32).ToArray();
+                        var replicas = replicaCount.Repeat(() => reader.ReadInt32()).ToArray();
                         assignments[a] = new CreateTopicsRequest.ReplicaAssignment(partitionId, replicas);
                     }
 

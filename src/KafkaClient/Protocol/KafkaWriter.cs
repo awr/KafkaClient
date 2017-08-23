@@ -45,13 +45,13 @@ namespace KafkaClient.Protocol
             return this;
         }
 
-        public IKafkaWriter Write(long value)
+        public IKafkaWriter Write(long value, bool varint = false)
         {
             _stream.Write(value.ToBytes(), 0, 8);
             return this;
         }
 
-        public IKafkaWriter Write(ArraySegment<byte> value, bool includeLength = true)
+        public IKafkaWriter Write(ArraySegment<byte> value, bool includeLength = true, bool varint = false)
         {
             if (value.Count == 0) {
                 if (includeLength) {
@@ -67,7 +67,7 @@ namespace KafkaClient.Protocol
             return this;
         }
 
-        public IKafkaWriter Write(string value)
+        public IKafkaWriter Write(string value, bool varint = false)
         {
             if (value == null) {
                 Write((short)-1);
@@ -123,14 +123,14 @@ namespace KafkaClient.Protocol
             Write(crc);            
         }
 
-        public IDisposable MarkForLength()
+        public IDisposable MarkForLength(bool varint = false)
         {
             var markerPosition = (int)_stream.Position;
             _stream.Seek(Request.IntegerByteSize, SeekOrigin.Current); //pre-allocate space for marker
             return new WriteAt(this, WriteLength, markerPosition);
         }
 
-        public IDisposable MarkForCrc()
+        public IDisposable MarkForCrc(bool castagnoli = false)
         {
             var markerPosition = (int)_stream.Position;
             _stream.Seek(Request.IntegerByteSize, SeekOrigin.Current); //pre-allocate space for marker

@@ -10,12 +10,12 @@ namespace KafkaClient.Protocol
         IKafkaWriter Write(short value);
         IKafkaWriter Write(int value);
         IKafkaWriter Write(uint value);
-        IKafkaWriter Write(long value);
-        IKafkaWriter Write(string value);
-        IKafkaWriter Write(ArraySegment<byte> value, bool includeLength = true);
+        IKafkaWriter Write(long value, bool varint = false);
+        IKafkaWriter Write(string value, bool varint = false);
+        IKafkaWriter Write(ArraySegment<byte> value, bool includeLength = true, bool varint = false);
 
-        IDisposable MarkForLength();
-        IDisposable MarkForCrc();
+        IDisposable MarkForLength(bool varint = false);
+        IDisposable MarkForCrc(bool castagnoli = false);
 
         ArraySegment<byte> ToSegment(bool includeLength = true);
         int Position { get; }

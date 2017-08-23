@@ -84,10 +84,10 @@ namespace KafkaClient.Protocol
                         var leaderId = reader.ReadInt32();
 
                         var replicaCount = reader.ReadInt32();
-                        var replicas = replicaCount.Repeat(reader.ReadInt32).ToArray();
+                        var replicas = replicaCount.Repeat(() => reader.ReadInt32()).ToArray();
 
                         var isrCount = reader.ReadInt32();
-                        var isrs = isrCount.Repeat(reader.ReadInt32).ToArray();
+                        var isrs = isrCount.Repeat(() => reader.ReadInt32()).ToArray();
 
                         partitions[p] = new Partition(partitionId, leaderId, partitionError, replicas, isrs);
 
