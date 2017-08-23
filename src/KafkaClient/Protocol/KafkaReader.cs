@@ -94,7 +94,7 @@ namespace KafkaClient.Protocol
             if (count < 0) throw new EndOfStreamException();
 
             var segment = ToSegment(count, false);
-            return Crc32.Compute(segment);
+            return Crc32.Compute(segment, castagnoli);
         }
 
         private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);

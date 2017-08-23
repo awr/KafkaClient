@@ -14,33 +14,35 @@ namespace KafkaClient.Common
     /// </summary>
     public static class Crc32
     {
-        private const uint DefaultPolynomial = 0xedb88320u;
         private const uint DefaultSeed = 0xffffffffu;
         private static readonly uint[] PolynomialTable;
+        private static readonly uint[] CastagnoliTable;
 
         static Crc32()
         {
-            PolynomialTable = InitializeTable();
+            PolynomialTable = InitializeTable(BitConverter.IsLittleEndian ? 0xedb88320u : 0x04C11DB7);
+            CastagnoliTable = InitializeTable(BitConverter.IsLittleEndian ? 0x82F63B78 : 0x1EDC6F41);
         }
 
-        public static uint Compute(ArraySegment<byte> bytes)
+        public static uint Compute(ArraySegment<byte> bytes, bool castagnoli = false)
         {
             var crc = DefaultSeed;
+            var table = castagnoli ? CastagnoliTable : PolynomialTable;
             var max = bytes.Offset + bytes.Count;
             for (var i = bytes.Offset; i < max; i++) {
-                crc = (crc >> 8) ^ PolynomialTable[bytes.Array[i] ^ crc & 0xff];
+                crc = (crc >> 8) ^ table[bytes.Array[i] ^ crc & 0xff];
             }
             return ~crc;
         }
 
-        private static uint[] InitializeTable()
+        private static uint[] InitializeTable(uint defaultPolynomial)
         {
             var table = new uint[256];
             for (var i = 0; i < 256; i++) {
                 var entry = (uint)i;
                 for (var j = 0; j < 8; j++) {
                     if ((entry & 1) == 1) {
-                        entry = (entry >> 1) ^ DefaultPolynomial;
+                        entry = (entry >> 1) ^ defaultPolynomial;
                     } else {
                         entry = entry >> 1;
                     }

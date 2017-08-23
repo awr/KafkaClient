@@ -194,7 +194,7 @@ namespace KafkaClient.Protocol
             var crcHash = reader.ReadCrc(length - 4);
             var version = reader.ReadByte();
 
-            return (offset, length, crc, version, crcHash, expectedLength - 17);
+            return (offset, length - 5, crc, version, crcHash, expectedLength - 17);
         }
 
         private static MessageBatch ReadRecordBatchFrom(IKafkaReader reader, long firstOffset, int length, int partitionLeaderEpoch, byte version)
@@ -261,15 +261,6 @@ namespace KafkaClient.Protocol
         {
             var messages = new List<Message>();
             while (reader.Position < finalPosition) {
-                //if (!offset.HasValue) {
-                //    if (reader.HasBytes(12)) break;
-                //    offset = reader.ReadInt64();
-                //}
-                //if (!length.HasValue) {
-                //    // Won't have offset but not length
-                //    length = reader.ReadInt32();
-                //}
-
                 // if the stream does not have enough left in the payload, we got only a partial message
                 if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Message size of {length} is not fully available (codec {codec}).");
 
@@ -288,18 +279,8 @@ namespace KafkaClient.Protocol
         /// <remarks>The return type is an Enumerable as the message could be a compressed message set.</remarks>
         private static IEnumerable<Message> ReadMessage(IKafkaReader reader, long offset, uint crc, uint crcHash, byte version)
         {
-            //if (!crc.HasValue) {
-            //    crc = reader.ReadUInt32();
-            //}
-            //if (!crcHash.HasValue) {
-            //    crcHash = reader.ReadCrc(length - 4);    
-            //}
-            
             if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
 
-            //if (!version.HasValue) {
-            //    version = reader.ReadByte();
-            //}
             var attribute = reader.ReadByte();
             DateTimeOffset? timestamp = null;
             if (version >= 1) {
