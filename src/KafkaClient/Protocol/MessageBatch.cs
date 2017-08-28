@@ -59,7 +59,7 @@ namespace KafkaClient.Protocol
             {
                 messageWriter.Write(Messages.Count);
                 foreach (var message in Messages) {
-                    message.WriteTo(messageWriter, version, _codec, firstOffset, timestamp);
+                    message.WriteTo(messageWriter, version, MessageCodec.None, firstOffset, timestamp);
                 }
             }
 
@@ -86,13 +86,79 @@ namespace KafkaClient.Protocol
                     using (var messageWriter = new KafkaWriter()) {
                         WriteUncompressedTo(messageWriter);
                         var recordsValue = messageWriter.ToSegment(false);
-                        var compressedMessage = new Message(recordsValue, (byte)_codec, firstOffset);
+                        var compressedMessage = new Message(recordsValue, 0, firstOffset);
 
                         writer.Write(1); // record count = 1 for compressed set
-                        return compressedMessage.WriteTo(writer, version, _codec);
+                        return compressedMessage.WriteTo(writer, version, _codec);   // TODO: add fixed overhead Record structure
                     }                    
                 }
             }
+        }
+
+        private static MessageBatch ReadRecordBatchFrom(IKafkaReader reader)
+        {
+            var firstOffset = reader.ReadInt64();
+            var length = reader.ReadInt32();
+            var partitionLeaderEpoch = reader.ReadInt32();
+            var version = reader.ReadByte();
+
+            var crc = reader.ReadUInt32();
+            var crcHash = reader.ReadCrc(length - 9, castagnoli: true);
+            if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
+
+            var attributes = reader.ReadInt16();
+            var lastOffsetDelta = reader.ReadInt32();
+            var firstTimestampMilliseconds = reader.ReadInt64();
+            var maxTimestamp = reader.ReadInt64();
+            var producerId = reader.ReadInt64();
+            var producerEpoch = reader.ReadInt16();
+            var firstSequence = reader.ReadInt32();
+
+            var firstTimestamp = firstTimestampMilliseconds >= 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(firstTimestampMilliseconds) : null;
+            var codec = (MessageCodec) (attributes & CodecMask);
+            var messages = ReadRecords(reader, firstOffset, firstTimestamp, codec);
+
+            return new MessageBatch(messages, codec, producerId, producerEpoch, firstSequence);
+        }
+
+        private static IEnumerable<Message> ReadRecords(IKafkaReader reader, long firstOffset, DateTimeOffset? firstTimestamp, MessageCodec codec)
+        {
+            var messages = new List<Message>();
+            var messageCount = reader.ReadInt32();
+
+            for (var m = 0; m < messageCount; m++) {
+                var length = reader.ReadInt32(varint: true);
+                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {codec}).");
+
+                var attribute = reader.ReadByte();
+                var timestampDelta = reader.ReadInt64(varint: true);
+                var offsetDelta = reader.ReadInt64(varint: true);
+                var key = reader.ReadBytes(varint: true);
+                var value = reader.ReadBytes(varint: true);
+
+                MessageHeader[] headers = null;
+                var headerCount = reader.ReadInt32();
+                if (headerCount > 0) {
+                    headers = new MessageHeader[headerCount];
+                    for (var h = 0; h < headerCount; h++) {
+                        var headerKey = reader.ReadString(varint: true);
+                        var headerValue = reader.ReadBytes(varint: true);
+                        headers[h] = new MessageHeader(headerKey, headerValue);
+                    }
+                }
+
+                var timestamp = firstTimestamp?.Add(TimeSpan.FromMilliseconds(timestampDelta));
+
+                if (codec == MessageCodec.None) {
+                    messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestamp, headers));
+                } else {
+                    var uncompressedBytes = value.ToUncompressed(codec);
+                    using (var messageRecordsReader = new KafkaReader(uncompressedBytes)) {
+                        messages.AddRange(ReadRecords(messageRecordsReader, firstOffset, firstTimestamp, MessageCodec.None));
+                    }
+                }
+            }
+            return messages;
         }
 
         private (long firstOffset, short attributes, int lastOffsetDelta, long firstTimestamp, long maxTimestamp) HarvestRecordBatchDetails(out DateTimeOffset? timestamp)
@@ -136,47 +202,14 @@ namespace KafkaClient.Protocol
             return (firstOffset, attributes, lastOffsetDelta, firstTimestamp, maxTimestamp);
         }
 
-        private int WriteMessageSetTo(IKafkaWriter writer, byte version)
-        {
-            void WriteUncompressedTo(IKafkaWriter messageWriter)
-            {
-                foreach (var message in Messages) {
-                    messageWriter.Write(0L); // offset does not increase, even though docs claim it does ...
-                    using (messageWriter.MarkForLength()) { // message length
-                        message.WriteTo(messageWriter, version);
-                    }
-                }
-            }
-
-            if (_codec == MessageCodec.None) {
-                using (writer.MarkForLength()) {
-                    WriteUncompressedTo(writer);
-                }
-                return 0;
-            }
-            using (var messageWriter = new KafkaWriter()) {
-                WriteUncompressedTo(messageWriter);
-                var messageSet = messageWriter.ToSegment(false);
-                var compressedMessage = new Message(messageSet, (byte)_codec);
-
-                using (writer.MarkForLength()) { // messageset
-                    writer.Write(0L); // offset
-                    using (writer.MarkForLength()) { // message length
-                        return compressedMessage.WriteTo(writer, version, _codec);
-                    }
-                }
-            }
-        }
-
         private const int MessageSetVersionOffset = 16;
 
         /// <summary>
         /// Decode a byte[] that represents a batch of messages.
         /// </summary>
-        public static MessageBatch ReadFrom(IKafkaReader reader)
+        public static MessageBatch ReadFrom(IKafkaReader reader, int? length = null)
         {
-            var expectedLength = reader.ReadInt32(); // MessageSet size
-            if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not fully available.");
+            if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set is missing version information.");
 
             reader.Position += MessageSetVersionOffset;
             var version = reader.ReadByte();
@@ -185,90 +218,52 @@ namespace KafkaClient.Protocol
             if (version >= 2) {
                 return ReadRecordBatchFrom(reader);
             } else {
-                var messages = ReadMessageSetFrom(reader, MessageCodec.None, reader.Position + expectedLength);
+                var messages = ReadMessageSetFrom(reader, MessageCodec.None, (reader.Position - 4) + length.Value);
                 return new MessageBatch(messages);
             }
         }
 
-        private static MessageBatch ReadRecordBatchFrom(IKafkaReader reader)
+        private int WriteMessageSetTo(IKafkaWriter writer, byte version)
         {
-            var firstOffset = reader.ReadInt64();
-            var length = reader.ReadInt32();
-            var partitionLeaderEpoch = reader.ReadInt32();
-            var version = reader.ReadByte();
-
-            var crc = reader.ReadUInt32();
-            var crcHash = reader.ReadCrc(length - 9, castagnoli: true);
-            if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
-
-            var attributes = reader.ReadInt16();
-            var lastOffsetDelta = reader.ReadInt32();
-            var firstTimestampMilliseconds = reader.ReadInt64();
-            var maxTimestamp = reader.ReadInt64();
-            var producerId = reader.ReadInt64();
-            var producerEpoch = reader.ReadInt16();
-            var firstSequence = reader.ReadInt32();
-
-            var firstTimestamp = firstTimestampMilliseconds >= 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(firstTimestampMilliseconds) : null;
-            var codec = (MessageCodec) (attributes & CodecMask);
-            var messages = ReadRecords(reader, firstOffset, firstTimestamp, codec);
-
-            return new MessageBatch(messages, codec, producerId, producerEpoch, firstSequence);
-        }
-
-        private static IEnumerable<Message> ReadRecords(IKafkaReader reader, long firstOffset, DateTimeOffset? firstTimestamp, MessageCodec codec)
-        {
-            var messages = new List<Message>();
-            var messageCount = reader.ReadInt32();
-
-            for (var m = 0; m < messageCount; m++) {
-                var length = reader.ReadInt32(varint: true);
-                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {codec}).");
-                var attribute = reader.ReadByte();
-                var timestampDelta = reader.ReadInt64(varint: true);
-                var offsetDelta = reader.ReadInt64(varint: true);
-                var key = reader.ReadBytes(varint: true);
-                var value = reader.ReadBytes(varint: true);
-
-                MessageHeader[] headers = null;
-                var headerCount = reader.ReadInt32();
-                if (headerCount > 0) {
-                    headers = new MessageHeader[headerCount];
-                    for (var h = 0; h < headerCount; h++) {
-                        var headerKey = reader.ReadString(varint: true);
-                        var headerValue = reader.ReadBytes(varint: true);
-                        headers[h] = new MessageHeader(headerKey, headerValue);
-                    }
-                }
-
-                var timestamp = firstTimestamp?.Add(TimeSpan.FromMilliseconds(timestampDelta));
-
-                if (codec == MessageCodec.None) {
-                    messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestamp, headers));
-                } else {
-                    var uncompressedBytes = value.ToUncompressed(codec);
-                    using (var messageRecordsReader = new KafkaReader(uncompressedBytes)) {
-                        messages.AddRange(ReadRecords(messageRecordsReader, firstOffset, firstTimestamp, MessageCodec.None));
+            void WriteUncompressedTo(IKafkaWriter messageWriter)
+            {
+                var offset = 0L;
+                foreach (var message in Messages) {
+                    messageWriter.Write(offset); // offset does not increase, even though docs claim it does ...
+                    using (messageWriter.MarkForLength()) { // message length
+                        message.WriteTo(messageWriter, version);
                     }
                 }
             }
-            return messages;
+
+            if (_codec == MessageCodec.None) {
+                WriteUncompressedTo(writer);
+                return 0;
+            }
+            using (var messageWriter = new KafkaWriter()) {
+                WriteUncompressedTo(messageWriter);
+                var messageSet = messageWriter.ToSegment(false);
+                var compressedMessage = new Message(messageSet, (byte)_codec);
+
+                writer.Write(0L); // offset
+                using (writer.MarkForLength()) { // message length
+                    return compressedMessage.WriteTo(writer, version, _codec);   // TODO: add fixed overhead MessageSet structure
+                }
+            }
         }
 
-        private const int MessageHeaderSize = 12;
-
-        private static IEnumerable<Message> ReadMessageSetFrom(IKafkaReader reader, MessageCodec codec, long finalPosition)
+        private static IEnumerable<Message> ReadMessageSetFrom(IKafkaReader reader, MessageCodec codec, int finalPosition)
         {
             var messages = new List<Message>();
+            // this checks that we have at least the minimum amount of data to retrieve a MessageSet header
             while (reader.Position < finalPosition) {
-                // this checks that we have at least the minimum amount of data to retrieve a header
-                if (!reader.HasBytes(MessageHeaderSize)) break;
-                var offset = reader.ReadInt64();
-                var length = reader.ReadInt32();
-
+                int? length = null;
                 try {
+                    var offset = reader.ReadInt64();
+                    length = reader.ReadInt32();
+
                     var crc = reader.ReadUInt32();
-                    var crcHash = reader.ReadCrc(length - 4);
+                    var crcHash = reader.ReadCrc(length.Value - 4);
                     if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
 
                     var version = reader.ReadByte();
@@ -289,10 +284,7 @@ namespace KafkaClient.Protocol
                     } else {
                         var uncompressedBytes = value.ToUncompressed(codec);
                         using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
-                            var expectedLength = messageSetReader.ReadInt32(); // MessageSet size
-                            if (!messageSetReader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not available (codec {codec}).");
-
-                            messages.AddRange(ReadMessageSetFrom(messageSetReader, codec, expectedLength));
+                            messages.AddRange(ReadMessageSetFrom(messageSetReader, codec, uncompressedBytes.Count));
                         }
                     }
                 } catch (EndOfStreamException ex) {

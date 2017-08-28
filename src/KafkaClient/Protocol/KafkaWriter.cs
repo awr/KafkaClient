@@ -109,7 +109,7 @@ namespace KafkaClient.Protocol
             Write(length);
         }
 
-        private void WriteCrc(int offset)
+        private void WriteCrc(int offset, bool castagnoli = false)
         {
             uint crc;
             var computeFrom = offset + Request.IntegerByteSize;
@@ -118,7 +118,7 @@ namespace KafkaClient.Protocol
                 throw new NotSupportedException();
             }
 
-            crc = Crc32.Compute(segment.Skip(computeFrom));
+            crc = Crc32.Compute(segment.Skip(computeFrom), castagnoli);
             _stream.Position = offset;
             Write(crc);            
         }
@@ -134,7 +134,7 @@ namespace KafkaClient.Protocol
         {
             var markerPosition = (int)_stream.Position;
             _stream.Seek(Request.IntegerByteSize, SeekOrigin.Current); //pre-allocate space for marker
-            return new WriteAt(this, WriteCrc, markerPosition);
+            return new WriteAt(this, offset => WriteCrc(offset, castagnoli), markerPosition);
         }
 
         private class WriteAt : IDisposable

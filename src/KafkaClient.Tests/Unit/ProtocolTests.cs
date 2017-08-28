@@ -37,10 +37,10 @@ namespace KafkaClient.Tests.Unit
                     message.WriteTo(writer, 0);
                 }
                 var encoded = writer.ToSegment(true);
-                encoded.Array[encoded.Offset + 16] += 1;
-                using (var reader = new KafkaReader(encoded))
-                {
-                    Assert.Throws<CrcValidationException>(() => Protocol.MessageBatch.ReadFrom(reader));
+                encoded.Array[encoded.Offset + 20] += 1;
+                using (var reader = new KafkaReader(encoded)) {
+                    var length = reader.ReadInt32();
+                    Assert.Throws<CrcValidationException>(() => Protocol.MessageBatch.ReadFrom(reader, length));
                 }
             }
         }
@@ -73,7 +73,7 @@ namespace KafkaClient.Tests.Unit
                 batch.WriteTo(writer, version);
                 var encoded = writer.ToSegment(false);
                 using (var reader = new KafkaReader(encoded)) {
-                    var result = Protocol.MessageBatch.ReadFrom(reader).Messages.First();
+                    var result = Protocol.MessageBatch.ReadFrom(reader, encoded.Count).Messages.First();
 
                     Assert.AreEqual(message.Key, result.Key);
                     Assert.AreEqual(message.Value, result.Value);
@@ -104,8 +104,6 @@ namespace KafkaClient.Tests.Unit
                 var messageBatch = new Protocol.MessageBatch(messages);
                 messageBatch.WriteTo(writer, 0);
                 var result = writer.ToSegment(false);
-                // need to skip the int32 sized length
-                result = new ArraySegment<byte>(result.Array, result.Offset + 4, result.Count - 4);
                 Assert.AreEqual(expected, result);
             }
         }
@@ -113,10 +111,10 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void DecodeMessageSetShouldHandleResponseWithMaxBufferSizeHit()
         {
-            using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow))
-            {
+            using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow)) {
+                var messageSetSize = reader.ReadInt32();
                 //This message set has a truncated message bytes at the end of it
-                var result = Protocol.MessageBatch.ReadFrom(reader);
+                var result = Protocol.MessageBatch.ReadFrom(reader, messageSetSize);
 
                 var message = result.Messages.First().Value.ToUtf8String();
 
@@ -136,11 +134,11 @@ namespace KafkaClient.Tests.Unit
                 writer.Write(0L)
                        .Write(messageSize)
                        .Write(new ArraySegment<byte>(message));
-                var segment = writer.ToSegment();
+                var segment = writer.ToSegment(false);
                 using (var reader = new KafkaReader(segment))
                 {
                     // act/assert
-                    Assert.Throws<BufferUnderRunException>(() => Protocol.MessageBatch.ReadFrom(reader));
+                    Assert.Throws<BufferUnderRunException>(() => Protocol.MessageBatch.ReadFrom(reader, segment.Count));
                 }
             }
         }
@@ -157,11 +155,11 @@ namespace KafkaClient.Tests.Unit
                 {
                     new Message(expectedPayloadBytes, new ArraySegment<byte>(new byte[] { 0 }), 0).WriteTo(writer, 0);
                 }
-                var segment = writer.ToSegment();
+                var segment = writer.ToSegment(false);
 
                 // act/assert
                 using (var reader = new KafkaReader(segment)) {
-                    var batch = Protocol.MessageBatch.ReadFrom(reader);
+                    var batch = Protocol.MessageBatch.ReadFrom(reader, segment.Count);
                     var messages = batch.Messages;
                     var actualPayload = messages.First().Value;
 
@@ -174,7 +172,7 @@ namespace KafkaClient.Tests.Unit
 
         [Test]
         public void MessageEquality(
-            [Values(0, 1)] byte version,
+            [Values(0, 1, 2)] byte version,
             [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec,
             [Values(1, 10)] int valueLength,
             [Values(0, 1, 10)] int keyLength)

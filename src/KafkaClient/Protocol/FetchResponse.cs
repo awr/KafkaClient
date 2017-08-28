@@ -65,7 +65,12 @@ namespace KafkaClient.Protocol
                                 transactions.Add(new AbortedTransaction(producerId, firstOffset));
                             }
                         }
-                        var messageBatch = MessageBatch.ReadFrom(reader);
+
+                        int? messageSetLength = null;
+                        if (context.ApiVersion < 5) {
+                            messageSetLength = reader.ReadInt32();
+                        }
+                        var messageBatch = MessageBatch.ReadFrom(reader, messageSetLength);
                         topics.Add(new Topic(topicName, partitionId, highWaterMarkOffset, errorCode, lastStableOffset, logStartOffset, messageBatch.Messages, transactions));
                     }
                 }

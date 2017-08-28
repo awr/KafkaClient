@@ -139,7 +139,8 @@ namespace KafkaClient.Testing
                     var partitionCount = reader.ReadInt32();
                     for (var j = 0; j < partitionCount; j++) {
                         var partitionId = reader.ReadInt32();
-                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader);
+                        var messageSetSize = reader.ReadInt32();
+                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader, messageSetSize);
 
                         payloads.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
                     }
@@ -800,14 +801,19 @@ namespace KafkaClient.Testing
                         }
                     }
 
-                    if (partition.Messages.Count > 0) {
-                        // assume all are the same codec
-                        var codec = (MessageCodec) (partition.Messages[0].Attribute & Protocol.MessageBatch.CodecMask);
-                        var messageBatch = new Protocol.MessageBatch(partition.Messages, codec);
-                        messageBatch.WriteTo(writer, messageVersion);
-                    } else {
-                        var messageBatch = new Protocol.MessageBatch(partition.Messages);
-                        messageBatch.WriteTo(writer, messageVersion);
+                    var lengthMarker = context.ApiVersion < 5 ? writer.MarkForLength() : null;
+                    try {
+                        if (partition.Messages.Count > 0) {
+                            // assume all are the same codec
+                            var codec = (MessageCodec) (partition.Messages[0].Attribute & Protocol.MessageBatch.CodecMask);
+                            var messageBatch = new Protocol.MessageBatch(partition.Messages, codec);
+                            messageBatch.WriteTo(writer, messageVersion);
+                        } else {
+                            var messageBatch = new Protocol.MessageBatch(partition.Messages);
+                            messageBatch.WriteTo(writer, messageVersion);
+                        }
+                    } finally {
+                        lengthMarker?.Dispose();
                     }
                 }
             }

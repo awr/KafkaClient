@@ -52,7 +52,7 @@ namespace KafkaClient.Protocol
         {
             // Record was introduced with version 2, and is significantly different from the Message approach (see above)
             return version >= 2 
-                ? WriteRecord(writer, version, codec, firstOffset, firstTimestamp) 
+                ? WriteRecord(writer, codec, firstOffset, firstTimestamp) 
                 : WriteMessage(writer, version, codec);
         }
 
@@ -79,7 +79,7 @@ namespace KafkaClient.Protocol
             }
         }
 
-        private int WriteRecord(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
+        private int WriteRecord(IKafkaWriter writer, MessageCodec codec, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
         {
             var timestampDelta = firstTimestamp.HasValue && Timestamp.HasValue
                 ? (long) Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds
@@ -93,12 +93,13 @@ namespace KafkaClient.Protocol
                       .Write(Key, varint: true);
                 if (codec == MessageCodec.None) {
                     writer.Write(Value, varint: true);
-                }
-                using (writer.MarkForLength(varint: true)) {
-                    var initialPosition = writer.Position;
-                    writer.WriteCompressed(Value, codec);
-                    var compressedMessageLength = writer.Position - initialPosition;
-                    compressionAmount = Value.Count - compressedMessageLength;
+                } else {
+                    using (writer.MarkForLength(varint: true)) {
+                        var initialPosition = writer.Position;
+                        writer.WriteCompressed(Value, codec);
+                        var compressedMessageLength = writer.Position - initialPosition;
+                        compressionAmount = Value.Count - compressedMessageLength;
+                    }
                 }
                 writer.Write(Headers.Count); // TODO: varint length (?)
                 foreach (var header in Headers) {

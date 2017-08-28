@@ -41,7 +41,7 @@ namespace KafkaClient.Common
         }
 
         /// <summary>
-        /// Read compressed bytes, and write uncompressed bytes *including* size prefix.
+        /// Read compressed bytes, and write uncompressed bytes.
         /// </summary>
         public static ArraySegment<byte> ToUncompressed(this ArraySegment<byte> source, MessageCodec codec)
         {
@@ -52,7 +52,7 @@ namespace KafkaClient.Common
                             gzip.CopyTo(writer.Stream);
                             gzip.Flush();
                         }
-                        return writer.ToSegment();
+                        return writer.ToSegment(false);
                     }
 
                 case MessageCodec.Snappy:

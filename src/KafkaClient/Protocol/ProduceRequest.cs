@@ -63,8 +63,11 @@ namespace KafkaClient.Protocol
 
                 // TODO: Add Txn related stuff to the context (?)
                 var messageBatch = new MessageBatch(topics.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
-                var compressedBytes = messageBatch.WriteTo(writer, version);
-                Interlocked.Add(ref totalCompressedBytes, compressedBytes);
+                // TODO: is length necessary for ApiVersion >= 3 ?
+                using (writer.MarkForLength()) {
+                    var compressedBytes = messageBatch.WriteTo(writer, version);
+                    Interlocked.Add(ref totalCompressedBytes, compressedBytes);
+                }
             }
 
             if (context.OnProduceRequestMessages != null) {
