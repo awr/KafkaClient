@@ -140,9 +140,8 @@ namespace KafkaClient.Protocol
         {
             void WriteUncompressedTo(IKafkaWriter messageWriter)
             {
-                var index = 0L;
                 foreach (var message in Messages) {
-                    messageWriter.Write(index); // offset does not increase, even though docs claim it does ...
+                    messageWriter.Write(0L); // offset does not increase, even though docs claim it does ...
                     using (messageWriter.MarkForLength()) { // message length
                         message.WriteTo(messageWriter, version);
                     }
@@ -169,36 +168,35 @@ namespace KafkaClient.Protocol
             }
         }
 
+        private const int MessageSetVersionOffset = 16;
+
         /// <summary>
         /// Decode a byte[] that represents a batch of messages.
         /// </summary>
         public static MessageBatch ReadFrom(IKafkaReader reader)
         {
-            (long offset, int length, uint crc, byte version, uint crcHash, int expectedLength) = ReadMessageHeader(reader);
+            var expectedLength = reader.ReadInt32(); // MessageSet size
+            if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not fully available.");
+
+            reader.Position += MessageSetVersionOffset;
+            var version = reader.ReadByte();
+            reader.Position -= MessageSetVersionOffset + 1;
+
             if (version >= 2) {
-                return ReadRecordBatchFrom(reader, offset, length, (int)crc, version);
+                return ReadRecordBatchFrom(reader);
             } else {
-                var messages = ReadMessageSetFrom(reader, MessageCodec.None, reader.Position + expectedLength, offset, length, crc, crcHash, version);
+                var messages = ReadMessageSetFrom(reader, MessageCodec.None, reader.Position + expectedLength);
                 return new MessageBatch(messages);
             }
         }
 
-        private static (long offset, int length, uint crc, byte version, uint crcHash, int expectedLength) ReadMessageHeader(IKafkaReader reader, MessageCodec codec = MessageCodec.None)
+        private static MessageBatch ReadRecordBatchFrom(IKafkaReader reader)
         {
-            var expectedLength = reader.ReadInt32(); // MessageSet size
-            if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not fully available (codec {codec}).");
-
-            var offset = reader.ReadInt64();
+            var firstOffset = reader.ReadInt64();
             var length = reader.ReadInt32();
-            var crc = reader.ReadUInt32(); // RecordBatch this is the PartitionLeaderEpoch
-            var crcHash = reader.ReadCrc(length - 4);
+            var partitionLeaderEpoch = reader.ReadInt32();
             var version = reader.ReadByte();
 
-            return (offset, length - 5, crc, version, crcHash, expectedLength - 17);
-        }
-
-        private static MessageBatch ReadRecordBatchFrom(IKafkaReader reader, long firstOffset, int length, int partitionLeaderEpoch, byte version)
-        {
             var crc = reader.ReadUInt32();
             var crcHash = reader.ReadCrc(length - 9, castagnoli: true);
             if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
@@ -257,51 +255,51 @@ namespace KafkaClient.Protocol
             return messages;
         }
 
-        private static IEnumerable<Message> ReadMessageSetFrom(IKafkaReader reader, MessageCodec codec, long finalPosition, long offset, int length, uint crc, uint crcHash, byte version)
+        private const int MessageHeaderSize = 12;
+
+        private static IEnumerable<Message> ReadMessageSetFrom(IKafkaReader reader, MessageCodec codec, long finalPosition)
         {
             var messages = new List<Message>();
             while (reader.Position < finalPosition) {
-                // if the stream does not have enough left in the payload, we got only a partial message
-                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Message size of {length} is not fully available (codec {codec}).");
+                // this checks that we have at least the minimum amount of data to retrieve a header
+                if (!reader.HasBytes(MessageHeaderSize)) break;
+                var offset = reader.ReadInt64();
+                var length = reader.ReadInt32();
 
                 try {
-                    messages.AddRange(ReadMessage(reader, offset, crc, crcHash, version));
+                    var crc = reader.ReadUInt32();
+                    var crcHash = reader.ReadCrc(length - 4);
+                    if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
+
+                    var version = reader.ReadByte();
+                    var attribute = reader.ReadByte();
+                    DateTimeOffset? timestamp = null;
+                    if (version >= 1) {
+                        var milliseconds = reader.ReadInt64();
+                        if (milliseconds >= 0) {
+                            timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+                        }
+                    }
+                    var key = reader.ReadBytes();
+                    var value = reader.ReadBytes();
+
+                    codec = (MessageCodec)(CodecMask & attribute);
+                    if (codec == MessageCodec.None) {
+                        messages.Add(new Message(value, key, attribute, offset, timestamp));
+                    } else {
+                        var uncompressedBytes = value.ToUncompressed(codec);
+                        using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
+                            var expectedLength = messageSetReader.ReadInt32(); // MessageSet size
+                            if (!messageSetReader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not available (codec {codec}).");
+
+                            messages.AddRange(ReadMessageSetFrom(messageSetReader, codec, expectedLength));
+                        }
+                    }
                 } catch (EndOfStreamException ex) {
                     throw new BufferUnderRunException($"Message size of {length} is not available (codec {codec}).", ex);
                 }
             }
             return messages;
-        }
-
-        /// <summary>
-        /// Decode messages from a reader.
-        /// </summary>
-        /// <remarks>The return type is an Enumerable as the message could be a compressed message set.</remarks>
-        private static IEnumerable<Message> ReadMessage(IKafkaReader reader, long offset, uint crc, uint crcHash, byte version)
-        {
-            if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
-
-            var attribute = reader.ReadByte();
-            DateTimeOffset? timestamp = null;
-            if (version >= 1) {
-                var milliseconds = reader.ReadInt64();
-                if (milliseconds >= 0) {
-                    timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
-                }
-            }
-            var key = reader.ReadBytes();
-            var value = reader.ReadBytes();
-
-            var codec = (MessageCodec)(CodecMask & attribute);
-            if (codec == MessageCodec.None) {
-                return new [] { new Message(value, key, attribute, offset, timestamp) };
-            }
-            var uncompressedBytes = value.ToUncompressed(codec);
-            using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
-                int length, expectedLength;
-                (offset, length, crc, version, crcHash, expectedLength) = ReadMessageHeader(reader, codec);
-                return ReadMessageSetFrom(messageSetReader, codec, reader.Position + expectedLength, offset, length, crc, crcHash, version);
-            }
         }
 
         public MessageBatch(IEnumerable<Message> messages, MessageCodec codec = MessageCodec.None, long producerId = 0L, short producerEpoch = 0, int sequence = 0)

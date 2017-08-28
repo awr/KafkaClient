@@ -4,7 +4,6 @@ using System.Linq;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
-using KafkaClient.Telemetry;
 using NUnit.Framework;
 
 namespace KafkaClient.Tests.Unit
@@ -30,13 +29,15 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void DecodeMessageShouldThrowWhenCrcFails()
         {
-            var testMessage = new Message(value: "kafka test message.", key: "test");
+            var message = new Message(value: "kafka test message.", key: "test");
 
-            using (var writer = new KafkaWriter())
-            {
-                testMessage.WriteTo(writer, 0);
-                var encoded = writer.ToSegment(false);
-                encoded.Array[encoded.Offset] += 1;
+            using (var writer = new KafkaWriter()) {
+                writer.Write(0L);
+                using (writer.MarkForLength()) {
+                    message.WriteTo(writer, 0);
+                }
+                var encoded = writer.ToSegment(true);
+                encoded.Array[encoded.Offset + 16] += 1;
                 using (var reader = new KafkaReader(encoded))
                 {
                     Assert.Throws<CrcValidationException>(() => Protocol.MessageBatch.ReadFrom(reader));
@@ -60,24 +61,22 @@ namespace KafkaClient.Tests.Unit
             Assert.AreEqual(m1, m2);
         }
 
-        [TestCase("test key", "test message")]
-        [TestCase(null, "test message")]
-        [TestCase("test key", null)]
-        [TestCase(null, null)]
-        public void EnsureMessageEncodeAndDecodeAreCompatible(string key, string value)
+        [Test]
+        public void EnsureMessageSetEncodeAndDecodeAreCompatible(
+            [Values(0, 1)] byte version, 
+            [Values("key", null)] string key, 
+            [Values("value", null)] string value)
         {
-            var testMessage = new Message(key: key, value: value);
-
-            using (var writer = new KafkaWriter())
-            {
-                testMessage.WriteTo(writer, 0);
+            var message = new Message(value, key);
+            var batch = new Protocol.MessageBatch(new[] { message });
+            using (var writer = new KafkaWriter()) {
+                batch.WriteTo(writer, version);
                 var encoded = writer.ToSegment(false);
-                using (var reader = new KafkaReader(encoded))
-                {
+                using (var reader = new KafkaReader(encoded)) {
                     var result = Protocol.MessageBatch.ReadFrom(reader).Messages.First();
 
-                    Assert.AreEqual(testMessage.Key, result.Key);
-                    Assert.AreEqual(testMessage.Value, result.Value);
+                    Assert.AreEqual(message.Key, result.Key);
+                    Assert.AreEqual(message.Value, result.Value);
                 }
             }
         }
