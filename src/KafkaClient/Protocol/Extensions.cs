@@ -267,25 +267,25 @@ namespace KafkaClient.Protocol
 
         internal static IKafkaWriter WriteMessageSet(this IKafkaWriter writer, IEnumerable<Message> messages, IMessageContext context, out int compressedBytes)
         {
-            void WriteUncompressedTo(IKafkaWriter uncompressedWriter)
-            {
-                var uncompressedContext = new MessageContext(version: context.MessageVersion);
-                var offset = 0L;
+            if (context.Codec == MessageCodec.None) {
                 foreach (var message in messages) {
-                    uncompressedWriter.Write(offset); // offset does not increase, even though docs claim it does ...
-                    using (uncompressedWriter.MarkForLength()) { // message length
-                        uncompressedWriter.WriteMessage(message, uncompressedContext, out int _);
+                    writer.Write(message.Offset);
+                    using (writer.MarkForLength()) { // message length
+                        writer.WriteMessage(message, context, out int _);
                     }
                 }
-            }
-
-            if (context.Codec == MessageCodec.None) {
-                WriteUncompressedTo(writer);
                 compressedBytes = 0;
                 return writer;
             }
             using (var uncompressedWriter = new KafkaWriter()) {
-                WriteUncompressedTo(uncompressedWriter);
+                var uncompressedContext = new MessageContext(version: context.MessageVersion);
+                var offset = 0L;
+                foreach (var message in messages) {
+                    uncompressedWriter.Write(offset++); // offset increasing by oneto avoid server side recompression
+                    using (uncompressedWriter.MarkForLength()) { // message length
+                        uncompressedWriter.WriteMessage(message, uncompressedContext, out int _);
+                    }
+                }
                 var messageSetBytes = uncompressedWriter.ToSegment(false);
                 var uncompressedMessage = new Message(messageSetBytes, (byte)context.Codec);
 

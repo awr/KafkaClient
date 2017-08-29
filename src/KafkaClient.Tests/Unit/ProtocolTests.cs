@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using KafkaClient.Assignment;
 using KafkaClient.Common;
 using KafkaClient.Protocol;
@@ -3702,7 +3703,8 @@ namespace KafkaClient.Tests.Unit
                 }
                 random.NextBytes(value);
 
-                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null));
+                var offset = codec == MessageCodec.None ? m*2 : m;
+                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, offset, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null));
             }
             return messages;
         }
