@@ -139,7 +139,7 @@ namespace KafkaClient.Testing
                     var partitionCount = reader.ReadInt32();
                     for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
-                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader);
+                        var messageBatch = reader.ReadMessages();
 
                         topics.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
                     }
@@ -803,12 +803,10 @@ namespace KafkaClient.Testing
                     using (writer.MarkForLength()) {
                         if (partition.Messages.Count > 0) {
                             // encode all with the same codec
-                            var codec = (MessageCodec) (partition.Messages[0].Attribute & Protocol.MessageBatch.CodecMask);
-                            var messageBatch = new Protocol.MessageBatch(partition.Messages, codec);
-                            messageBatch.WriteTo(writer, messageVersion);
+                            var codec = (MessageCodec) (partition.Messages[0].Attribute & Message.CodecMask);
+                            writer.WriteMessages(partition.Messages, new TransactionContext(), messageVersion, codec, out int _);
                         } else {
-                            var messageBatch = new Protocol.MessageBatch(partition.Messages);
-                            messageBatch.WriteTo(writer, messageVersion);
+                            writer.WriteMessages(partition.Messages, new TransactionContext(), messageVersion, MessageCodec.None, out int _);
                         }
                     }
                 }

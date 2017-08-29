@@ -62,9 +62,8 @@ namespace KafkaClient.Protocol
                         .Write(groupedPayload.Key.partition_id);
 
                 // TODO: Add Txn related stuff to the context (?)
-                var messageBatch = new MessageBatch(topics.SelectMany(x => x.Messages), groupedPayload.Key.Codec);
                 using (writer.MarkForLength()) {
-                    var compressedBytes = messageBatch.WriteTo(writer, version);
+                    writer.WriteMessages(topics.SelectMany(x => x.Messages), new TransactionContext(), version, groupedPayload.Key.Codec, out int compressedBytes);
                     Interlocked.Add(ref totalCompressedBytes, compressedBytes);
                 }
             }

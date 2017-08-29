@@ -66,7 +66,7 @@ namespace KafkaClient.Protocol
                             }
                         }
 
-                        var messageBatch = MessageBatch.ReadFrom(reader);
+                        var messageBatch = reader.ReadMessages();
                         topics.Add(new Topic(topicName, partitionId, highWaterMarkOffset, errorCode, lastStableOffset, logStartOffset, messageBatch.Messages, transactions));
                     }
                 }

@@ -7,10 +7,28 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Record => Length Attributes TimestampDelta OffsetDelta Key Value [Header] 
+    /// Message represents the data from a single event occurance.
     /// </summary>
     /// <remarks>
     /// Version 2+:
+    /// RecordBatch => FirstOffset Length PartitionLeaderEpoch Magic CRC Attributes LastOffsetDelta FirstTimestamp MaxTimestamp ProducerId ProducerEpoch FirstSequence [Record]
+    ///   FirstOffset => int64
+    ///   Length => int32
+    ///   PartitionLeaderEpoch => int32
+    ///   Magic => int8 
+    ///   CRC => int32
+    ///   Attributes => int16
+    ///   LastOffsetDelta => int32
+    ///   FirstTimestamp => int64
+    ///   MaxTimestamp => int64
+    ///   ProducerId => int64
+    ///   ProducerEpoch => int16
+    ///   FirstSequence => int32
+    ///   Records => [Record]
+    /// 
+    /// PartitionLeaderEpoch is set by the broker upon receipt of a produce request and is used to ensure no loss of data when there are leader changes with log truncation. 
+    ///   Client developers do not need to worry about setting this value.
+    /// 
     /// Record => Length Attributes TimestampDelta OffsetDelta Key Value [Header] 
     ///   Length => varint
     ///   Attributes => int8
@@ -23,7 +41,13 @@ namespace KafkaClient.Protocol
     ///   Headers => [Header]
     /// 
     /// Version 0-1:
-    /// Message represents the data from a single event occurance.
+    /// MessageSet => [Offset MessageSize Message]
+    ///   Offset => int64
+    ///   MessageSize => int32
+    /// 
+    /// MessageSets are not preceded by an int32 like other array elements in the protocol.
+    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Messagesets
+    /// 
     /// Message => Crc MagicByte Attributes *Timestamp Key Value
     ///   Crc => int32
     ///   MagicByte => int8
@@ -48,68 +72,6 @@ namespace KafkaClient.Protocol
     {
         public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
 
-        public int WriteTo(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
-        {
-            // Record was introduced with version 2, and is significantly different from the Message approach (see above)
-            return version >= 2 
-                ? WriteRecord(writer, codec, firstOffset, firstTimestamp) 
-                : WriteMessage(writer, version, codec);
-        }
-
-        private int WriteMessage(IKafkaWriter writer, byte version, MessageCodec codec = MessageCodec.None)
-        {
-            using (writer.MarkForCrc()) {
-                writer.Write(version)
-                      .Write((byte) codec);
-                if (version >= 1) {
-                    writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
-                }
-                writer.Write(Key);
-
-                if (codec == MessageCodec.None) {
-                    writer.Write(Value);
-                    return 0;
-                }
-                using (writer.MarkForLength()) {
-                    var initialPosition = writer.Position;
-                    writer.WriteCompressed(Value, codec);
-                    var compressedMessageLength = writer.Position - initialPosition;
-                    return Value.Count - compressedMessageLength;
-                }
-            }
-        }
-
-        private int WriteRecord(IKafkaWriter writer, MessageCodec codec, long firstOffset = 0L, DateTimeOffset? firstTimestamp = null)
-        {
-            var timestampDelta = firstTimestamp.HasValue && Timestamp.HasValue
-                ? (long) Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds
-                : 0L;
-
-            var compressionAmount = 0;
-            using (writer.MarkForLength(varint: true)) {
-                writer.Write((byte) 0) // attributes
-                      .Write(timestampDelta, varint: true)
-                      .Write(Math.Max(0L, Offset - firstOffset), varint: true)
-                      .Write(Key, varint: true);
-                if (codec == MessageCodec.None) {
-                    writer.Write(Value, varint: true);
-                } else {
-                    using (writer.MarkForLength(varint: true)) {
-                        var initialPosition = writer.Position;
-                        writer.WriteCompressed(Value, codec);
-                        var compressedMessageLength = writer.Position - initialPosition;
-                        compressionAmount = Value.Count - compressedMessageLength;
-                    }
-                }
-                writer.Write(Headers.Count); // TODO: varint length (?)
-                foreach (var header in Headers) {
-                    writer.Write(header.Key, varint: true)
-                          .Write(header.Value, varint: true);
-                }
-            }
-            return compressionAmount;
-        }
-
         public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)
             : this(value, EmptySegment, attribute, offset, timestamp)
         {
@@ -118,7 +80,7 @@ namespace KafkaClient.Protocol
         public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null, IEnumerable<MessageHeader> headers = null)
         {
             Offset = offset;
-            Attribute = (byte)(attribute & MessageBatch.CodecMask);
+            Attribute = (byte)(attribute & CodecMask);
             Key = key.Count > 0 ? key : EmptySegment;
             Value = value;
             Timestamp = timestamp;
@@ -161,6 +123,11 @@ namespace KafkaClient.Protocol
         /// All other bits should be set to 0.
         /// </summary>
         public byte Attribute { get; }
+
+        /// <summary>
+        ///  The lowest 3 bits contain the compression codec used for the message. The other bits should be set to 0.
+        /// </summary>
+        public const byte CodecMask = 0x7;
 
         /// <summary>
         /// Key value used for routing message to partitions.

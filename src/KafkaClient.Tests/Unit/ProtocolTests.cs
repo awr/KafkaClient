@@ -34,13 +34,12 @@ namespace KafkaClient.Tests.Unit
             using (var writer = new KafkaWriter()) {
                 writer.Write(0L);
                 using (writer.MarkForLength()) {
-                    message.WriteTo(writer, 0);
+                    writer.WriteMessage(message, new MessageContext(), out int _);
                 }
                 var encoded = writer.ToSegment(true);
                 encoded.Array[encoded.Offset + 20] += 1;
                 using (var reader = new KafkaReader(encoded)) {
-                    var length = reader.ReadInt32();
-                    Assert.Throws<CrcValidationException>(() => Protocol.MessageBatch.ReadFrom(reader, length));
+                    Assert.Throws<CrcValidationException>(() => reader.ReadMessages());
                 }
             }
         }
@@ -68,12 +67,12 @@ namespace KafkaClient.Tests.Unit
             [Values("value", null)] string value)
         {
             var message = new Message(value, key);
-            var batch = new Protocol.MessageBatch(new[] { message });
+            var messages = new[] { message };
             using (var writer = new KafkaWriter()) {
-                batch.WriteTo(writer, version);
+                writer.WriteMessages(messages, new TransactionContext(), version, MessageCodec.None, out int _);
                 var encoded = writer.ToSegment(false);
                 using (var reader = new KafkaReader(encoded)) {
-                    var result = Protocol.MessageBatch.ReadFrom(reader, encoded.Count).Messages.First();
+                    var result = reader.ReadMessages(encoded.Count).Messages.First();
 
                     Assert.AreEqual(message.Key, result.Key);
                     Assert.AreEqual(message.Value, result.Value);
@@ -92,17 +91,15 @@ namespace KafkaClient.Tests.Unit
                     0, 0, 0, 0, 0, 16, 195, 72, 121, 18, 0, 0, 0, 0, 0, 1, 49, 0, 0, 0, 1, 50
                 };
 
-            var messages = new[]
-                {
-                    new Message("0", "1"),
-                    new Message("1", "1"),
-                    new Message("2", "1")
-                };
+            var messages = new[] {
+                new Message("0", "1"),
+                new Message("1", "1"),
+                new Message("2", "1")
+            };
 
             using (var writer = new KafkaWriter())
             {
-                var messageBatch = new Protocol.MessageBatch(messages);
-                messageBatch.WriteTo(writer, 0);
+                writer.WriteMessages(messages, new TransactionContext(), 0, MessageCodec.None, out int _);
                 var result = writer.ToSegment(false);
                 Assert.AreEqual(expected, result);
             }
@@ -112,9 +109,8 @@ namespace KafkaClient.Tests.Unit
         public void DecodeMessageSetShouldHandleResponseWithMaxBufferSizeHit()
         {
             using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow)) {
-                var messageSetSize = reader.ReadInt32();
                 //This message set has a truncated message bytes at the end of it
-                var result = Protocol.MessageBatch.ReadFrom(reader, messageSetSize);
+                var result = reader.ReadMessages();
 
                 var message = result.Messages.First().Value.ToUtf8String();
 
@@ -138,7 +134,7 @@ namespace KafkaClient.Tests.Unit
                 using (var reader = new KafkaReader(segment))
                 {
                     // act/assert
-                    Assert.Throws<BufferUnderRunException>(() => Protocol.MessageBatch.ReadFrom(reader, segment.Count));
+                    Assert.Throws<BufferUnderRunException>(() => reader.ReadMessages(segment.Count));
                 }
             }
         }
@@ -153,13 +149,13 @@ namespace KafkaClient.Tests.Unit
                 writer.Write(0L);
                 using (writer.MarkForLength())
                 {
-                    new Message(expectedPayloadBytes, new ArraySegment<byte>(new byte[] { 0 }), 0).WriteTo(writer, 0);
+                    writer.WriteMessage(new Message(expectedPayloadBytes, new ArraySegment<byte>(new byte[] { 0 }), 0), new MessageContext(), out int _);
                 }
                 var segment = writer.ToSegment(false);
 
                 // act/assert
                 using (var reader = new KafkaReader(segment)) {
-                    var batch = Protocol.MessageBatch.ReadFrom(reader, segment.Count);
+                    var batch = reader.ReadMessages(segment.Count);
                     var messages = batch.Messages;
                     var actualPayload = messages.First().Value;
 
