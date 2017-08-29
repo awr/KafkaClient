@@ -240,26 +240,31 @@ namespace KafkaClient.Protocol
                 ? (long) record.Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds
                 : 0L;
 
-            using (writer.MarkForLength(varint: true)) {
+            var expectedLength = 1 + 10 + 10 + 5 + record.Key.Count + 5 + record.Value.Count + 5 + record.Headers.Sum(h => 5 + (2 * (h.Key ?? "").Length) + 5 + h.Value.Count);
+            using (writer.MarkForVarintLength(expectedLength)) {
                 writer.Write((byte) 0) // attributes
-                      .Write(timestampDelta, varint: true)
-                      .Write(Math.Max(0L, record.Offset - firstOffset), varint: true)
-                      .Write(record.Key, varint: true);
+                      .WriteVarint(timestampDelta)
+                      .WriteVarint(Math.Max(0L, record.Offset - firstOffset))
+                      .WriteVarint((uint)record.Key.Count)
+                      .Write(record.Key, includeLength: false);
                 if (codec == MessageCodec.None) {
-                    writer.Write(record.Value, varint: true);
+                    writer.WriteVarint((uint)record.Value.Count)
+                          .Write(record.Value, includeLength: false);
                     compressedBytes = 0;
                 } else {
-                    using (writer.MarkForLength(varint: true)) {
+                    var expectedCompressedLength = record.Value.Count;
+                    using (writer.MarkForVarintLength(expectedCompressedLength)) {
                         var initialPosition = writer.Position;
                         writer.WriteCompressed(record.Value, codec);
                         var compressedRecordLength = writer.Position - initialPosition;
                         compressedBytes = record.Value.Count - compressedRecordLength;
                     }
                 }
-                writer.Write(record.Headers.Count); // TODO: varint length (?)
+                writer.WriteVarint((uint)record.Headers.Count);
                 foreach (var header in record.Headers) {
                     writer.Write(header.Key, varint: true)
-                          .Write(header.Value, varint: true);
+                          .WriteVarint(header.Value.Count)
+                          .Write(header.Value, includeLength: false);
                 }
             }
             return writer;
@@ -371,28 +376,34 @@ namespace KafkaClient.Protocol
             return new MessageTransaction(messages, transaction);
         }
 
+        private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
+
         internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IMessageContext context, long firstOffset, DateTimeOffset? firstTimestamp)
         {
             var messages = new List<Message>();
             var messageCount = reader.ReadInt32();
 
             for (var m = 0; m < messageCount; m++) {
-                var length = reader.ReadInt32(varint: true);
+                var length = reader.ReadVarint32();
                 if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {context.Codec}).");
 
                 var attribute = reader.ReadByte();
-                var timestampDelta = reader.ReadInt64(varint: true);
-                var offsetDelta = reader.ReadInt64(varint: true);
-                var key = reader.ReadBytes(varint: true);
-                var value = reader.ReadBytes(varint: true);
+                var timestampDelta = reader.ReadVarint64();
+                var offsetDelta = reader.ReadVarint64();
+                var keyLength = reader.ReadVarint32();
+                var key = keyLength > 0 ? reader.ReadBytes(keyLength) : EmptySegment;
+                var valueLength = reader.ReadVarint32();
+                var value = valueLength > 0 ? reader.ReadBytes(valueLength) : EmptySegment;
 
                 MessageHeader[] headers = null;
-                var headerCount = reader.ReadInt32();
+                var headerCount = reader.ReadVarint32();
                 if (headerCount > 0) {
                     headers = new MessageHeader[headerCount];
                     for (var h = 0; h < headerCount; h++) {
-                        var headerKey = reader.ReadString(varint: true);
-                        var headerValue = reader.ReadBytes(varint: true);
+                        var headerKeyLength = reader.ReadVarint32();
+                        var headerKey = headerKeyLength > 0 ? reader.ReadString(headerKeyLength) : null;
+                        var headerValueLength = reader.ReadVarint32();
+                        var headerValue = headerKeyLength > 0 ? reader.ReadBytes(headerValueLength) : EmptySegment;
                         headers[h] = new MessageHeader(headerKey, headerValue);
                     }
                 }

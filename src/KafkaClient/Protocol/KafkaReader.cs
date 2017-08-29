@@ -55,12 +55,25 @@ namespace KafkaClient.Protocol
             return ToSegment(2).ToInt16();
         }
 
-        public int ReadInt32(bool varint = false)
+        public int ReadVarint32()
+        {
+            return (int) ReadVarint64();
+        }
+
+        public int ReadInt32()
         {
             return ToSegment(4).ToInt32();
         }
 
-        public long ReadInt64(bool varint = false)
+        public long ReadVarint64()
+        {
+            var segment = new ArraySegment<byte>(_bytes.Array, _bytes.Offset + Position, Length - Position);
+            (int count, long value) = segment.FromVarint();
+            Position += count;
+            return value;
+        }
+
+        public long ReadInt64()
         {
             return ToSegment(8).ToInt64();
         }
@@ -70,22 +83,30 @@ namespace KafkaClient.Protocol
             return ToSegment(4).ToUInt32();
         }
 
-        public string ReadString(bool varint = false)
+        public string ReadString(int? length = null)
         {
-            var size = ReadInt16();
-            if (size == KafkaNullSize) return null;
+            if (!length.HasValue) {
+                var size = ReadInt16();
+                if (size == KafkaNullSize) return null;
+                length = size;
+            }
 
-            var segment = ReadSegment(size);
+            var segment = ReadBytes(length.Value);
             var result = Encoding.UTF8.GetString(segment.Array, segment.Offset, segment.Count);
             return result;
         }
 
-        public ArraySegment<byte> ReadBytes(bool varint = false)
+        public ArraySegment<byte> ReadBytes(int count)
+        {
+            return ToSegment(count);
+        }
+
+        public ArraySegment<byte> ReadBytes()
         {
             var size = ReadInt32();
             if (size == KafkaNullSize) { return EmptySegment; }
 
-            var result = ReadSegment(size);
+            var result = ReadBytes(size);
             return result;
         }
 
@@ -109,11 +130,6 @@ namespace KafkaClient.Protocol
                 Position = next;
             }
             return new ArraySegment<byte>(_bytes.Array, _bytes.Offset + current, count);
-        }
-
-        public ArraySegment<byte> ReadSegment(int count)
-        {
-            return ToSegment(count);
         }
 
         public void Dispose()
