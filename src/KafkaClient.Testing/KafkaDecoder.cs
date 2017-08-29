@@ -131,21 +131,20 @@ namespace KafkaClient.Testing
                 var acks = reader.ReadInt16();
                 var timeout = reader.ReadInt32();
 
-                var payloads = new List<ProduceRequest.Topic>();
+                var topics = new List<ProduceRequest.Topic>();
                 var payloadCount = reader.ReadInt32();
-                for (var i = 0; i < payloadCount; i++) {
+                for (var t = 0; t < payloadCount; t++) {
                     var topicName = reader.ReadString();
 
                     var partitionCount = reader.ReadInt32();
-                    for (var j = 0; j < partitionCount; j++) {
+                    for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
-                        var messageSetSize = reader.ReadInt32();
-                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader, messageSetSize);
+                        var messageBatch = Protocol.MessageBatch.ReadFrom(reader);
 
-                        payloads.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
+                        topics.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
                     }
                 }
-                return new ProduceRequest(payloads, TimeSpan.FromMilliseconds(timeout), acks, transaction_id);
+                return new ProduceRequest(topics, TimeSpan.FromMilliseconds(timeout), acks, transaction_id);
             }
         }
 
@@ -801,10 +800,9 @@ namespace KafkaClient.Testing
                         }
                     }
 
-                    var lengthMarker = context.ApiVersion < 5 ? writer.MarkForLength() : null;
-                    try {
+                    using (writer.MarkForLength()) {
                         if (partition.Messages.Count > 0) {
-                            // assume all are the same codec
+                            // encode all with the same codec
                             var codec = (MessageCodec) (partition.Messages[0].Attribute & Protocol.MessageBatch.CodecMask);
                             var messageBatch = new Protocol.MessageBatch(partition.Messages, codec);
                             messageBatch.WriteTo(writer, messageVersion);
@@ -812,8 +810,6 @@ namespace KafkaClient.Testing
                             var messageBatch = new Protocol.MessageBatch(partition.Messages);
                             messageBatch.WriteTo(writer, messageVersion);
                         }
-                    } finally {
-                        lengthMarker?.Dispose();
                     }
                 }
             }

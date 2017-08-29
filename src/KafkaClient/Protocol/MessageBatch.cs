@@ -207,9 +207,12 @@ namespace KafkaClient.Protocol
         /// <summary>
         /// Decode a byte[] that represents a batch of messages.
         /// </summary>
-        public static MessageBatch ReadFrom(IKafkaReader reader, int? length = null)
+        public static MessageBatch ReadFrom(IKafkaReader reader, int? messageSetSize = null)
         {
-            if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set is missing version information.");
+            if (!messageSetSize.HasValue) {
+                messageSetSize = reader.ReadInt32();
+            }
+            if (!reader.HasBytes(messageSetSize.Value)) throw new BufferUnderRunException($"Message set of {messageSetSize} is not available.");
 
             reader.Position += MessageSetVersionOffset;
             var version = reader.ReadByte();
@@ -218,7 +221,7 @@ namespace KafkaClient.Protocol
             if (version >= 2) {
                 return ReadRecordBatchFrom(reader);
             } else {
-                var messages = ReadMessageSetFrom(reader, MessageCodec.None, (reader.Position - 4) + length.Value);
+                var messages = ReadMessageSetFrom(reader, MessageCodec.None, (reader.Position - 4) + messageSetSize.Value);
                 return new MessageBatch(messages);
             }
         }
