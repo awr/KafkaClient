@@ -236,20 +236,33 @@ namespace KafkaClient.Protocol
 
         internal static IKafkaWriter WriteRecord(this IKafkaWriter writer, Message record, MessageCodec codec, long firstOffset, DateTimeOffset? firstTimestamp, out int compressedBytes)
         {
-            var timestampDelta = firstTimestamp.HasValue && record.Timestamp.HasValue
-                ? (long) record.Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds
+            var timestamp = firstTimestamp.HasValue && record.Timestamp.HasValue
+                ? (ulong) Math.Max(0L, record.Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds)
                 : 0L;
 
-            var expectedLength = 1 + 10 + 10 + 5 + record.Key.Count + 5 + record.Value.Count + 5 + record.Headers.Sum(h => 5 + (2 * (h.Key ?? "").Length) + 5 + h.Value.Count);
+            var timestampDelta = timestamp.ToVarint();
+            var offsetDelta = ((ulong)Math.Max(0L, record.Offset - firstOffset)).ToVarint();
+            var keyLenth = ((uint) record.Key.Count).ToVarint();
+            var valueLenth = ((uint) record.Value.Count).ToVarint();
+            var headerCount = ((uint) record.Headers.Count).ToVarint();
+
+            var expectedLength = 1 // attribute
+                + timestampDelta.Count 
+                + offsetDelta.Count 
+                + keyLenth.Count + record.Key.Count 
+                + valueLenth.Count + record.Value.Count 
+                + headerCount.Count 
+                + record.Headers.Sum(h => 5 + (2 * (h.Key ?? "").Length) + 5 + h.Value.Count);
+
             using (writer.MarkForVarintLength(expectedLength)) {
                 writer.Write((byte) 0) // attributes
-                      .WriteVarint(timestampDelta)
-                      .WriteVarint(Math.Max(0L, record.Offset - firstOffset))
-                      .WriteVarint((uint)record.Key.Count)
-                      .Write(record.Key, includeLength: false);
+                      .Write(timestampDelta, false)
+                      .Write(offsetDelta, false)
+                      .Write(keyLenth, false)
+                      .Write(record.Key, false);
                 if (codec == MessageCodec.None) {
-                    writer.WriteVarint((uint)record.Value.Count)
-                          .Write(record.Value, includeLength: false);
+                    writer.Write(valueLenth, false)
+                          .Write(record.Value, false);
                     compressedBytes = 0;
                 } else {
                     var expectedCompressedLength = record.Value.Count;
@@ -260,11 +273,11 @@ namespace KafkaClient.Protocol
                         compressedBytes = record.Value.Count - compressedRecordLength;
                     }
                 }
-                writer.WriteVarint((uint)record.Headers.Count);
+                writer.Write(headerCount, false);
                 foreach (var header in record.Headers) {
                     writer.Write(header.Key, varint: true)
-                          .WriteVarint(header.Value.Count)
-                          .Write(header.Value, includeLength: false);
+                          .WriteVarint((uint)header.Value.Count)
+                          .Write(header.Value, false);
                 }
             }
             return writer;

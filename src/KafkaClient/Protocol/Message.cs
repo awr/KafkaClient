@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using KafkaClient.Common;
 
@@ -70,6 +71,13 @@ namespace KafkaClient.Protocol
     /// </remarks>>
     public class Message : IEquatable<Message>
     {
+        public string ToVerboseString()
+        {
+            var keyString = string.Join("", Key.ToArray().Select(b => $"{b:X2}"));
+            var valueString = string.Join("", Value.ToArray().Select(b => $"{b:X2}"));
+            return $"{{Offset:{Offset:D},Timestamp:{Timestamp?.ToUnixTimeMilliseconds():D},Attribute:{Attribute:X2},Key:0x{keyString},Value:0x{valueString},Headers:{Headers.Count}";  
+        }
+
         public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
 
         public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)

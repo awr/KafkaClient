@@ -60,23 +60,51 @@ namespace KafkaClient.Tests.Unit
             Assert.AreEqual(m1.GetHashCode(), m2.GetHashCode());
             Assert.AreEqual(m1, m2);
         }
-
+        
         [Test]
         public void EnsureMessageSetEncodeAndDecodeAreCompatible(
-            [Values(0, 1)] byte version, 
-            [Values("key", null)] string key, 
-            [Values("value", null)] string value)
+            [Values(0, 1, 2)] byte version,
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec,
+            [Values(1, 10)] int valueLength,
+            [Values(0, 1, 10)] int keyLength)
         {
-            var message = new Message(value, key);
-            var messages = new[] { message };
+            var random = new Random(42);
+            var messages = new List<Message>();
+            for (var m = 0; m < 3; m++) {
+                var key = keyLength > 0 ? new byte[keyLength] : null;
+                var value = new byte[valueLength];
+                if (key != null) {
+                    random.NextBytes(key);
+                }
+                random.NextBytes(value);
+
+                var offset = codec == MessageCodec.None ? m*2 : m;
+                var keyBytes = key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>();
+                var dateTimeOffset = version > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(m) : (DateTimeOffset?)null;
+
+                var headers = new List<MessageHeader>();
+                if (version > 0) {
+                    for (var h = 0; h < keyLength; h++) {
+                        var headerValue = new byte[valueLength];
+                        random.NextBytes(headerValue);
+                        headers.Add(new MessageHeader(h.ToString(), new ArraySegment<byte>(headerValue)));
+                    }
+                }
+                messages.Add(new Message(new ArraySegment<byte>(value), keyBytes, 0, offset, dateTimeOffset));
+            }
+
             using (var writer = new KafkaWriter()) {
-                writer.WriteMessages(messages, new TransactionContext(), version, MessageCodec.None, out int _);
+                writer.WriteMessages(messages, new TransactionContext(), version, codec, out int _);
                 var encoded = writer.ToSegment(false);
                 using (var reader = new KafkaReader(encoded)) {
-                    var result = reader.ReadMessages(encoded.Count).Messages.First();
+                    var result = reader.ReadMessages(encoded.Count).Messages;
 
-                    Assert.AreEqual(message.Key, result.Key);
-                    Assert.AreEqual(message.Value, result.Value);
+                    for (var i = 0; i < messages.Count; i++) {
+                        if (!messages[i].Equals(result[i])) {
+                            Assert.AreEqual(messages[i].ToVerboseString(), result[i].ToVerboseString());
+                            Assert.AreEqual(messages[i], result[i]);
+                        }
+                    }
                 }
             }
         }
