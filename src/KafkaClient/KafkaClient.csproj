@@ -5,7 +5,7 @@
     <Copyright>Nudge Software 2017</Copyright>
     <VersionPrefix>1.0.0</VersionPrefix>
     <Authors>Nudge Software Inc</Authors>
-    <TargetFrameworks>net462;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>netstandard1.6</TargetFrameworks>
     <AssemblyName>KafkaClient</AssemblyName>
     <PackageId>KafkaClient</PackageId>
     <PackageTags>C#;Apache;Kafka;Messaging</PackageTags>
@@ -28,18 +28,6 @@
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="1.0.2" />
     <PackageReference Include="System.Net.Security" Version="4.3.0" />
     <PackageReference Include="System.ValueTuple" Version="4.4.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
-    <DefineConstants>$(DefineConstants);DOTNETSTANDARD</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Extensions" Version="4.3.0" />

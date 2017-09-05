@@ -228,7 +228,6 @@ namespace KafkaClient.Tests.Unit
 
         #region Request / Response
 
-#if DOTNETSTANDARD
         [Test]
         public void ProduceRequestSnappy(
             [Values(0, 1, 2, 3)] short version,
@@ -241,7 +240,6 @@ namespace KafkaClient.Tests.Unit
         {
             ProduceRequest(version, acks, timeoutMilliseconds, topic, topicsPerRequest, totalPartitions, messagesPerSet, MessageCodec.Snappy);
         }
-#endif
 
         private byte MessageVersion(short version)
         {
@@ -542,7 +540,6 @@ namespace KafkaClient.Tests.Unit
                 );
         }
 
-#if DOTNETSTANDARD
         [Test]
         public void FetchResponseSnappy(
             [Values(0, 1, 2, 3, 4, 5)] short version,
@@ -559,7 +556,6 @@ namespace KafkaClient.Tests.Unit
         {
             FetchResponse(version, throttleTime, topicName, topicsPerRequest, totalPartitions, MessageCodec.Snappy, errorCode, messagesPerSet);
         }
-#endif
 
         [Test]
         public void OffsetsRequest(

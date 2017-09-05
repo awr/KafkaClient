@@ -78,7 +78,6 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-#if DOTNETSTANDARD
         [Test]
         public async Task SnappyCanCompressMessageAndSend()
         {
@@ -145,6 +144,5 @@ namespace KafkaClient.Tests.Integration
         //        });
         //    }
         //}
-#endif
     }
 }

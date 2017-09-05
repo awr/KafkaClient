@@ -26,14 +26,10 @@ namespace KafkaClient.Common
                     break;
 
                 case MessageCodec.Snappy:
-#if DOTNETSTANDARD
                     var buffer = new byte[Snappy.SnappyCodec.GetMaxCompressedLength(bytes.Count)];
                     var size = Snappy.SnappyCodec.Compress(bytes.Array, bytes.Offset, bytes.Count, buffer, 0);
                     writer.Write(new ArraySegment<byte>(buffer, 0, size), false);
                     break;
-#else
-                    throw new NotSupportedException("Snappy codec is only supported on .net core");
-#endif
 
                 default:
                     throw new NotSupportedException($"Codec type of {codec} is not supported.");
@@ -56,18 +52,10 @@ namespace KafkaClient.Common
                     }
 
                 case MessageCodec.Snappy:
-#if DOTNETSTANDARD
                     var length = Snappy.SnappyCodec.GetUncompressedLength(source.Array, source.Offset, source.Count);
-                    var lengthBytes = length.ToBytes();
-                    var buffer = new byte[lengthBytes.Length + length];
-                    for (var i = 0; i < lengthBytes.Length; i++) {
-                        buffer[i] = lengthBytes[i];
-                    }
-                    Snappy.SnappyCodec.Uncompress(source.Array, source.Offset, source.Count, buffer, lengthBytes.Length);
-                    return new ArraySegment<byte>(buffer);
-#else
-                    throw new NotSupportedException("Snappy codec is only supported on .net core");
-#endif
+                    var buffer = new byte[length];
+                    var actualLength = Snappy.SnappyCodec.Uncompress(source.Array, source.Offset, source.Count, buffer, 0);
+                    return new ArraySegment<byte>(buffer, 0, actualLength);
 
                 default:
                     throw new NotSupportedException($"Codec type of {codec} is not supported.");
