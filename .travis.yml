@@ -3,11 +3,15 @@ language: generic
 addons:
   apt:
     packages:
-    - gettext
-    - libcurl4-openssl-dev
-    - libicu-dev
-    - libssl-dev
     - libunwind8
+    - libunwind8-dev
+    - gettext
+    - libicu-dev
+    - liblttng-ust-dev
+    - libcurl4-openssl-dev
+    - libssl-dev
+    - uuid-dev
+    - unzip
     - zlib1g
     - zlib1g-dev 
     - libpcre3-dev 
