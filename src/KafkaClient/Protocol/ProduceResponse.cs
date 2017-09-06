@@ -105,7 +105,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicResponse, IEquatable<Topic>
         {
-            public override string ToString() => $"{{{this.PartitionToString()},error_code:{Error},base_offset:{BaseOffset},log_append_time:{Timestamp}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},error_code:{Error},base_offset:{BaseOffset},log_append_time:{Timestamp?.ToUnixTimeMilliseconds()}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode, long offset, DateTimeOffset? timestamp = null)
                 : base(topic, partitionId, errorCode)

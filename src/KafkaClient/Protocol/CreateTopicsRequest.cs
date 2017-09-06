@@ -29,7 +29,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class CreateTopicsRequest : Request, IRequest<CreateTopicsResponse>, IEquatable<CreateTopicsRequest>
     {
-        public override string ToString() => $"{{{this.RequestToString()},create_topic_requests:[{Topics.ToStrings()}],timeout:{Timeout},validate_only:{ValidateOnly}}}";
+        public override string ToString() => $"{{{this.RequestToString()},create_topic_requests:[{Topics.ToStrings()}],timeout:{Timeout.TotalMilliseconds:F0},validate_only:{ValidateOnly}}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 

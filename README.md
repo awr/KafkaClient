@@ -1,5 +1,5 @@
 # KafkaClient
-Native async C# client for Apache Kafka, supporting versions [0.9, 0.10.1]
+Native async C# client for Apache Kafka, supporting versions [0.9, 0.11]
 
 ## Status
 
@@ -125,6 +125,8 @@ History
 This client is a fork of [gigya]'s [KafkaNetClient], itself a fork of [jroland]'s [kafka-net] client, which was based on [David Arthur]'s [kafka-python] client. Thanks to all those who spent so much time working on the ancestors to this client, and to all contributors!
 
 A big thank you to [Nudge Software] for backing this project.
+
+Also thank you to AppVeyor and Travis for providing CI infrastructure, and to github for hosting the code.
 
 [Apache Kafka protocol]:https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol
 [kafka-python]:https://github.com/mumrah/kafka-python

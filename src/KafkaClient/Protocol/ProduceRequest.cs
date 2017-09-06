@@ -26,7 +26,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ProduceRequest : Request, IRequest<ProduceResponse>, IEquatable<ProduceRequest>
     {
-        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionalId},acks:{Acks},timeout:{Timeout},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionalId},acks:{Acks},timeout:{Timeout.TotalMilliseconds:F0},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 

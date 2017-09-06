@@ -21,7 +21,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DeleteRecordsRequest : Request, IRequest<DeleteRecordsResponse>, IEquatable<DeleteRecordsRequest>
     {
-        public override string ToString() => $"{{{this.RequestToString()},topics:[{Topics.ToStrings()}],timeout:{Timeout}}}";
+        public override string ToString() => $"{{{this.RequestToString()},topics:[{Topics.ToStrings()}],timeout:{Timeout.TotalMilliseconds:F0}}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 

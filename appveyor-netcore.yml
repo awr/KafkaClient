@@ -22,7 +22,7 @@ test_script:
   - dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
 
 after_test:
-  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
+  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/${env:APPVEYOR_JOB_ID}", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
 
 artifacts:
   - path: src\KafkaClient\artifacts\**\*.*
