@@ -5,8 +5,7 @@ Native async C# client for Apache Kafka, supporting versions [0.9, 0.11]
 
 | OS      | Framework | Status |
 |---------|-----------|--------|
-| Windows | .net 4.6.2 | [![Build status](https://ci.appveyor.com/api/projects/status/54mgnutld37dpn9a?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkaclient) [![codecov](https://codecov.io/gh/awr/KafkaClient/branch/master/graph/badge.svg)](https://codecov.io/gh/awr/KafkaClient) |
-| Windows | .net standard 1.6 | [![Build status](https://ci.appveyor.com/api/projects/status/e7ej2g9q77if8mkf?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkanetclient) |
+| Windows | .net standard 1.6 | [![Build status](https://ci.appveyor.com/api/projects/status/e7ej2g9q77if8mkf?svg=true) [![codecov](https://codecov.io/gh/awr/KafkaClient/branch/master/graph/badge.svg)](https://codecov.io/gh/awr/KafkaClient)](https://ci.appveyor.com/project/AndrewRobinson/kafkanetclient) |
 | Linux   | .net standard 1.6 | [![Build status](https://api.travis-ci.org/awr/KafkaClient.svg?branch=master)](https://travis-ci.org/awr/KafkaClient) |
 
 [![NuGet Badge](https://buildstats.info/nuget/KafkaClient)](https://www.nuget.org/packages/KafkaClient)
