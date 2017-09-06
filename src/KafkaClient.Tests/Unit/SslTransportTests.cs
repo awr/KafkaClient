@@ -9,6 +9,7 @@ using NUnit.Framework;
 namespace KafkaClient.Tests.Unit
 {
     [Category("CI")]
+    [Category("SSL")]
     public class SslTransportTests : TransportTests<SslTransport>
     {
         private const string CertPassword = "password";
