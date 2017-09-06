@@ -734,7 +734,7 @@ namespace KafkaClient.Protocol
 
         #region ToString
 
-        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:F0}";
+        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:##########}";
 
         internal static string RequestToString(this IRequest request) => $"Api:{request.ApiKey}";
 

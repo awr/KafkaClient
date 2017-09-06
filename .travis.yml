@@ -41,7 +41,7 @@ services:
 before_install:
   - docker network create kafka-net
   - docker run -d --name zookeeper --restart always --network kafka-net --publish 2181:2181 zookeeper:3.4
-  - docker run -d --name kafka --network kafka-net --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafka ches/kafka:0.10.2.1
+  - docker run -d --name kafka --network kafka-net --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_AUTO_CREATE_TOPICS_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafka ches/kafka:0.10.2.1
   - docker ps
   #- dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
 
@@ -58,8 +58,7 @@ install:
 
 script:
   - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
-  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)"
-  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=Integration)"
+  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "((TestCategory=CI) | (TestCategory=Integration)) & (TestCategory!=Flaky) & (TestCategory!=SSL)"
 
 after_success:
   - dotnet pack -c Release -f netcoreapp2.0 src/KafkaClient/KafkaClient.csproj -o artifacts 

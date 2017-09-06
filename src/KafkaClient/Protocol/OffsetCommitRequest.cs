@@ -29,7 +29,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetCommitRequest : GroupRequest, IRequest<OffsetCommitResponse>, IEquatable<OffsetCommitRequest>
     {
-        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},generation_id:{GenerationId},member_id:{MemberId},retention_time:{RetentionTime?.TotalMilliseconds:F0},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},generation_id:{GenerationId},member_id:{MemberId},retention_time:{RetentionTime?.TotalMilliseconds:##########},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 

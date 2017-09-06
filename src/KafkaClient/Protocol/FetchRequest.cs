@@ -30,7 +30,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class FetchRequest : Request, IRequest<FetchResponse>, IEquatable<FetchRequest>
     {
-        public override string ToString() => $"{{{this.RequestToString()},max_wait_time:{MaxWaitTime.TotalMilliseconds:F0},min_bytes:{MinBytes},max_bytes:{MaxBytes},isolation_level:{IsolationLevel},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},max_wait_time:{MaxWaitTime.TotalMilliseconds:##########},min_bytes:{MinBytes},max_bytes:{MaxBytes},isolation_level:{IsolationLevel},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 

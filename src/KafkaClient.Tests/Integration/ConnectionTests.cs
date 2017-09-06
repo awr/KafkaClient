@@ -54,7 +54,7 @@ namespace KafkaClient.Tests.Integration
             var requestTasks = new ConcurrentBag<Task<MetadataResponse>>();
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
-                    var singleResult = await router.Connections.First().SendAsync(new MetadataRequest(TestConfig.TopicName()), CancellationToken.None);
+                    var singleResult = await router.Connections.First().SendAsync(new MetadataRequest(topicName), CancellationToken.None);
                     Assert.True(singleResult.TopicMetadata.Count > 0);
                     Assert.True(singleResult.TopicMetadata.First().PartitionMetadata.Count > 0);
 

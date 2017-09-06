@@ -37,7 +37,7 @@ namespace KafkaClient.Tests
         {
             var topicName = TestConfig.TopicName(name);
             try {
-                await router.SendToAnyAsync(new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TimeSpan.FromSeconds(1)), CancellationToken.None);
+                await router.SendToAnyAsync(new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TestConfig.DefaultTimeout), CancellationToken.None);
             } catch (RequestException ex) when (ex.ErrorCode == ErrorCode.TOPIC_ALREADY_EXISTS) {
                 // ignore already exists
             }

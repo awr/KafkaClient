@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.0</TargetFrameworks>
     <AssemblyName>KafkaClient.Tests</AssemblyName>
     <PackageId>KafkaClient.Tests</PackageId>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -33,12 +33,6 @@
     <PackageReference Include="AgileObjects.ReadableExpressions" Version="1.9.1" />
     <PackageReference Include="NSubstitute" Version="2.0.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' != 'netcoreapp2.0' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-    <PackageReference Include="NETStandard.Library" Version="2.0.0" />
   </ItemGroup>
  
   <ItemGroup>

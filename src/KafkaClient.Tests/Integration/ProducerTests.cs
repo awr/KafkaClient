@@ -18,7 +18,7 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var sendTask = producer.SendAsync(
-                            new Message(Guid.NewGuid().ToString()), TestConfig.TopicName(), 0,
+                            new Message(Guid.NewGuid().ToString()), topicName, 0,
                             new SendMessageConfiguration(acks: 0), CancellationToken.None);
 
                         await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromMinutes(2)));
@@ -50,9 +50,9 @@ namespace KafkaClient.Tests.Integration
                 await router.TemporaryTopicAsync(async topicName => {
                     using (var producer = new Producer(router)) {
                         var tasks = new[] {
-                            producer.SendAsync(new Message("1"), TestConfig.TopicName(), 0, CancellationToken.None),
-                            producer.SendAsync(new Message("2"), TestConfig.TopicName(), 1, CancellationToken.None),
-                            producer.SendAsync(new Message("3"), TestConfig.TopicName(), 2, CancellationToken.None),
+                            producer.SendAsync(new Message("1"), topicName, 0, CancellationToken.None),
+                            producer.SendAsync(new Message("2"), topicName, 1, CancellationToken.None),
+                            producer.SendAsync(new Message("3"), topicName, 2, CancellationToken.None),
                         };
 
                         await Task.WhenAll(tasks);
