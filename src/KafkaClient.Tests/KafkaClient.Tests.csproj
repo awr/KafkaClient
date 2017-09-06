@@ -38,6 +38,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' != 'netcoreapp2.0' ">
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="NETStandard.Library" Version="2.0.0" />
   </ItemGroup>
  
   <ItemGroup>
