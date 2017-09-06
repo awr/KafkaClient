@@ -27,7 +27,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetsRequest : Request, IRequest<OffsetsResponse>, IEquatable<OffsetsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},isolation_level:{IsolationLevel},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 
@@ -107,7 +107,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},timestamp:{Timestamp},max_num_offsets:{MaxNumOffsets}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},timestamp:{Timestamp},max_num_offsets:{MaxNumOffsets}}}";
 
             public Topic(string topicName, int partitionId, long timestamp = LatestTime, int maxOffsets = DefaultMaxOffsets) : base(topicName, partitionId)
             {

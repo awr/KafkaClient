@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class SyncGroupRequest : GroupRequest, IRequest<SyncGroupResponse>, IEquatable<SyncGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId},group_assignments:[{GroupAssignments.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},generation_id:{GenerationId},member_id:{MemberId},group_assignments:[{GroupAssignments.ToStrings()}]}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 

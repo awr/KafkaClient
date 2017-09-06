@@ -102,7 +102,7 @@ namespace KafkaClient.Protocol
 
         public class FilterResponse : IEquatable<FilterResponse>
         {
-            public override string ToString() => $"{{error_code:{Error},error_message:{ErrorMessage}}}";
+            public override string ToString() => $"{{error_code:{Error},error_message:{ErrorMessage},matching_acls:[{MatchingAcls.ToStrings()}]}}";
 
             public FilterResponse(ErrorCode errorCode, string errorMessage, IEnumerable<MatchingAcl> matchingAcls = null)
             {
@@ -157,7 +157,7 @@ namespace KafkaClient.Protocol
 
         public class MatchingAcl : AclResource, IEquatable<MatchingAcl>
         {
-            public override string ToString() => $"{{error_code:{Error},error_message:{ErrorMessage},resource_type:{ResourceType},resource_name:{ResourceName},principal:{Principal},host:{Host},operation:{Operation},permission_type:{PermissionType}}}";
+            public override string ToString() => $"{{error_code:{Error},error_message:{ErrorMessage},{this.AclToString()}}}";
 
             public MatchingAcl(ErrorCode errorCode, string errorMessage, byte resourceType, string resourceName, string principal, string host, byte operation, byte permissionType)
                 : base(resourceType, resourceName, principal, host, operation, permissionType)

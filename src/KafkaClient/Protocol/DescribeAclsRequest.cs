@@ -18,7 +18,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DescribeAclsRequest : Request, IAclResource, IRequest<DescribeAclsResponse>, IEquatable<DescribeAclsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},resource_type:{ResourceType},resource_name:{ResourceName},principal:{Principal},host:{Host},operation:{Operation},permission_type:{PermissionType}}}";
+        public override string ToString() => $"{{{this.RequestToString()},{this.AclToString()}}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

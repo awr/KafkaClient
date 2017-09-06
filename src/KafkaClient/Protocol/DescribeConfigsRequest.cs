@@ -19,7 +19,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DescribeConfigsRequest : Request, IRequest<DescribeConfigsResponse>, IEquatable<DescribeConfigsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},resources:[{Resources.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},resources:[{Resources.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

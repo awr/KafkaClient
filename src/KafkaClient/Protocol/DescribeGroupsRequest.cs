@@ -19,7 +19,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DescribeGroupsRequest : Request, IRequest<DescribeGroupsResponse>, IEquatable<DescribeGroupsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_ids:[{GroupIds.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_ids:[{GroupIds.ToStrings()}]}}";
 
         public override string ShortString() => GroupIds.Count == 1 ? $"{ApiKey} {GroupIds[0]}" : ApiKey.ToString();
 

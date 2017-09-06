@@ -23,7 +23,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class WriteTxnMarkersRequest : Request, IRequest<WriteTxnMarkersResponse>, IEquatable<WriteTxnMarkersRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transaction_markers:[{TransactionMarkers.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},transaction_markers:[{TransactionMarkers.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

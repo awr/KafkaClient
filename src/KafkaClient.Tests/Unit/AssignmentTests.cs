@@ -119,7 +119,7 @@ namespace KafkaClient.Tests.Unit
             var request = new SyncGroupRequest("group", 5, "member", new[] { new SyncGroupRequest.GroupAssignment("member", new ConsumerMemberAssignment(new[] { new TopicPartition("topic-foo", 0), new TopicPartition("topic", 1) })) });
             var formatted = request.ToString();
             Assert.True(formatted.Contains("topic:topic-foo"));
-            Assert.True(formatted.Contains("partition_id:1"));
+            Assert.True(formatted.Contains("partition:1"));
         }
 
         // design unit TESTS to write:

@@ -26,7 +26,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DescribeAclsResponse : ThrottledResponse, IResponse, IEquatable<DescribeAclsResponse>
     {
-        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},error_message:{ErrorMessage}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},error_message:{ErrorMessage},resources:[{Resources.ToStrings()}]}}";
 
         public static DescribeAclsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

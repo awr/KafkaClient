@@ -15,7 +15,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ListGroupsRequest : Request, IRequest<ListGroupsResponse>, IEquatable<ListGroupsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey}}}";
+        public override string ToString() => $"{{{this.RequestToString()}}}";
 
         public ListGroupsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => ListGroupsResponse.FromBytes(context, bytes);
 

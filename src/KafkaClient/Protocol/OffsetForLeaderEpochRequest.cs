@@ -20,7 +20,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetForLeaderEpochRequest : Request, IRequest<OffsetForLeaderEpochResponse>, IEquatable<OffsetForLeaderEpochRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},topics:[{Topics.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
@@ -78,7 +78,7 @@ namespace KafkaClient.Protocol
         /// </summary>
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},leader_epoch:{LeaderEpoch}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},leader_epoch:{LeaderEpoch}}}";
 
             public Topic(string topicName, int partitionId, int leaderEpoch = 0) 
                 : base(topicName, partitionId)

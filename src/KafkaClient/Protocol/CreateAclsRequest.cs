@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class CreateAclsRequest : Request, IRequest<CreateAclsResponse>, IEquatable<CreateAclsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},creations:[{Creations.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},creations:[{Creations.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

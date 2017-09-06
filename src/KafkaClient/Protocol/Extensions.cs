@@ -734,7 +734,13 @@ namespace KafkaClient.Protocol
 
         #region ToString
 
-        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:D}";
+        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:F0}";
+
+        internal static string RequestToString(this IRequest request) => $"Api:{request.ApiKey}";
+
+        internal static string PartitionToString(this TopicPartition partition) => $"topic:{partition.TopicName},partition:{partition.PartitionId}";
+
+        internal static string AclToString(this IAclResource acl) => $"resource_type:{acl.ResourceType},resource_name:{acl.ResourceName},principal:{acl.Principal},host:{acl.Host},operation:{acl.Operation},permission_type:{acl.PermissionType}";
 
         #endregion
     }

@@ -16,7 +16,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AddOffsetsToTxnRequest : TransactionRequest, IRequest<AddOffsetsToTxnResponse>, IEquatable<AddOffsetsToTxnRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},consumer_group_id:{GroupId}}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},consumer_group_id:{GroupId}}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

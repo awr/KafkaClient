@@ -21,7 +21,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AddPartitionsToTxnRequest : TransactionRequest, IRequest<AddPartitionsToTxnResponse>, IEquatable<AddPartitionsToTxnRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},topics:[{Topics.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DeleteAclsRequest : Request, IRequest<DeleteAclsResponse>, IEquatable<DeleteAclsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},creations:[{Filters.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},filters:[{Filters.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

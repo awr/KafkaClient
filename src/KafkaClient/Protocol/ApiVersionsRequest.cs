@@ -14,7 +14,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ApiVersionsRequest : Request, IRequest<ApiVersionsResponse>, IEquatable<ApiVersionsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey}}}";
+        public override string ToString() => $"{{{this.RequestToString()}}}";
 
         public ApiVersionsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => ApiVersionsResponse.FromBytes(context, bytes);
 

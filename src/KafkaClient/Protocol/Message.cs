@@ -78,7 +78,7 @@ namespace KafkaClient.Protocol
             return $"{{Offset:{Offset:D},Timestamp:{Timestamp?.ToUnixTimeMilliseconds():D},Attribute:{Attribute:X2},Key:0x{keyString},Value:0x{valueString},Headers:{Headers.Count}";  
         }
 
-        public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
+        public override string ToString() => $"{{Offset:{Offset},Timestamp:{Timestamp?.ToUnixTimeMilliseconds():D},KeySize:{Key.Count},ValueSize:{Value.Count}}}";
 
         public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)
             : this(value, EmptySegment, attribute, offset, timestamp)

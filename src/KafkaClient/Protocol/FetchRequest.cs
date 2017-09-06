@@ -30,7 +30,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class FetchRequest : Request, IRequest<FetchResponse>, IEquatable<FetchRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},max_wait_time:{MaxWaitTime},min_bytes:{MinBytes},max_bytes:{MaxBytes},isolation_level:{IsolationLevel},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},max_wait_time:{MaxWaitTime},min_bytes:{MinBytes},max_bytes:{MaxBytes},isolation_level:{IsolationLevel},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 
@@ -149,7 +149,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},fetch_offset:{FetchOffset},log_start_offset:{LogStartOffset},max_bytes:{MaxBytes}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},fetch_offset:{FetchOffset},log_start_offset:{LogStartOffset},max_bytes:{MaxBytes}}}";
 
             public Topic(string topicName, int partitionId, long offset, long? logStartOffset = null, int? maxBytes = null)
                 : base(topicName, partitionId)

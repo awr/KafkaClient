@@ -13,7 +13,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class SaslHandshakeRequest : Request, IRequest<SaslHandshakeResponse>, IEquatable<SaslHandshakeRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},mechanism:{Mechanism}}}";
+        public override string ToString() => $"{{{this.RequestToString()},mechanism:{Mechanism}}}";
 
         public SaslHandshakeResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => SaslHandshakeResponse.FromBytes(context, bytes);
 

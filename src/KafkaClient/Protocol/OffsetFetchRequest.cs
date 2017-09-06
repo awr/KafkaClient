@@ -20,7 +20,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetFetchRequest : Request, IRequest<OffsetFetchResponse>, IEquatable<OffsetFetchRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {GroupId} {Topics[0].TopicName}" : $"{ApiKey} {GroupId}";
 

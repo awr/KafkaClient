@@ -27,7 +27,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetFetchResponse : ThrottledResponse, IResponse<OffsetFetchResponse.Topic>, IEquatable<OffsetFetchResponse>
     {
-        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}],error_code:{Error}}}";
 
         public static OffsetFetchResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -112,7 +112,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicOffset, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{Offset},metadata:{Metadata},error_code:{Error}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},offset:{Offset},metadata:{Metadata},error_code:{Error}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode, long offset, string metadata) 
                 : base(topic, partitionId, offset)

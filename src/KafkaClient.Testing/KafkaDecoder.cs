@@ -426,11 +426,11 @@ namespace KafkaClient.Testing
                         assignments[a] = new CreateTopicsRequest.ReplicaAssignment(partitionId, replicas);
                     }
 
-                    var configs = new KeyValuePair<string, string>[reader.ReadInt32()];
+                    var configs = new ConfigEntry[reader.ReadInt32()];
                     for (var c = 0; c < configs.Length; c++) {
                         var key = reader.ReadString();
                         var value = reader.ReadString();
-                        configs[c] = new KeyValuePair<string, string>(key, value);
+                        configs[c] = new ConfigEntry(key, value);
                     }
 
                     topics[t] = assignments.Length > 0

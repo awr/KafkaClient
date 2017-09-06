@@ -29,7 +29,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class CreateTopicsRequest : Request, IRequest<CreateTopicsResponse>, IEquatable<CreateTopicsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},create_topic_requests:[{Topics.ToStrings()}],timeout:{Timeout}}}";
+        public override string ToString() => $"{{{this.RequestToString()},create_topic_requests:[{Topics.ToStrings()}],timeout:{Timeout},validate_only:{ValidateOnly}}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 
@@ -47,8 +47,8 @@ namespace KafkaClient.Protocol
                 }
                 writer.Write(topic.Configs.Count);
                 foreach (var config in topic.Configs) {
-                    writer.Write(config.Key)
-                          .Write(config.Value);
+                    writer.Write(config.ConfigName)
+                          .Write(config.ConfigValue);
                 }
             }
             writer.WriteMilliseconds(Timeout);
@@ -111,9 +111,9 @@ namespace KafkaClient.Protocol
 
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},num_partitions:{NumPartitions},replication_factor:{ReplicationFactor},replica_assignments:[{ReplicaAssignments.ToStrings()}],configs:{{{string.Join(",",Configs.Select(pair => $"{pair.Key}:{pair.Value}"))}}}}}";
+            public override string ToString() => $"{{topic:{TopicName},num_partitions:{NumPartitions},replication_factor:{ReplicationFactor},replica_assignments:[{ReplicaAssignments.ToStrings()}],configs:[{Configs.ToStrings()}]}}";
 
-            public Topic(string topicName, int numberOfPartitions, short replicationFactor, IEnumerable<KeyValuePair<string, string>> configs = null)
+            public Topic(string topicName, int numberOfPartitions, short replicationFactor, IEnumerable<ConfigEntry> configs = null)
                 : this (topicName, configs)
             {
                 NumPartitions = numberOfPartitions;
@@ -121,7 +121,7 @@ namespace KafkaClient.Protocol
                 ReplicaAssignments = ImmutableList<ReplicaAssignment>.Empty;
             }
 
-            public Topic(string topicName, IEnumerable<ReplicaAssignment> replicaAssignments, IEnumerable<KeyValuePair<string, string>> configs = null)
+            public Topic(string topicName, IEnumerable<ReplicaAssignment> replicaAssignments, IEnumerable<ConfigEntry> configs = null)
                 : this (topicName, configs)
             {
                 NumPartitions = -1;
@@ -129,10 +129,10 @@ namespace KafkaClient.Protocol
                 ReplicaAssignments = replicaAssignments.ToSafeImmutableList();
             }
 
-            private Topic(string topicName, IEnumerable<KeyValuePair<string, string>> configs)
+            private Topic(string topicName, IEnumerable<ConfigEntry> configs)
             {
                 TopicName = topicName;
-                Configs = configs.ToSafeImmutableDictionary();
+                Configs = configs.ToSafeImmutableList();
             }
 
             /// <summary>
@@ -159,7 +159,7 @@ namespace KafkaClient.Protocol
             /// <summary>
             /// Topic level configuration for topic to be set.
             /// </summary>
-            public IImmutableDictionary<string, string> Configs { get; }
+            public IImmutableList<ConfigEntry> Configs { get; }
 
             #region Equality
 

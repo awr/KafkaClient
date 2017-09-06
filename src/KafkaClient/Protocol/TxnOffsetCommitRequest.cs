@@ -25,7 +25,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class TxnOffsetCommitRequest : TransactionRequest, IRequest<TxnOffsetCommitResponse>, IEquatable<TxnOffsetCommitRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},consumer_group_id:{GroupId},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionId},consumer_group_id:{GroupId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},topics:[{Topics.ToStrings()}]}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
@@ -93,7 +93,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{Offset},metadata:{Metadata}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},offset:{Offset},metadata:{Metadata}}}";
 
             public Topic(string topicName, int partitionId, long offset, string metadata = null) 
                 : base(topicName, partitionId)

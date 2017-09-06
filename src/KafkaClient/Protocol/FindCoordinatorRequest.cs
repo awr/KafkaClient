@@ -19,7 +19,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class FindCoordinatorRequest : Request, IRequest<FindCoordinatorResponse>, IEquatable<FindCoordinatorRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{CoordinatorId}}}";
+        public override string ToString() => $"{{{this.RequestToString()},coordinator_key:{CoordinatorId},coordinator_type:{CoordinatorType}}}";
 
         public override string ShortString() => $"{ApiKey} {CoordinatorId}";
 

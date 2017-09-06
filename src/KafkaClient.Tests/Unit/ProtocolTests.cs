@@ -2069,11 +2069,11 @@ namespace KafkaClient.Tests.Unit
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
-                var configs = new Dictionary<string, string>();
+                var configs = new ConfigEntry[configCount];
                 for (var c = 0; c < configCount; c++) {
-                    configs["config-" + c] = Guid.NewGuid().ToString("N");
+                    configs[c] = new ConfigEntry("config-" + c, Guid.NewGuid().ToString("N"));
                 }
-                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
+                if (configs.Length == 0 && _randomizer.Next() % 2 == 0) {
                     configs = null;
                 }
                 topics.Add(new CreateTopicsRequest.Topic(topicName + t, partitionsPerTopic, replicationFactor, configs));
@@ -2090,11 +2090,11 @@ namespace KafkaClient.Tests.Unit
             [Values(1, 3)] short replicationFactor,
             [Values(1, 3)] int configCount)
         {
-            var configs = new Dictionary<string, string>();
+            var configs = new ConfigEntry[configCount];
             for (var c = 0; c < configCount; c++) {
-                configs["config-" + c] = Guid.NewGuid().ToString("N");
+                configs[c] = new ConfigEntry("config-" + c, Guid.NewGuid().ToString("N"));
             }
-            if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
+            if (configs.Length == 0 && _randomizer.Next() % 2 == 0) {
                 configs = null;
             }
             var topic = new CreateTopicsRequest.Topic(topicName, partitionsPerTopic, replicationFactor, configs);
@@ -2140,11 +2140,11 @@ namespace KafkaClient.Tests.Unit
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
-                var configs = new Dictionary<string, string>();
+                var configs = new ConfigEntry[configCount];
                 for (var c = 0; c < configCount; c++) {
-                    configs["config-" + c] = Guid.NewGuid().ToString("N");
+                    configs[c] = new ConfigEntry("config-" + c, Guid.NewGuid().ToString("N"));
                 }
-                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
+                if (configs.Length == 0 && _randomizer.Next() % 2 == 0) {
                     configs = null;
                 }
                 topics.Add(new CreateTopicsRequest.Topic(topicName + t, partitionsPerTopic, replicationFactor, configs));
@@ -2173,11 +2173,11 @@ namespace KafkaClient.Tests.Unit
         {
             var topics = new List<CreateTopicsRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
-                var configs = new Dictionary<string, string>();
+                var configs = new ConfigEntry[configCount];
                 for (var c = 0; c < configCount; c++) {
-                    configs["config-" + c] = Guid.NewGuid().ToString("N");
+                    configs[c] = new ConfigEntry("config-" + c, Guid.NewGuid().ToString("N"));
                 }
-                if (configs.Count == 0 && _randomizer.Next() % 2 == 0) {
+                if (configs.Length == 0 && _randomizer.Next() % 2 == 0) {
                     configs = null;
                 }
 

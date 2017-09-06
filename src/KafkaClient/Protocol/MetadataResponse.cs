@@ -39,7 +39,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class MetadataResponse : ThrottledResponse, IResponse, IEquatable<MetadataResponse>
     {
-        public override string ToString() => $"{{{this.ThrottleToString()},brokers:[{Brokers.ToStrings()}],topic_metadata:[{TopicMetadata.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},brokers:[{Brokers.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId},topic_metadata:[{TopicMetadata.ToStrings()}]}}";
 
         public static MetadataResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -167,7 +167,7 @@ namespace KafkaClient.Protocol
         /// </summary>
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},topic_error_code:{TopicError},partition_metadata:[{PartitionMetadata.ToStrings()}],is_internal:{IsInternal}}}";
+            public override string ToString() => $"{{topic_error_code:{TopicError},topic:{TopicName},is_internal:{IsInternal},partition_metadata:[{PartitionMetadata.ToStrings()}]}}";
 
             public Topic(string topicName, ErrorCode errorCode = ErrorCode.NONE, IEnumerable<Partition> partitions = null, bool? isInternal = null)
             {
@@ -231,7 +231,7 @@ namespace KafkaClient.Protocol
 
         public class Partition : IEquatable<Partition>
         {
-            public override string ToString() => $"{{partition_id:{PartitionId},partition_error_code:{PartitionError},leader:{Leader},replicas:[{Replicas.ToStrings()}],isr:[{Isr.ToStrings()}]}}";
+            public override string ToString() => $"{{partition_error_code:{PartitionError},partition_id:{PartitionId},leader:{Leader},replicas:[{Replicas.ToStrings()}],isr:[{Isr.ToStrings()}]}}";
 
             public Partition(int partitionId, int leaderId, ErrorCode errorCode = ErrorCode.NONE, IEnumerable<int> replicas = null, IEnumerable<int> isrs = null)
             {

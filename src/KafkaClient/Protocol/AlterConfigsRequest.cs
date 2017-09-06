@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AlterConfigsRequest : Request, IRequest<AlterConfigsResponse>, IEquatable<AlterConfigsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},resources:[{Resources.ToStrings()}],validate_only:{ValidateOnly}}}";
+        public override string ToString() => $"{{{this.RequestToString()},resources:[{Resources.ToStrings()}],validate_only:{ValidateOnly}}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

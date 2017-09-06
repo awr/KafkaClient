@@ -18,7 +18,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class HeartbeatRequest : GroupRequest, IRequest<HeartbeatResponse>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId}}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId}}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 

@@ -21,7 +21,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DeleteRecordsRequest : Request, IRequest<DeleteRecordsResponse>, IEquatable<DeleteRecordsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},timeout:{Timeout},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},topics:[{Topics.ToStrings()}],timeout:{Timeout}}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 
@@ -90,7 +90,7 @@ namespace KafkaClient.Protocol
         /// </summary>
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{Offset}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},offset:{Offset}}}";
 
             public Topic(string topicName, int partitionId, long offset = 0L) 
                 : base(topicName, partitionId)

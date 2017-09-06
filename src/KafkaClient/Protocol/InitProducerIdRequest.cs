@@ -14,7 +14,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class InitProducerIdRequest : Request, IRequest<InitProducerIdResponse>, IEquatable<InitProducerIdRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionTimeout},transaction_timeout_ms:{TransactionTimeout}}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionTimeout},transaction_timeout_ms:{TransactionTimeout.TotalMilliseconds:F0} }}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

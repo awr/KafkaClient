@@ -91,7 +91,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicResponse, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},low_watermark:{LowWatermark},error_code:{Error}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},low_watermark:{LowWatermark},error_code:{Error}}}";
 
             public Topic(string topic, int partitionId, long lowWatermark, ErrorCode errorCode)
                 : base(topic, partitionId, errorCode)

@@ -79,6 +79,8 @@ namespace KafkaClient.Protocol
 
         public class ErrorResponse : IEquatable<ErrorResponse>
         {
+            public override string ToString() => $"{{error_code:{Error},error_message:{ErrorMessage}}}";
+
             public ErrorResponse(ErrorCode errorCode, string errorMessage)
             {
                 Error = errorCode;

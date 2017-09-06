@@ -45,7 +45,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class JoinGroupRequest : Request, IRequest<JoinGroupResponse>, IGroupMember, IEquatable<JoinGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},session_timeout:{SessionTimeout},rebalance_timeout:{RebalanceTimeout},protocol_type:{ProtocolType},group_protocols:[{GroupProtocols.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},session_timeout:{SessionTimeout},rebalance_timeout:{RebalanceTimeout},member_id:{MemberId},protocol_type:{ProtocolType},group_protocols:[{GroupProtocols.ToStrings()}]}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 

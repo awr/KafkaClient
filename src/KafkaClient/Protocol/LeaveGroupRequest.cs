@@ -18,7 +18,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class LeaveGroupRequest : Request, IRequest<LeaveGroupResponse>, IGroupMember, IEquatable<LeaveGroupRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId}}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},member_id:{MemberId}}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 

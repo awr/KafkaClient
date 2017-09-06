@@ -23,13 +23,13 @@ namespace KafkaClient.Protocol
     /// 
     /// Version 1+: group_generation_id
     /// Version 1+: member_id
-    /// Version 1 only: timestamp
+    /// Version 1 only: timestamp => INT64
     /// Version 2+: retention_time
     /// From http://kafka.apache.org/protocol.html#The_Messages_OffsetCommit
     /// </remarks>
     public class OffsetCommitRequest : GroupRequest, IRequest<OffsetCommitResponse>, IEquatable<OffsetCommitRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},group_id:{GroupId},member_id:{MemberId},generation_id:{GenerationId},topics:[{Topics.ToStrings()}],retention_time:{RetentionTime}}}";
+        public override string ToString() => $"{{{this.RequestToString()},group_id:{GroupId},generation_id:{GenerationId},member_id:{MemberId},retention_time:{RetentionTime?.TotalMilliseconds:F0},topics:[{Topics.ToStrings()}]}}";
 
         public override string ShortString() => $"{ApiKey} {GroupId} {MemberId}";
 
@@ -110,7 +110,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : TopicPartition, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},timeStamp:{TimeStamp},offset:{Offset},metadata:{Metadata}}}";
+            public override string ToString() => $"{{{this.PartitionToString()},offset:{Offset},timeStamp:{TimeStamp},metadata:{Metadata}}}";
 
             public Topic(string topicName, int partitionId, long offset, string metadata = null, long? timeStamp = null) 
                 : base(topicName, partitionId)

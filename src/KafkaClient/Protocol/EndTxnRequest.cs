@@ -16,7 +16,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class EndTxnRequest : TransactionRequest, IRequest<EndTxnResponse>, IEquatable<EndTxnRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},transaction_result:{TransactionResult}}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch},transaction_result:{TransactionResult}}}";
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {

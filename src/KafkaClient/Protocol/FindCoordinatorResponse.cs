@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class FindCoordinatorResponse : Server, IResponse, IThrottledResponse, IEquatable<FindCoordinatorResponse>
     {
-        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},node_id:{Id},host:'{Host}',port:{Port}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},error_message:{ErrorMessage},node_id:{Id},host:'{Host}',port:{Port}}}";
 
         public static FindCoordinatorResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

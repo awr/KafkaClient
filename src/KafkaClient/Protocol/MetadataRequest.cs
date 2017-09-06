@@ -18,7 +18,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class MetadataRequest : Request, IRequest<MetadataResponse>, IEquatable<MetadataRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.RequestToString()},topics:[{Topics.ToStrings()}],allow_auto_topic_creation:{AllowTopicAutoCreation}}}";
 
         public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0]}" : ApiKey.ToString();
 

@@ -4,7 +4,7 @@ namespace KafkaClient.Protocol
 {
     public class AclResource : Acl, IAclResource, IEquatable<AclResource>
     {
-        public override string ToString() => $"{{resource_type:{ResourceType},resource_name:{ResourceName},principal:{Principal},host:{Host},operation:{Operation},permission_type:{PermissionType}}}";
+        public override string ToString() => $"{{{this.AclToString()}}}";
 
         public AclResource(byte resourceType, string resourceName, string principal, string host, byte operation, byte permissionType) 
             : base(principal, host, operation, permissionType)

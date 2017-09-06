@@ -4,7 +4,7 @@ namespace KafkaClient.Protocol
 {
     public abstract class TransactionRequest : Request, IEquatable<TransactionRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch}}}";
+        public override string ToString() => $"{{{this.RequestToString()},transactional_id:{TransactionId},producer_id:{ProducerId},producer_epoch:{ProducerEpoch}}}";
  
         protected TransactionRequest(ApiKey apiKey, string transactionId, long producerId, short producerEpoch, bool expectResponse = true) 
             : base(apiKey, expectResponse)
