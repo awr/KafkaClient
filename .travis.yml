@@ -39,8 +39,9 @@ services:
   - docker
 
 before_install:
-  - docker run -d --name zookeeper --publish 2181:2181 --restart always zookeeper:3.4
-  - docker run -d --name kafka10_1 --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env  KAFKA_BROKER_ID=0 --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafkalocal ches/kafka:0.10.2.1
+  - docker network create kafka-net
+  - docker run -d --name zookeeper --restart always --network kafka-net --publish 2181:2181 zookeeper:3.4
+  - docker run -d --name kafka --network kafka-net --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafka ches/kafka:0.10.2.1
   - docker ps
   #- dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
 
