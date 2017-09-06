@@ -59,7 +59,7 @@ install:
 script:
   - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
   - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)"
-  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=Integration) & (TestCategory!=Flaky)"
+  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=Integration)"
 
 after_success:
   - dotnet pack -c Release -f netcoreapp2.0 src/KafkaClient/KafkaClient.csproj -o artifacts 

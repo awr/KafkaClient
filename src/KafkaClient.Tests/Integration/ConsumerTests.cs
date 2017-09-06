@@ -14,7 +14,7 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    [Category("Integration")]
+    //[Category("Integration")]
     public class ConsumerTests
     {
         [Test]
