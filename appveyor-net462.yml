@@ -14,7 +14,8 @@ configuration: Release
 os: Visual Studio 2017
 
 before_build:
-  - nuget restore -PackagesDirectory packages
+  - appveyor-retry dotnet restore --packages packages
+  # - nuget restore -PackagesDirectory packages
 
 build:
   parallel: true
@@ -22,7 +23,7 @@ build:
   verbosity: minimal
 
 test_script:
- - nunit3-console src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --where "cat!=Flaky AND cat=CI" --result=test-results.xml;format=AppVeyor
+ - packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --where "cat!=Flaky AND cat=CI" --result=test-results.xml;format=AppVeyor
  - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --noheader --where \"cat!=Flaky AND cat=CI\" --result=test-results.xml;format=AppVeyor" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
  
 after_test:
