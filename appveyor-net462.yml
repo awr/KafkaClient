@@ -17,7 +17,7 @@ build_script:
   - appveyor-retry dotnet restore --packages packages
   - dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
   - dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj -o artifacts 
-  - dotnet build -c %CONFIGURATION% src\KafkaClient.Tests\KafkaClient.Tests.csproj --no-dependencies --no-incremental
+  - dotnet build -c %CONFIGURATION% src\KafkaClient.Tests\KafkaClient.Tests.csproj --no-incremental
 
 # build:
 #   parallel: true
