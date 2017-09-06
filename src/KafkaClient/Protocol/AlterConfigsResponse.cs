@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AlterConfigsResponse : ThrottledResponse, IResponse, IEquatable<AlterConfigsResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},resources:{Resources.ToStrings()}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},resources:{Resources.ToStrings()}}}";
 
         public static AlterConfigsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

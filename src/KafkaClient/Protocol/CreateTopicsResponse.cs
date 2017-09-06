@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
 {
@@ -20,6 +21,8 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class CreateTopicsResponse : TopicsResponse, IEquatable<CreateTopicsResponse>
     {
+        public override string ToString() => $"{{{this.ThrottleToString()},topic_errors:{Topics.ToStrings()}}}";
+
         public static CreateTopicsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {

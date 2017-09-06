@@ -15,7 +15,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class EndTxnResponse : ThrottledResponse, IResponse, IEquatable<EndTxnResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},error:{Error}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error}}}";
 
         public static EndTxnResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

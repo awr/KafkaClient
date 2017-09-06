@@ -23,7 +23,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetCommitResponse : ThrottledResponse, IResponse<TopicResponse>, IEquatable<OffsetCommitResponse>
     {
-        public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetCommitResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

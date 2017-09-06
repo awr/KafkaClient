@@ -8,8 +8,6 @@ namespace KafkaClient.Protocol
 {
     public abstract class TopicsResponse : ThrottledResponse, IResponse, IEquatable<TopicsResponse>
     {
-        public override string ToString() => $"{{Topics:[{Topics.ToStrings()}]}}";
-
         protected TopicsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
             : base(throttleTime)
         {
@@ -48,7 +46,7 @@ namespace KafkaClient.Protocol
 
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{TopicName:{TopicName},ErrorCode:{ErrorCode}}}";
+            public override string ToString() => $"{{topic:{TopicName},error_code:{ErrorCode},error_message:{ErrorMessage}}}";
 
             public Topic(string topicName, ErrorCode errorCode, string errorMessage = null)
             {

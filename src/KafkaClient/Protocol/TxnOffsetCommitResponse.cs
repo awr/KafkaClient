@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class TxnOffsetCommitResponse : ThrottledResponse, IResponse, IEquatable<TxnOffsetCommitResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},topics:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},topics:[{Topics.ToStrings()}]}}";
 
         public static TxnOffsetCommitResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

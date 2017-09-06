@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AddPartitionsToTxnResponse : ThrottledResponse, IResponse, IEquatable<AddPartitionsToTxnResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},errors:[{Topics.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},errors:[{Topics.ToStrings()}]}}";
 
         public static AddPartitionsToTxnResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

@@ -23,7 +23,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DeleteRecordsResponse : ThrottledResponse, IResponse, IEquatable<DeleteRecordsResponse>
     {
-        public override string ToString() => $"{{topics:[{Topics.ToStrings()}],throttle_time_ms:{ThrottleTime}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},topics:[{Topics.ToStrings()}]}}";
 
         public static DeleteRecordsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

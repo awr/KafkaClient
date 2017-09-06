@@ -731,5 +731,11 @@ namespace KafkaClient.Protocol
         }
 
         #endregion
+
+        #region ToString
+
+        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:D}";
+
+        #endregion
     }
 }

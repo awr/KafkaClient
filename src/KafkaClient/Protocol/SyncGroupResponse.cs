@@ -18,7 +18,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class SyncGroupResponse : ThrottledResponse, IResponse, IEquatable<SyncGroupResponse>
     {
-        public override string ToString() => $"{{error_code:{Error},member_assignment:{MemberAssignment}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},member_assignment:{MemberAssignment}}}";
 
         public static SyncGroupResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

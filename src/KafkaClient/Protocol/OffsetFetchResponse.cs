@@ -7,16 +7,6 @@ using KafkaClient.Common;
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// OffsetFetch Response => [responses]
-    ///  response => topic [partition_responses] 
-    ///   topic => STRING              -- The name of the topic.
-    ///   partition_response => partition_id offset metadata error_code
-    ///    partition_id => INT32       -- The id of the partition.
-    ///    offset => INT64             -- The offset, or -1 if none exists.
-    ///    metadata => NULLABLE_STRING -- The metadata associated with the topic and partition.
-    ///    error_code => INT16         -- The error code for the partition, if any.
-    ///
-    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommit/FetchAPI
     /// OffsetFetch Response => *throttle_time_ms [responses] *error_code 
     /// </summary>
     /// <remarks>
@@ -37,7 +27,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class OffsetFetchResponse : ThrottledResponse, IResponse<OffsetFetchResponse.Topic>, IEquatable<OffsetFetchResponse>
     {
-        public override string ToString() => $"{{responses:[{Responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetFetchResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

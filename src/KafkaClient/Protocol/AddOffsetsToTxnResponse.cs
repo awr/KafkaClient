@@ -15,7 +15,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class AddOffsetsToTxnResponse : ThrottledResponse, IResponse, IEquatable<AddOffsetsToTxnResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},error:{Error}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error:{Error}}}";
 
         public static AddOffsetsToTxnResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

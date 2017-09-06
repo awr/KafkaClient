@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
 {
@@ -18,6 +19,8 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DeleteTopicsResponse : TopicsResponse, IEquatable<DeleteTopicsResponse>
     {
+        public override string ToString() => $"{{{this.ThrottleToString()},topic_errors:{Topics.ToStrings()}}}";
+
         public static DeleteTopicsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {

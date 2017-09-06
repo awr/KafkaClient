@@ -33,7 +33,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class FetchResponse : ThrottledResponse, IResponse<FetchResponse.Topic>, IEquatable<FetchResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},responses:[{Responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
 
         public static FetchResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

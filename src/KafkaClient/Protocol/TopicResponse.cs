@@ -41,6 +41,6 @@ namespace KafkaClient.Protocol
 
         #endregion
 
-        public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},error_code:{Error}}}";
+        public override string ToString() => $"{{topic:{TopicName},partition:{PartitionId},error_code:{Error}}}";
     }
 }

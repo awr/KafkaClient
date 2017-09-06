@@ -16,7 +16,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class HeartbeatResponse : ThrottledResponse, IResponse, IEquatable<HeartbeatResponse>
     {
-        public override string ToString() => $"{{error_code:{Error}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error}}}";
 
         public static HeartbeatResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

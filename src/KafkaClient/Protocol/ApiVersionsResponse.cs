@@ -22,7 +22,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ApiVersionsResponse : ThrottledResponse, IResponse, IEquatable<ApiVersionsResponse>
     {
-        public override string ToString() => $"{{error_code:{Error},api_versions:[{ApiVersions.ToStrings()}]}}";
+        public override string ToString() => $"{{error_code:{Error},api_versions:[{ApiVersions.ToStrings()}],{this.ThrottleToString()}}}";
 
         public static ApiVersionsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

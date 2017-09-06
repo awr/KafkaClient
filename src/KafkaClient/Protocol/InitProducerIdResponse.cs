@@ -17,7 +17,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class InitProducerIdResponse : ThrottledResponse, IResponse, IEquatable<InitProducerIdResponse>
     {
-        public override string ToString() => $"{{throttle_time_ms:{ThrottleTime},error_code:{Error},producer_id:{ProducerId},producer_epoch:{ProducerEpoch}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},producer_id:{ProducerId},producer_epoch:{ProducerEpoch}}}";
 
         public static InitProducerIdResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

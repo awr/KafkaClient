@@ -39,7 +39,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class MetadataResponse : ThrottledResponse, IResponse, IEquatable<MetadataResponse>
     {
-        public override string ToString() => $"{{brokers:[{Brokers.ToStrings()}],topic_metadata:[{TopicMetadata.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},brokers:[{Brokers.ToStrings()}],topic_metadata:[{TopicMetadata.ToStrings()}],cluster_id:{ClusterId},controller_id:{ControllerId}}}";
 
         public static MetadataResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

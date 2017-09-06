@@ -20,9 +20,9 @@ namespace KafkaClient.Protocol
     /// Version 1+: error_message
     /// From http://kafka.apache.org/protocol.html#The_Messages_FindCoordinator
     /// </remarks>
-    public class FindCoordinatorResponse : Server, IResponse, IEquatable<FindCoordinatorResponse>
+    public class FindCoordinatorResponse : Server, IResponse, IThrottledResponse, IEquatable<FindCoordinatorResponse>
     {
-        public override string ToString() => $"{{error_code:{Error},node_id:{Id},host:'{Host}',port:{Port}}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},node_id:{Id},host:'{Host}',port:{Port}}}";
 
         public static FindCoordinatorResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

@@ -21,7 +21,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ListGroupsResponse : ThrottledResponse, IResponse, IEquatable<ListGroupsResponse>
     {
-        public override string ToString() => $"{{error_code:{Error},groups:[{Groups.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},groups:[{Groups.ToStrings()}]}}";
 
         public static ListGroupsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

@@ -31,7 +31,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class DescribeGroupsResponse : ThrottledResponse, IResponse, IEquatable<DescribeGroupsResponse>
     {
-        public override string ToString() => $"{{groups:[{Groups.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},groups:[{Groups.ToStrings()}]}}";
 
         public static DescribeGroupsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

@@ -26,7 +26,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class ProduceResponse : ThrottledResponse, IResponse<ProduceResponse.Topic>, IEquatable<ProduceResponse>
     {
-        public override string ToString() => $"{{responses:[{Responses.ToStrings()}],throttle_time_ms:{ThrottleTime}}}";
+        public override string ToString() => $"{{responses:[{Responses.ToStrings()}],{this.ThrottleToString()}}}";
 
         public static ProduceResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {

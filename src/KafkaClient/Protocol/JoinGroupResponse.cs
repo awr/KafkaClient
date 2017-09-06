@@ -36,7 +36,7 @@ namespace KafkaClient.Protocol
     /// </remarks>
     public class JoinGroupResponse : ThrottledResponse, IResponse, IEquatable<JoinGroupResponse>
     {
-        public override string ToString() => $"{{error_code:{Error},generation_id:{GenerationId},group_protocol:{GroupProtocol},leader_id:{LeaderId},member_id:{MemberId},members:[{Members.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},error_code:{Error},generation_id:{GenerationId},group_protocol:{GroupProtocol},leader_id:{LeaderId},member_id:{MemberId},members:[{Members.ToStrings()}]}}";
 
         public static JoinGroupResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
