@@ -14,7 +14,8 @@ configuration: Release
 os: Visual Studio 2017
 
 before_build:
-  - nuget restore -PackagesDirectory packages
+  - appveyor-retry dotnet restore --packages packages
+  # - nuget restore -PackagesDirectory packages
 
 build:
   parallel: true
