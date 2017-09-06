@@ -198,7 +198,7 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public void MessageEquality(
             [Values(0, 1, 2)] byte version,
-            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec,
+            [Values(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec,
             [Values(1, 10)] int valueLength,
             [Values(0, 1, 10)] int keyLength)
         {
@@ -228,19 +228,6 @@ namespace KafkaClient.Tests.Unit
 
         #region Request / Response
 
-        [Test]
-        public void ProduceRequestSnappy(
-            [Values(0, 1, 2, 3)] short version,
-            [Values(0, 2, -1)] short acks, 
-            [Values(0, 1000)] int timeoutMilliseconds, 
-            [Values("testTopic")] string topic, 
-            [Values(1, 10)] int topicsPerRequest, 
-            [Values(1, 5)] int totalPartitions, 
-            [Values(3)] int messagesPerSet)
-        {
-            ProduceRequest(version, acks, timeoutMilliseconds, topic, topicsPerRequest, totalPartitions, messagesPerSet, MessageCodec.Snappy);
-        }
-
         private byte MessageVersion(short version)
         {
             switch (version) {
@@ -261,7 +248,7 @@ namespace KafkaClient.Tests.Unit
             [Values(1, 10)] int topicsPerRequest,
             [Values(1, 5)] int totalPartitions,
             [Values(3)] int messagesPerSet,
-            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec)
+            [Values(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec)
         {
             var payloads = new List<ProduceRequest.Topic>();
             for (var t = 0; t < topicsPerRequest; t++) {
@@ -518,7 +505,7 @@ namespace KafkaClient.Tests.Unit
             [Values("testTopic")] string topicName, 
             [Values(2)] int topicsPerRequest, 
             [Values(2)] int totalPartitions, 
-            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
+            [Values(MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy)] MessageCodec codec, 
             [Values(
                 ErrorCode.NONE,
                 ErrorCode.OFFSET_OUT_OF_RANGE
@@ -538,23 +525,6 @@ namespace KafkaClient.Tests.Unit
                 new FetchResponse(alternate.Union(topics.Skip(1)), response.ThrottleTime),
                 new FetchResponse(topics.Skip(1), response.ThrottleTime)
                 );
-        }
-
-        [Test]
-        public void FetchResponseSnappy(
-            [Values(0, 1, 2, 3, 4, 5)] short version,
-            [Values(0, 1234)] int throttleTime,
-            [Values("testTopic")] string topicName,
-            [Values(1, 10)] int topicsPerRequest,
-            [Values(1, 5)] int totalPartitions,
-            [Values(
-                ErrorCode.NONE,
-                ErrorCode.OFFSET_OUT_OF_RANGE
-            )] ErrorCode errorCode,
-            [Values(3)] int messagesPerSet
-        )
-        {
-            FetchResponse(version, throttleTime, topicName, topicsPerRequest, totalPartitions, MessageCodec.Snappy, errorCode, messagesPerSet);
         }
 
         [Test]
@@ -3719,6 +3689,7 @@ namespace KafkaClient.Tests.Unit
         {
             var random = new Random(42);
             var messages = new List<Message>();
+            var timestamp = random.Next(1504662407, int.MaxValue);
             for (var m = 0; m < count; m++) {
                 var key = m > 0 ? new byte[8] : null;
                 var value = new byte[8*(m + 1)];
@@ -3728,7 +3699,7 @@ namespace KafkaClient.Tests.Unit
                 random.NextBytes(value);
 
                 var offset = codec == MessageCodec.None ? m*2 : m;
-                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, offset, timestamp: version > 0 ? DateTimeOffset.UtcNow : (DateTimeOffset?)null));
+                messages.Add(new Message(new ArraySegment<byte>(value), key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>(), (byte)codec, offset, timestamp: version > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(timestamp + m) : (DateTimeOffset?)null));
             }
             return messages;
         }

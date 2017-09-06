@@ -177,14 +177,12 @@ namespace KafkaClient.Protocol
 
             // The offset of the last message in the RecordBatch. This is used by the broker to ensure correct behavior even when Records within a batch are compacted out.
             var lastOffsetDelta = messages.Count;
-            DateTimeOffset? timestamp = null;
 
             // The timestamp of the last Record in the batch. This is used by the broker to ensure the correct behavior even when Records within the batch are compacted out.
             var maxTimestamp = 0L;
             if (messages.Count > 0) {
                 firstOffset = messages[0].Offset;
-                timestamp = messages[0].Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
-                var first = timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
+                var first = messages[0].Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
                 firstTimestamp = first.ToUnixTimeMilliseconds();
                 maxTimestamp = messages
                                 .Where(m => m.Timestamp.HasValue).Max(m => m.Timestamp)
@@ -195,7 +193,7 @@ namespace KafkaClient.Protocol
             {
                 uncompressedWriter.Write(messages.Count);
                 foreach (var record in messages) {
-                    uncompressedWriter.WriteRecord(record, MessageCodec.None, firstOffset, timestamp, out int _);
+                    uncompressedWriter.WriteRecord(record, MessageCodec.None, firstOffset, firstTimestamp, out int _);
                 }
             }
 
@@ -226,7 +224,7 @@ namespace KafkaClient.Protocol
                         var uncompressedRecord = new Message(recordsValue, 0, firstOffset);
 
                         writer.Write(1) // record count = 1 for compressed set
-                              .WriteRecord(uncompressedRecord, context.Codec, firstOffset, timestamp, out compressedBytes);
+                              .WriteRecord(uncompressedRecord, context.Codec, firstOffset, firstTimestamp, out compressedBytes);
                         compressedBytes -= 8; // minimum size of record used to do the compression -- actual size *might* be larger for the varint for the value
                         return writer;
                     }                    
@@ -234,13 +232,14 @@ namespace KafkaClient.Protocol
             }
         }
 
-        internal static IKafkaWriter WriteRecord(this IKafkaWriter writer, Message record, MessageCodec codec, long firstOffset, DateTimeOffset? firstTimestamp, out int compressedBytes)
+        internal static IKafkaWriter WriteRecord(this IKafkaWriter writer, Message record, MessageCodec codec, long firstOffset, long firstTimestamp, out int compressedBytes)
         {
-            var timestamp = firstTimestamp.HasValue && record.Timestamp.HasValue
-                ? (ulong) Math.Max(0L, record.Timestamp.Value.Subtract(firstTimestamp.Value).TotalMilliseconds)
-                : 0L;
+            var timestamp = 0L;
+            if (record.Timestamp.HasValue) {
+                timestamp = Math.Max(0L, record.Timestamp.Value.ToUnixTimeMilliseconds() - firstTimestamp);
+            }
 
-            var timestampDelta = timestamp.ToVarint();
+            var timestampDelta = ((ulong)timestamp).ToVarint();
             var offsetDelta = ((ulong)Math.Max(0L, record.Offset - firstOffset)).ToVarint();
             var keyLenth = ((uint) record.Key.Count).ToVarint();
             var valueLenth = ((uint) record.Value.Count).ToVarint();
@@ -376,13 +375,12 @@ namespace KafkaClient.Protocol
 
             var attributes = reader.ReadInt16();
             var lastOffsetDelta = reader.ReadInt32();
-            var firstTimestampMilliseconds = reader.ReadInt64();
+            var firstTimestamp = reader.ReadInt64();
             var maxTimestamp = reader.ReadInt64();
             var producerId = reader.ReadInt64();
             var producerEpoch = reader.ReadInt16();
             var firstSequence = reader.ReadInt32();
 
-            var firstTimestamp = firstTimestampMilliseconds >= 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(firstTimestampMilliseconds) : null;
             var codec = (MessageCodec) (attributes & Message.CodecMask);
             var messages = reader.ReadRecords(new MessageContext(codec, version), firstOffset, firstTimestamp);
             var transaction = new TransactionContext(producerId, producerEpoch, firstSequence);
@@ -391,7 +389,7 @@ namespace KafkaClient.Protocol
 
         private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
 
-        internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IMessageContext context, long firstOffset, DateTimeOffset? firstTimestamp)
+        internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IMessageContext context, long firstOffset, long firstTimestamp)
         {
             var messages = new List<Message>();
             var messageCount = reader.ReadInt32();
@@ -421,10 +419,9 @@ namespace KafkaClient.Protocol
                     }
                 }
 
-                var timestamp = firstTimestamp?.Add(TimeSpan.FromMilliseconds(timestampDelta));
-
+                var timestampMilliseconds = firstTimestamp + timestampDelta;
                 if (context.Codec == MessageCodec.None) {
-                    messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestamp, headers));
+                    messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestampMilliseconds > 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(timestampMilliseconds) : null, headers));
                 } else {
                     var uncompressedBytes = value.ToUncompressed(context.Codec);
                     using (var messageRecordsReader = new KafkaReader(uncompressedBytes)) {
