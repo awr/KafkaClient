@@ -100,7 +100,7 @@ namespace KafkaClient.Protocol
         public TimeSpan RebalanceTimeout { get; }
 
         /// <summary>
-        /// List of protocols that the member supports.
+        /// List of protocols that the member supports. The coordinator chooses a single protocol which all members support. This enables e.g. rolling upgrades without downtime.
         /// </summary>
         public IImmutableList<GroupProtocol> GroupProtocols { get; }
 

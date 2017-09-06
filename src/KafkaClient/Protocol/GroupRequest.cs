@@ -28,6 +28,10 @@ namespace KafkaClient.Protocol
         /// a group, the coordinator will send an error code indicating that the member needs to rejoin. If the member does not rejoin before a rebalance 
         /// completes, then it will have an old generationId, which will cause <see cref="ErrorCode.ILLEGAL_GENERATION"/> errors when included in 
         /// new requests.
+        /// 
+        /// For the "Simple consumer" scenario (not part of a consumer group) of an <see cref="OffsetCommitRequest"/>, then this should be set to -1 and the
+        /// memberId must be empty (not null). Additionally, if there is an active consumer group ith the same groupId, then the commit will be rejected
+        /// (typically with an <see cref="ErrorCode.UNKNOWN_MEMBER_ID"/> or <see cref="ErrorCode.ILLEGAL_GENERATION"/>).
         /// </summary>
         public int GenerationId { get; }
 

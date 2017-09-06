@@ -162,6 +162,9 @@ namespace KafkaClient.Protocol
 
         #endregion
 
+        /// <summary>
+        /// Metadata for each topic requested
+        /// </summary>
         public class Topic : IEquatable<Topic>
         {
             public override string ToString() => $"{{topic:{TopicName},topic_error_code:{TopicError},partition_metadata:[{PartitionMetadata.ToStrings()}],is_internal:{IsInternal}}}";

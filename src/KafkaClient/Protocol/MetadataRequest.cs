@@ -45,7 +45,7 @@ namespace KafkaClient.Protocol
         }
 
         /// <summary>
-        /// The list of topics to get metadata for.
+        /// The array of topics to get metadata for. If the topics array is null or empty fetch metadata for all topics.
         /// </summary>
         public IImmutableList<string> Topics { get; }
 

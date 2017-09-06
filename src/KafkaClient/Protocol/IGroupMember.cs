@@ -3,7 +3,7 @@ namespace KafkaClient.Protocol
     public interface IGroupMember
     {
         /// <summary>
-        /// The group id.
+        /// The consumer group id.
         /// </summary>
         string GroupId { get; }
 

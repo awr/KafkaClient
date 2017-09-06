@@ -89,10 +89,13 @@ namespace KafkaClient.Protocol
             }
 
             /// <summary>
-            /// The member id assigned by the group coordinator (ie one of the kafka servers).
+            /// TThe consumer id assigned to this member.
             /// </summary>
             public string MemberId { get; }
 
+            /// <summary>
+            /// Protocol specific state (e.g. partition assignments)
+            /// </summary>
             public IMemberAssignment MemberAssignment { get; }
 
             #region Equality

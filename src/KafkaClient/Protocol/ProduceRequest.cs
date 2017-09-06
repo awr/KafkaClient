@@ -103,12 +103,13 @@ namespace KafkaClient.Protocol
         public string TransactionalId { get; }
 
         /// <summary>
-        /// Level of ack required by kafka: 0 immediate, 1 written to leader, 2+ replicas synced, -1 all replicas
+        /// The number of acknowledgments the producer requires the leader to have received before considering a request complete.
+        /// Allowed values: 0 for no acknowledgments, 1 for only the leader and -1 for the full ISR.
         /// </summary>
         public short Acks { get; }
 
         /// <summary>
-        /// Collection of payloads to post to kafka
+        /// The data being published to each topic.
         /// </summary>
         public IImmutableList<Topic> Topics { get; }
 

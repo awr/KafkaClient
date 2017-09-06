@@ -68,6 +68,10 @@ namespace KafkaClient.Protocol
 
         public IImmutableList<ErrorCode> Errors { get; }
 
+        /// <summary>
+        /// Responses are given on a per-partition basis because a given partition may be unavailable or 
+        /// maintained on a different host, while others may have successfully accepted the produce request.
+        /// </summary>
         public IImmutableList<Topic> Responses { get; }
 
         #region Equality
@@ -111,7 +115,7 @@ namespace KafkaClient.Protocol
             }
 
             /// <summary>
-            /// The offset number to commit as completed.
+            /// The offset assigned to the first message in the message set appended to this partition.
             /// </summary>
             public long BaseOffset { get; }
 

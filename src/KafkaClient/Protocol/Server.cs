@@ -15,9 +15,24 @@ namespace KafkaClient.Protocol
             Rack = rack;
         }
 
+        /// <summary>
+        /// The broker id.
+        /// </summary>
         public int Id { get; }
+
+        /// <summary>
+        /// The hostname of the broker.
+        /// </summary>
         public string Host { get; }
+
+        /// <summary>
+        /// The port on which the broker accepts requests.
+        /// </summary>
         public int Port { get; }
+
+        /// <summary>
+        /// The rack of the broker.
+        /// </summary>
         public string Rack { get; }
 
         #region Equality

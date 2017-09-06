@@ -123,7 +123,7 @@ namespace KafkaClient.Protocol
             public long Timestamp { get; }
 
             /// <summary>
-            /// Maximum offsets to return.
+            /// Maximum offsets to return. Note that because offsets are pulled in descending order, asking for the earliest offset will always return you a single element.
             /// Version: 0 only
             /// </summary>
             public int MaxNumOffsets { get; }

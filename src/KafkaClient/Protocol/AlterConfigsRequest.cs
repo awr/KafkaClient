@@ -92,14 +92,18 @@ namespace KafkaClient.Protocol
                 ConfigEntries = configEntries.ToSafeImmutableList();
             }
 
-            /// <inheritdoc cref="IResource.ResourceType"/>
+            /// <summary>
+            /// Id of the resource type to alter configuration of. Value 2 means topic, 4 means broker
+            /// </summary>
             public byte ResourceType { get; }
 
-            /// <inheritdoc cref="IResource.ResourceName"/>
+            /// <summary>
+            /// Name of the resource to alter configuration of.
+            /// </summary>
             public string ResourceName { get; }
 
             /// <summary>
-            /// The names of the configs to retrieve
+            /// Configuration entries to alter.
             /// </summary>
             public IImmutableList<ConfigEntry> ConfigEntries { get; }
 

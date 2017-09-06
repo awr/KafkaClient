@@ -78,12 +78,13 @@ namespace KafkaClient.Protocol
         public ErrorCode Error { get; }
 
         /// <summary>
-        /// The generation counter for completion of the join group phase.
+        /// The generation of the consumer group. It is incremented the completion of the join group phase. 
+        /// Members need to send this id in heartbeats and offset commit requests.
         /// </summary>
         public int GenerationId { get; }
 
         /// <summary>
-        /// The group protocol selected by the coordinator. Is this the name or the type??
+        /// The group protocol selected by the coordinator.
         /// </summary>
         public string GroupProtocol { get; }
 
@@ -97,6 +98,10 @@ namespace KafkaClient.Protocol
         /// </summary>
         public string MemberId { get; }
 
+        /// <summary>
+        /// The leader will receive the full list of members along with the associated metadata for the protocol chosen. 
+        /// Other members, followers, will receive an empty array of members.
+        /// </summary>
         public IImmutableList<Member> Members { get; }
 
         #region Equality
@@ -148,7 +153,14 @@ namespace KafkaClient.Protocol
                 MemberMetadata = metadata;
             }
 
+            /// <summary>
+            /// The consumer id assigned to this particular member.
+            /// </summary>
             public string MemberId { get; }
+
+            /// <summary>
+            /// The metadata supplied in this member's join group request.
+            /// </summary>
             public IMemberMetadata MemberMetadata { get; }
 
             #region Equality

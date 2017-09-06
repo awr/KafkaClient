@@ -69,7 +69,8 @@ namespace KafkaClient.Protocol
         }
 
         /// <summary>
-        /// Time period to retain the offset.
+        /// ime period in ms to retain the offset. Brokers will always retain offsets until its commit time stamp + user specified retention 
+        /// time in the commit request. If the retention time is not set (-1), the broker offset retention time will be used as default.
         /// Version: 2+
         /// </summary>
         public TimeSpan? RetentionTime { get; }

@@ -44,6 +44,10 @@ namespace KafkaClient.Protocol
         public IImmutableList<ErrorCode> Errors { get; }
 
         public ErrorCode Error { get; }
+
+        /// <summary>
+        /// The state assigned by the group leader to this member.
+        /// </summary>
         public IMemberAssignment MemberAssignment { get; }
 
         #region Equality
