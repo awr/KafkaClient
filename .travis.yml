@@ -38,11 +38,11 @@ dotnet: 2.0.0
 services:
   - docker
 
-before_install:
+# before_install:
   # - docker run -d --name zookeeper --publish 2181:2181 zookeeper:3.4
   # - docker run -d --name kafka10_1 --publish 9092:9092 --env ZOOKEEPER_IP=zookeeper --env  KAFKA_BROKER_ID=0 --env KAFKA_DELETE_TOPIC_ENABLE=true --env KAFKA_ADVERTISED_HOST_NAME=kafkalocal ches/kafka:0.10.1.1
   # - docker ps
-  - dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
+  #- dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
 
 # before_install:
 #   # set up the apt-get feed
@@ -57,7 +57,7 @@ install:
 
 script:
   - dotnet build -c Release -f netstandard1.6 src/KafkaClient/KafkaClient.csproj --no-dependencies --no-incremental
-  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)"
+  - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky) & (TestCategory!=SSL)"
   # - dotnet test -c Release -f netcoreapp2.0 src/KafkaClient.Tests/KafkaClient.Tests.csproj --filter "(TestCategory=CI | TestCategory=Integration) & (TestCategory!=Flaky)"
 
 after_success:
