@@ -14,7 +14,7 @@ using NUnit.Framework;
 
 namespace KafkaClient.Tests.Integration
 {
-    //[Category("Integration")]
+    [Category("Integration")]
     public class ConsumerTests
     {
         [Test]
@@ -552,7 +552,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [TestCase(1, 200)]
+        [TestCase(5, 200)]
         [TestCase(1000, 500)]
         public async Task ConsumerShouldConsumeInSameOrderAsProduced(int totalMessages, int timeoutInMs)
         {
@@ -778,8 +778,9 @@ namespace KafkaClient.Tests.Integration
             }
         }
         
+        [Category("Flaky")]
         [TestCase(2, 2)]
-        [TestCase(5, 5)]
+        [TestCase(3, 3)]
         public async Task CanConsumeFromMultipleGroups(int groups, int members)
         {
             using (var timed = new TimedCancellation(CancellationToken.None, TimeSpan.FromMinutes(1))) {

@@ -615,7 +615,7 @@ namespace KafkaClient
                     if (configuration.FetchByteMultiplier <= 1) throw;
                     var maxBytes = topic.MaxBytes * configuration.FetchByteMultiplier;
                     router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.MaxBytes} -> {maxBytes}"));
-                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.FetchOffset, maxBytes);
+                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.FetchOffset, topic.LogStartOffset, maxBytes);
                 }
             }
             return response?.Responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;

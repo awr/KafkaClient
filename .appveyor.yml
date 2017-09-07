@@ -20,13 +20,13 @@ build_script:
 
 test_script:
   - dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
-#  - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\net462\KafkaClient.Tests.dll --noheader --where \"cat!=Flaky AND cat=CI\" --result=test-results.xml;format=AppVeyor" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
+  - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\netcoreapp2.0\KafkaClient.Tests.dll --noheader --where \"cat!=Flaky AND cat=CI\" --result=test-results.xml;format=AppVeyor" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
 
 after_test:
   - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/${env:APPVEYOR_JOB_ID}", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
-#  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
-#  - pip install codecov
-#  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
+  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
+  - pip install codecov
+  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
 
 artifacts:
   - path: src\KafkaClient\artifacts\**\*.*

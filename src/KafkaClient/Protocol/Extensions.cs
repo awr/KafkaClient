@@ -348,9 +348,13 @@ namespace KafkaClient.Protocol
 
         public static MessageTransaction ReadMessages(this IKafkaReader reader, int? messageSetSize = null)
         {
-            messageSetSize = messageSetSize ?? reader.ReadInt32();
+            if (!messageSetSize.HasValue) {
+                messageSetSize = reader.ReadInt32();
+            }
+            if (messageSetSize.Value == 0) return new MessageTransaction(ImmutableList<Message>.Empty);
             if (!reader.HasBytes(messageSetSize.Value)) throw new BufferUnderRunException($"Message set of {messageSetSize} is not available.");
 
+            if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set header is not available.");
             reader.Position += MessageSetVersionOffset;
             var version = reader.ReadByte();
             reader.Position -= MessageSetVersionOffset + 1;
