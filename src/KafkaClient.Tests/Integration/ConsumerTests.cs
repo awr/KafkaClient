@@ -161,11 +161,14 @@ namespace KafkaClient.Tests.Integration
 
         [Category("Flaky")]
         [Test]
-        public async Task FetchMessagesTopicDoesntExist()
+        public async Task FetchMessagesTopicDoesntExist([Values(true, false)] bool deleteFirst)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 var topicName = TestConfig.TopicName();
-                await router.DeleteTopicAsync();
+                if (deleteFirst) {
+                    topicName += "-deleted";
+                    await router.DeleteTopicAsync(topicName);
+                }
                 using (var consumer = new Consumer(new TopicOffset(topicName, 0, 0), router, new ConsumerConfiguration(maxPartitionFetchBytes: TestConfig.IntegrationOptions.ConsumerConfiguration.MaxFetchBytes * 2))) {
 
                     await AssertAsync.Throws<RoutingException>(
@@ -263,7 +266,7 @@ namespace KafkaClient.Tests.Integration
 
                     try {
                         await router.GetOffsetsAsync(groupId, topicName, partitionId, CancellationToken.None);
-                        Assert.True(false, "should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown RoutingException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -273,16 +276,19 @@ namespace KafkaClient.Tests.Integration
 
         [Category("Flaky")]
         [Test]
-        public async Task FetchOffsetTopicDoesntExistTest()
+        public async Task FetchOffsetTopicDoesntExistTest([Values(true, false)] bool deleteFirst)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 var topicName = TestConfig.TopicName();
-                await router.DeleteTopicAsync();
+                if (deleteFirst) {
+                    topicName += "-deleted";
+                    await router.DeleteTopicAsync(topicName);
+                }
 
                 var groupId = TestConfig.GroupId();
                 try {
                     await router.GetOffsetsAsync(groupId, topicName, 0, CancellationToken.None);
-                    Assert.True(false, "should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown RoutingException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }
@@ -359,7 +365,7 @@ namespace KafkaClient.Tests.Integration
                     var offest = 5;
                     try {
                         await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
-                        Assert.True(false, "should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown RoutingException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -369,11 +375,14 @@ namespace KafkaClient.Tests.Integration
 
         [Category("Flaky")]
         [Test]
-        public async Task UpdateOrCreateOffsetTopicDoesntExistTest()
+        public async Task UpdateOrCreateOffsetTopicDoesntExistTest([Values(true, false)] bool deleteFirst)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 var topicName = TestConfig.TopicName();
-                await router.DeleteTopicAsync();
+                if (deleteFirst) {
+                    topicName += "-deleted";
+                    await router.DeleteTopicAsync(topicName);
+                }
 
                 var partitionId = 0;
                 var groupId = TestConfig.GroupId();
@@ -381,7 +390,7 @@ namespace KafkaClient.Tests.Integration
                 var offest = 5;
                 try {
                     await router.CommitTopicOffsetAsync(topicName, partitionId, groupId, offest, CancellationToken.None);
-                    Assert.True(false, "should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown RoutingException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }
@@ -439,7 +448,7 @@ namespace KafkaClient.Tests.Integration
 
                     try {
                         await router.GetOffsetsAsync(topicName, partitionId, CancellationToken.None);
-                        Assert.True(false, "should have thrown CachedMetadataException");
+                        Assert.True(false, "should have thrown RoutingException");
                     } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
                         // expected
                     }
@@ -449,15 +458,18 @@ namespace KafkaClient.Tests.Integration
 
         [Category("Flaky")]
         [Test]
-        public async Task FetchLastOffsetTopicDoesntExistTest()
+        public async Task FetchLastOffsetTopicDoesntExistTest([Values(true, false)] bool deleteFirst)
         {
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 var topicName = TestConfig.TopicName();
-                await router.DeleteTopicAsync();
+                if (deleteFirst) {
+                    topicName += "-deleted";
+                    await router.DeleteTopicAsync(topicName);
+                }
 
                 try {
                     await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
-                    Assert.True(false, "should have thrown CachedMetadataException");
+                    Assert.True(false, "should have thrown RoutingException");
                 } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined.")) {
                     // expected
                 }

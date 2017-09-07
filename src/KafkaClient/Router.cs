@@ -249,7 +249,7 @@ namespace KafkaClient
                         response = await this.GetMetadataAsync(request, cancellationToken).ConfigureAwait(false);
                     } else {
                         Log.Info(() => LogEvent.Create($"Router refreshing metadata for topics {string.Join(",", cachedResults.Misses)}"));
-                        request = new MetadataRequest(cachedResults.Misses);
+                        request = new MetadataRequest(cachedResults.Misses, false);
                         response = await this.GetMetadataAsync(request, cancellationToken).ConfigureAwait(false);
                     }
 

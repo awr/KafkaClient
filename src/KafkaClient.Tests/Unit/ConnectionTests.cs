@@ -600,11 +600,10 @@ namespace KafkaClient.Tests.Unit
                         return Task.FromResult(0);
                     };
 
-                    await AssertAsync.Throws<TimeoutException>(() => conn.SendAsync(new MetadataRequest(), CancellationToken.None));
+                    await AssertAsync.Throws<TimeoutException>(() => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None));
                     var initialCount = 3;
-                    var initialCorrelation = correlationId;
                     await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(initialCount.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationId > initialCorrelation || (initialCorrelation + initialCount) > Connection.OverflowGuard, () => $"correlation {correlationId}");
+                    await AssertAsync.ThatEventually(() => correlationId > correlationIds.Last() || (correlationIds.Last() + initialCount) > Connection.OverflowGuard, () => $"correlation {correlationId}");
                     
                     await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
                     await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"correlation ids {string.Join(',', correlationIds.Select(id => id.ToString()))}");
