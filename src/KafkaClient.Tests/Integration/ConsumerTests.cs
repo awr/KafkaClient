@@ -159,6 +159,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
+        [Category("Flaky")]
         [Test]
         public async Task FetchMessagesTopicDoesntExist()
         {
@@ -270,6 +271,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
+        [Category("Flaky")]
         [Test]
         public async Task FetchOffsetTopicDoesntExistTest()
         {
@@ -365,6 +367,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
+        [Category("Flaky")]
         [Test]
         public async Task UpdateOrCreateOffsetTopicDoesntExistTest()
         {
@@ -444,6 +447,7 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
+        [Category("Flaky")]
         [Test]
         public async Task FetchLastOffsetTopicDoesntExistTest()
         {
@@ -732,6 +736,7 @@ namespace KafkaClient.Tests.Integration
             });
         }
 
+        [Category("Flaky")]
         [TestCase(1, 100)]
         [TestCase(2, 100)]
         [TestCase(10, 500)]

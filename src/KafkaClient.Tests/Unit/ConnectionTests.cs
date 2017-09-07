@@ -599,17 +599,16 @@ namespace KafkaClient.Tests.Unit
                 try {
                     Connection.OverflowGuard = 10;
                     await AssertAsync.Throws<TimeoutException>(() => conn.SendAsync(new MetadataRequest(), CancellationToken.None));
+                    var initialCount = 3;
                     var initialCorrelation = correlationId;
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(3.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationId > initialCorrelation || initialCorrelation == Connection.OverflowGuard, () => $"correlation {correlationId}");
+                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(initialCount.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
+                    await AssertAsync.ThatEventually(() => correlationId > initialCorrelation || (initialCorrelation + initialCount) > Connection.OverflowGuard, () => $"correlation {correlationId}");
                     
                     await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
                     await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"max correlation {correlationIds.Max()}");
 
-                    if (correlationId == Connection.OverflowGuard) {
-                        await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(3.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                        await AssertAsync.ThatEventually(() => correlationId < correlationIds.Max(), () => $"correlation {correlationId}");
-                    }
+                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
+                    Assert.That(correlationIds.All(id => 0 <= id && id <= Connection.OverflowGuard));
                 }
                 finally {
                     Connection.OverflowGuard = int.MaxValue >> 1;
