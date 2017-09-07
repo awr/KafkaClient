@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -582,6 +583,7 @@ namespace KafkaClient.Tests.Unit
         public async Task CorrelationOverflowGuardWorks()
         {
             var correlationId = -1;
+            var correlationIds = new ConcurrentBag<int>();
 
             var endpoint = TestConfig.ServerEndpoint();
             using (var server = new TcpServer(endpoint.Ip.Port, TestConfig.Log))
@@ -589,6 +591,8 @@ namespace KafkaClient.Tests.Unit
                 server.OnReceivedAsync = data => {
                     var context = KafkaDecoder.DecodeHeader(data.Skip(Request.IntegerByteSize));
                     correlationId = context.CorrelationId;
+                    correlationIds.Add(context.CorrelationId);
+                    TestConfig.Log.Write(LogLevel.Info, () => LogEvent.Create($"correlation {context.CorrelationId}"));
                     return Task.FromResult(0);
                 };
 
@@ -596,11 +600,16 @@ namespace KafkaClient.Tests.Unit
                     Connection.OverflowGuard = 10;
                     await AssertAsync.Throws<TimeoutException>(() => conn.SendAsync(new MetadataRequest(), CancellationToken.None));
                     var initialCorrelation = correlationId;
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Enumerable.Range(initialCorrelation, Connection.OverflowGuard - 1).Select(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationId > 1, () => $"correlation {correlationId}");
-                    var currentCorrelation = correlationId;
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Enumerable.Range(0, Connection.OverflowGuard / 2).Select(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationId < currentCorrelation, () => $"correlation {correlationId}");
+                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(3.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
+                    await AssertAsync.ThatEventually(() => correlationId > initialCorrelation || initialCorrelation == Connection.OverflowGuard, () => $"correlation {correlationId}");
+                    
+                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
+                    await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"max correlation {correlationIds.Max()}");
+
+                    if (correlationId == Connection.OverflowGuard) {
+                        await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(3.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
+                        await AssertAsync.ThatEventually(() => correlationId < correlationIds.Max(), () => $"correlation {correlationId}");
+                    }
                 }
                 finally {
                     Connection.OverflowGuard = int.MaxValue >> 1;
