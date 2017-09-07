@@ -605,10 +605,10 @@ namespace KafkaClient.Tests.Unit
                     await AssertAsync.ThatEventually(() => correlationId > initialCorrelation || (initialCorrelation + initialCount) > Connection.OverflowGuard, () => $"correlation {correlationId}");
                     
                     await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"max correlation {correlationIds.Max()}");
+                    await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"correlation ids {string.Join(',', correlationIds.Select(id => id.ToString()))}");
 
                     await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new MetadataRequest(), CancellationToken.None))));
-                    Assert.That(correlationIds.All(id => 0 <= id && id <= Connection.OverflowGuard));
+                    Assert.That(correlationIds.All(id => 0 <= id && id <= Connection.OverflowGuard), $"correlation ids {string.Join(',', correlationIds.Select(id => id.ToString()))}");
                 }
                 finally {
                     Connection.OverflowGuard = int.MaxValue >> 1;
