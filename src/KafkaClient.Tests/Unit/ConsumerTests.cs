@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using KafkaClient.Assignment;
@@ -251,9 +252,9 @@ namespace KafkaClient.Tests.Unit
         }
 
         [TestCase(100)]
-        [TestCase(150)]
+        [TestCase(200)]
         [TestCase(250)]
-        public async Task ConsumerHeartbeatsUntilDisposed(int heartbeatMilliseconds)
+        public async Task ConsumerHeartbeatsWhileNotDisposed(int heartbeatMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
             var router = Substitute.For<IRouter>();
@@ -271,8 +272,10 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.ProtocolName, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
+            int GetHeartbeats() => conn.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(Connection.SendAsync) && (c.GetArguments()[0] as HeartbeatRequest) != null);
+
             using (new GroupConsumer(router, request.GroupId, request.ProtocolType, response, config)) {
-                await Task.Delay(heartbeatMilliseconds * 3);
+                await AssertAsync.ThatEventually(() => GetHeartbeats() >= 2, () => "heartbeats enough", TimeSpan.FromMilliseconds(heartbeatMilliseconds * 10));
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 conn.DidNotReceive().SendAsync(
@@ -286,7 +289,9 @@ namespace KafkaClient.Tests.Unit
                 Arg.Any<IRequestContext>());
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-            Assert.True(conn.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(Connection.SendAsync) && (c.GetArguments()[0] as HeartbeatRequest) != null) >= 2);
+            var heartbeats = GetHeartbeats();
+            await Task.Delay(heartbeats * 2);
+            Assert.That(GetHeartbeats(), Is.EqualTo(heartbeats), "heartbeats should have stopped after disposing");
         }
 
         // design unit TESTS to write:

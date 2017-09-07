@@ -27,7 +27,7 @@ namespace KafkaClient.Tests.Integration
                     var topic = response.Responses.FirstOrDefault();
 
                     Assert.NotNull(topic);
-                    Assert.AreEqual(topic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, topic.Error);
                     Assert.AreEqual(topic.Offset, -1);
                 });
             }
@@ -54,7 +54,7 @@ namespace KafkaClient.Tests.Integration
                     var topic = response.Responses.FirstOrDefault();
 
                     Assert.NotNull(topic);
-                    Assert.AreEqual(topic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, topic.Error);
                 });
             }
         }
@@ -75,21 +75,21 @@ namespace KafkaClient.Tests.Integration
                     var group = new FindCoordinatorRequest(groupId);
                     var groupResponse = await conn.Connection.SendAsync(group, CancellationToken.None);
                     Assert.NotNull(groupResponse);
-                    Assert.AreEqual(groupResponse.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, groupResponse.Error);
 
                     var commit = new OffsetCommitRequest(group.CoordinatorId, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, null) });
                     var commitResponse = await conn.Connection.SendAsync(commit, CancellationToken.None);
                     var commitTopic = commitResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(commitTopic);
-                    Assert.AreEqual(commitTopic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, commitTopic.Error);
 
                     var fetch = new OffsetFetchRequest(groupId, new TopicPartition(topicName, partitionId));
                     var fetchResponse = await conn.Connection.SendAsync(fetch, CancellationToken.None);
                     var fetchTopic = fetchResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(fetchTopic);
-                    Assert.AreEqual(fetchTopic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, fetchTopic.Error);
                     Assert.AreEqual(fetchTopic.Offset, offset);
                 });
             }
@@ -111,21 +111,21 @@ namespace KafkaClient.Tests.Integration
                     var group = new FindCoordinatorRequest(groupId);
                     var groupResponse = await conn.Connection.SendAsync(group, CancellationToken.None);
                     Assert.NotNull(groupResponse);
-                    Assert.AreEqual(groupResponse.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, groupResponse.Error);
 
                     var commit = new OffsetCommitRequest(group.CoordinatorId, new []{ new OffsetCommitRequest.Topic(topicName, partitionId, offset, metadata) });
                     var commitResponse = await conn.Connection.SendAsync(commit, CancellationToken.None);
                     var commitTopic = commitResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(commitTopic);
-                    Assert.AreEqual(commitTopic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, commitTopic.Error);
 
                     var fetch = new OffsetFetchRequest(groupId, commitTopic);
                     var fetchResponse = await conn.Connection.SendAsync(fetch, CancellationToken.None);
                     var fetchTopic = fetchResponse.Responses.SingleOrDefault();
 
                     Assert.NotNull(fetchTopic);
-                    Assert.AreEqual(fetchTopic.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, fetchTopic.Error);
                     Assert.AreEqual(fetchTopic.Offset, offset);
                     Assert.AreEqual(fetchTopic.Metadata, metadata);
                 });
@@ -145,7 +145,7 @@ namespace KafkaClient.Tests.Integration
                     var response = await conn.Connection.SendAsync(request, CancellationToken.None);
 
                     Assert.NotNull(response);
-                    Assert.AreEqual(response.Error, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, response.Error);
                 });
             }
         }
@@ -156,7 +156,7 @@ namespace KafkaClient.Tests.Integration
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     var response = await router.GetTopicMetadataAsync(topicName, CancellationToken.None);
-                    Assert.AreEqual(response.TopicError, ErrorCode.NONE);
+                    Assert.AreEqual(ErrorCode.NONE, response.TopicError);
                 });
             }
         }
