@@ -13,19 +13,16 @@ namespace KafkaClient.Testing
     {
         public static IRequestContext DecodeHeader(ArraySegment<byte> bytes)
         {
-            IRequestContext context;
-            using (ReadHeader(bytes, out context)) {
+            using (ReadHeader(bytes, out _, out var context)) {
                 return context;
             }            
         }
 
-        public static Tuple<IRequestContext, ApiKey> DecodeFullHeader(ArraySegment<byte> bytes)
+        public static (IRequestContext, ApiKey) DecodeFullHeader(ArraySegment<byte> bytes)
         {
-            ApiKey apiKey;
-            IRequestContext context;
-            using (ReadHeader(bytes, out apiKey, out context))
+            using (ReadHeader(bytes, out var apiKey, out var context))
             {
-                return new Tuple<IRequestContext, ApiKey>(context, apiKey);
+                return (context, apiKey);
             }
         }
 
@@ -33,7 +30,7 @@ namespace KafkaClient.Testing
         {
             var protocolType = context?.ProtocolType;
             var encoders = context?.Encoders;
-            using (ReadHeader(bytes, out context)) { }
+            using (ReadHeader(bytes, out _, out context)) { }
 
             return Decode<T>(new RequestContext(context.CorrelationId, context.ApiVersion, context.ClientId, encoders, protocolType), bytes);
         }
@@ -702,14 +699,7 @@ namespace KafkaClient.Testing
 
         private static IKafkaReader ReadHeader(ArraySegment<byte> data)
         {
-            IRequestContext context;
-            return ReadHeader(data, out context);
-        }
-
-        private static IKafkaReader ReadHeader(ArraySegment<byte> data, out IRequestContext context)
-        {
-            ApiKey apikey;
-            return ReadHeader(data, out apikey, out context);
+            return ReadHeader(data, out _, out _);
         }
 
         private static IKafkaReader ReadHeader(ArraySegment<byte> data, out ApiKey apiKey, out IRequestContext context)
