@@ -19,7 +19,6 @@ namespace KafkaClient.Tests.Special
         {
             int partitions = 1;
             short version = 0;
-            byte messageVersion = 0;
             
             var results = new List<object>();
             foreach (var codec in new[] { MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy }) {
@@ -34,12 +33,12 @@ namespace KafkaClient.Tests.Special
                                               partitionId, 
                                               500,
                                               ErrorCode.NONE,
-                                              Enumerable.Range(1, messages)
-                                                        .Select(i => new Message(GenerateMessageBytes(messageSize), new ArraySegment<byte>(), (byte) codec, version: messageVersion))
+                                              messages: Enumerable.Range(1, messages)
+                                                        .Select(i => new Message(GenerateMessageBytes(messageSize), new ArraySegment<byte>(), (byte) codec))
                                           )));
                             var bytes = KafkaDecoder.EncodeResponseBytes(new RequestContext(1, version), response);
                             var decoded = FetchResponse.FromBytes(new RequestContext(1, version), bytes.Skip(Request.IntegerByteSize + Request.CorrelationSize));
-                            Assert.AreEqual(decoded.responses.Sum(t => t.Messages.Count), response.responses.Sum(t => t.Messages.Count));
+                            Assert.AreEqual(decoded.Responses.Sum(t => t.Messages.Count), response.Responses.Sum(t => t.Messages.Count));
                             var result = new {
                                 Codec = codec.ToString(),
                                 Level = codec == MessageCodec.None ? "-" : level.ToString(),
@@ -61,7 +60,6 @@ namespace KafkaClient.Tests.Special
         {
             int partitions = 1;
             short version = 0;
-            byte messageVersion = 0;
 
             var results = new List<object>();
             foreach (var codec in new[] { MessageCodec.None, MessageCodec.Gzip, MessageCodec.Snappy }) {
@@ -75,7 +73,7 @@ namespace KafkaClient.Tests.Special
                                                       "topic", 
                                                       partitionId, 
                                                       Enumerable.Range(1, messages)
-                                                                .Select(i => new Message(GenerateMessageBytes(messageSize), new ArraySegment<byte>(), 0, version: messageVersion)), 
+                                                                .Select(i => new Message(GenerateMessageBytes(messageSize), new ArraySegment<byte>(), 0)), 
                                                       codec)));
 
                             var result = new {

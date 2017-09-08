@@ -95,7 +95,7 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(MetadataResponse)) return ApiKey.Metadata;
             if (typeof(T) == typeof(OffsetCommitResponse)) return ApiKey.OffsetCommit;
             if (typeof(T) == typeof(OffsetFetchResponse)) return ApiKey.OffsetFetch;
-            if (typeof(T) == typeof(GroupCoordinatorResponse)) return ApiKey.GroupCoordinator;
+            if (typeof(T) == typeof(FindCoordinatorResponse)) return ApiKey.FindCoordinator;
             if (typeof(T) == typeof(JoinGroupResponse)) return ApiKey.JoinGroup;
             if (typeof(T) == typeof(HeartbeatResponse)) return ApiKey.Heartbeat;
             if (typeof(T) == typeof(LeaveGroupResponse)) return ApiKey.LeaveGroup;
@@ -106,8 +106,20 @@ namespace KafkaClient.Tests
             if (typeof(T) == typeof(ApiVersionsResponse)) return ApiKey.ApiVersions;
             if (typeof(T) == typeof(CreateTopicsResponse)) return ApiKey.CreateTopics;
             if (typeof(T) == typeof(DeleteTopicsResponse)) return ApiKey.DeleteTopics;
+            if (typeof(T) == typeof(DeleteRecordsResponse)) return ApiKey.DeleteRecords;
+            if (typeof(T) == typeof(InitProducerIdResponse)) return ApiKey.InitProducerId;
+            if (typeof(T) == typeof(OffsetForLeaderEpochResponse)) return ApiKey.OffsetForLeaderEpoch;
+            if (typeof(T) == typeof(AddPartitionsToTxnResponse)) return ApiKey.AddPartitionsToTxn;
+            if (typeof(T) == typeof(AddOffsetsToTxnResponse)) return ApiKey.AddOffsetsToTxn;
+            if (typeof(T) == typeof(EndTxnResponse)) return ApiKey.EndTxn;
+            if (typeof(T) == typeof(WriteTxnMarkersResponse)) return ApiKey.WriteTxnMarkers;
+            if (typeof(T) == typeof(TxnOffsetCommitResponse)) return ApiKey.TxnOffsetCommit;
+            if (typeof(T) == typeof(DescribeAclsResponse)) return ApiKey.DescribeAcls;
+            if (typeof(T) == typeof(CreateAclsResponse)) return ApiKey.CreateAcls;
+            if (typeof(T) == typeof(DeleteAclsResponse)) return ApiKey.DeleteAcls;
+            if (typeof(T) == typeof(DescribeConfigsResponse)) return ApiKey.DescribeConfigs;
+            if (typeof(T) == typeof(AlterConfigsResponse)) return ApiKey.AlterConfigs;
             throw new InvalidOperationException();
         }
-
     }
 }

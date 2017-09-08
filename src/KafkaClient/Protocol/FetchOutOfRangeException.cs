@@ -3,7 +3,7 @@
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// An exception caused by a Kafka Request for fetching (FetchRequest, FetchOffset, etc)
+    /// An exception caused by a Kafka Request for fetching (FetchRequest, FetchOffset, etc) having bad offsets
     /// </summary>
     public class FetchOutOfRangeException : RequestException
     {

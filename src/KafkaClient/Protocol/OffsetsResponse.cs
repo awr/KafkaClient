@@ -3,33 +3,38 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// Offsets Response => [responses]
-    ///  response => topic [partition_responses]
-    ///   topic => STRING  -- The name of the topic.
-    /// 
-    ///   partition_response => partition_id error_code *timestamp *offset *[offset]
-    ///    *timestamp, *offset only applies to version 1 (Kafka 0.10.1 and higher)
-    ///    *[offset] only applies to version 0 (Kafka 0.10.0.1 and below)
-    ///    partition_id => INT32  -- The id of the partition the fetch is for.
-    ///    error_code => INT16    -- The error from this partition, if any. Errors are given on a per-partition basis because a given partition may 
-    ///                              be unavailable or maintained on a different host, while others may have successfully accepted the produce request.
-    ///    timestamp => INT64     -- The timestamp associated with the returned offset
-    ///    offset => INT64        -- offset found
-    /// 
-    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetAPI(AKAListOffset)
+    /// Offsets Response => *throttle_time_ms [responses] 
     /// </summary>
-    public class OffsetsResponse : IResponse<OffsetsResponse.Topic>, IEquatable<OffsetsResponse>
+    /// <remarks>
+    /// Offsets Response => *throttle_time_ms [responses] 
+    ///   throttle_time_ms => INT32
+    ///   responses => topic [partition_responses] 
+    ///     topic => STRING
+    ///     partition_responses => partition error_code *timestamp *offset *[offsets] 
+    ///       partition => INT32
+    ///       error_code => INT16
+    ///       timestamp => INT64
+    ///       offset => INT64
+    ///       offsets => INT64
+    /// 
+    /// Version 0 only: offsets
+    /// Version 1+: timestamp
+    /// Version 1+: offset
+    /// Version 2+: throttle_time_ms
+    /// From http://kafka.apache.org/protocol.html#The_Messages_Offsets
+    /// </remarks>
+    public class OffsetsResponse : ThrottledResponse, IResponse<OffsetsResponse.Topic>, IEquatable<OffsetsResponse>
     {
-        public override string ToString() => $"{{responses:[{responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 2);
                 var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
                 for (var t = 0; t < topicCount; t++) {
@@ -53,24 +58,20 @@ namespace KafkaClient.Protocol
                         }
                     }
                 }
-                return new OffsetsResponse(topics);
+                return new OffsetsResponse(topics, throttleTime);
             }            
         }
 
-        public OffsetsResponse(Topic topic)
-            : this(new[] {topic})
+        public OffsetsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
-        }
-
-        public OffsetsResponse(IEnumerable<Topic> topics = null)
-        {
-            responses = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(responses.Select(t => t.error_code));
+            Responses = topics.ToSafeImmutableList();
+            Errors = Responses.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<Topic> responses { get; }
+        public IImmutableList<Topic> Responses { get; }
 
         #region Equality
 
@@ -85,38 +86,43 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return responses.HasEqualElementsInOrder(other.responses);
+            return base.Equals(other) 
+                && Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return responses?.Count.GetHashCode() ?? 0;
+            unchecked {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Responses?.Count.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
 
         #endregion
 
         public class Topic : TopicOffset, IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset},error_code:{error_code}}}";
+            public override string ToString() => $"{{topic:{TopicName},partition_id:{PartitionId},offset:{Offset},error_code:{Error}}}";
 
             public Topic(string topic, int partitionId, ErrorCode errorCode = ErrorCode.NONE, long offset = -1, DateTimeOffset? timestamp = null) 
                 : base(topic, partitionId, offset)
             {
-                this.timestamp = timestamp;
-                error_code = errorCode;
+                this.Timestamp = timestamp;
+                Error = errorCode;
             }
 
             /// <summary>
             /// Error response code.
             /// </summary>
-            public ErrorCode error_code { get; }
+            public ErrorCode Error { get; }
 
             /// <summary>
             /// The timestamp associated with the returned offset.
-            /// This only applies to version 1 and above.
+            /// Version: 1+
             /// </summary>
-            public DateTimeOffset? timestamp { get; }
+            public DateTimeOffset? Timestamp { get; }
 
             #region Equality
 
@@ -130,16 +136,16 @@ namespace KafkaClient.Protocol
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
                 return base.Equals(other) 
-                    && timestamp?.ToUnixTimeMilliseconds() == other.timestamp?.ToUnixTimeMilliseconds()
-                    && error_code == other.error_code;
+                    && Timestamp?.ToUnixTimeMilliseconds() == other.Timestamp?.ToUnixTimeMilliseconds()
+                    && Error == other.Error;
             }
 
             public override int GetHashCode()
             {
                 unchecked {
                     var hashCode = base.GetHashCode();
-                    hashCode = (hashCode*397) ^ (timestamp?.GetHashCode() ?? 0);
-                    hashCode = (hashCode*397) ^ error_code.GetHashCode();
+                    hashCode = (hashCode*397) ^ (Timestamp?.GetHashCode() ?? 0);
+                    hashCode = (hashCode*397) ^ Error.GetHashCode();
                     return hashCode;
                 }
             }

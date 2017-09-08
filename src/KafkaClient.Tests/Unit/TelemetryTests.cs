@@ -126,7 +126,6 @@ namespace KafkaClient.Tests.Unit
 
         #endregion
 
-
         #region ApiStatistics
 
         //[Theory]

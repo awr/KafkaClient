@@ -85,20 +85,83 @@ namespace KafkaClient.Common
             return BitConverter.ToInt64(value.Array, value.Offset).ToBigEndian();
         }
 
-        //public static ushort ToUInt16(this ArraySegment<byte> value)
-        //{
-        //    return BitConverter.ToUInt16(value.Array, value.Offset).ToBigEndian();
-        //}
-
         public static uint ToUInt32(this ArraySegment<byte> value)
         {
             return BitConverter.ToUInt32(value.Array, value.Offset).ToBigEndian();
         }
 
-        //public static ulong ToUInt64(this ArraySegment<byte> value)
+        //public static ArraySegment<byte> ToVarint(this ulong value)
         //{
-        //    return BitConverter.ToUInt64(value.Array, value.Offset).ToBigEndian();
+        //    var bytes = new byte[10];
+        //    if (value == 0L) return new ArraySegment<byte>(bytes, 0, 1);
+
+        //    var increment = BitConverter.IsLittleEndian ? -1 : 1;
+
+        //    var index = BitConverter.IsLittleEndian ? 9 : 0;
+        //    while (value != 0) {
+        //        var @byte = value & 0x7f;
+        //        if (value > 0x7f) {
+        //            @byte |= 0x80;
+        //            value >>= 7;
+        //        } else {
+        //            value = 0;
+        //        }
+        //        bytes[index] = (byte)@byte;
+        //        index += increment;
+        //    }
+
+        //    return BitConverter.IsLittleEndian
+        //        ? new ArraySegment<byte>(bytes, 0, index)
+        //        : new ArraySegment<byte>(bytes, index + 1, 9 - index);
         //}
+
+
+        private static readonly ArraySegment<byte> VarintZero = new ArraySegment<byte>(new byte[1], 0, 1);
+
+        public static ArraySegment<byte> ToVarint(this ulong value)
+        {
+            return value == 0L 
+                ? VarintZero 
+                : ToBigEndianVarint(value);
+        }
+
+        public static ArraySegment<byte> ToVarint(this uint value)
+        {
+            return value == 0L
+                ? VarintZero
+                : ToBigEndianVarint(value);
+        }
+
+        private static ArraySegment<byte> ToBigEndianVarint(ulong value)
+        {
+            var bytes = new byte[10];
+            var index = 0;
+            while (value != 0) {
+                var @byte = value & 0x7f;
+                if (value > 0x7f) {
+                    @byte |= 0x80;
+                    value >>= 7;
+                } else {
+                    value = 0;
+                }
+                bytes[index++] = (byte)@byte;
+            }
+
+            return new ArraySegment<byte>(bytes, 0, index);
+        }
+
+        public static (int count, long value) FromVarint(this ArraySegment<byte> bytes)
+        {
+            var value = 0L;
+            var count = 0;
+            while (count < bytes.Count) {
+                var @byte = bytes.Array[bytes.Offset + count];
+                value |= (long)(@byte & 0x7f) << (7 * count++);
+                if ((@byte & 0x80) == 0) break;
+            }
+
+            return (count, (long)value);
+        }
 
         #endregion
 
@@ -119,50 +182,15 @@ namespace KafkaClient.Common
             return BitConverter.GetBytes(value.ToBigEndian());
         }
 
-        //public static byte[] ToBytes(this ushort value)
-        //{
-        //    return BitConverter.GetBytes(value.ToBigEndian());
-        //}
-
         public static byte[] ToBytes(this uint value)
         {
             return BitConverter.GetBytes(value.ToBigEndian());
         }
 
-        //public static byte[] ToBytes(this ulong value)
-        //{
-        //    return BitConverter.GetBytes(value.ToBigEndian());
-        //}
-
-        //public static short ToInt16(this byte[] value)
-        //{
-        //    return BitConverter.ToInt16(value, 0).ToBigEndian();
-        //}
-
         public static int ToInt32(this byte[] value)
         {
             return BitConverter.ToInt32(value, 0).ToBigEndian();
         }
-
-        //public static long ToInt64(this byte[] value)
-        //{
-        //    return BitConverter.ToInt64(value, 0).ToBigEndian();
-        //}
-
-        //public static ushort ToUInt16(this byte[] value)
-        //{
-        //    return BitConverter.ToUInt16(value, 0).ToBigEndian();
-        //}
-
-        //public static uint ToUInt32(this byte[] value)
-        //{
-        //    return BitConverter.ToUInt32(value, 0).ToBigEndian();
-        //}
-
-        //public static ulong ToUInt64(this byte[] value)
-        //{
-        //    return BitConverter.ToUInt64(value, 0).ToBigEndian();
-        //}
 
         private static long ToBigEndian(this long value)
         {
@@ -182,12 +210,12 @@ namespace KafkaClient.Common
             return ((long) second << 32) | first;
         }
 
-        //public static ulong ToBigEndian(this ulong value)
-        //{
-        //    return BitConverter.IsLittleEndian
-        //        ? (ulong)ToBigEndian((long)value)
-        //        : value;
-        //}
+        public static ulong ToBigEndian(this ulong value)
+        {
+            return BitConverter.IsLittleEndian
+                ? (ulong)ToBigEndian((long)value)
+                : value;
+        }
 
         public static int ToBigEndian(this int value)
         {
@@ -213,13 +241,6 @@ namespace KafkaClient.Common
                 : value;
         }
 
-        //public static ushort ToBigEndian(this ushort value)
-        //{
-        //    return BitConverter.IsLittleEndian
-        //        ? (ushort)ToBigEndian((short)value)
-        //        : value;
-        //}
-
         #endregion
 
         #region Enumerable / Immutable Collections
@@ -236,11 +257,16 @@ namespace KafkaClient.Common
             return list.AddRange(items);
         }
 
-        public static IImmutableDictionary<T, TValue> AddNotNullRange<T, TValue>(this IImmutableDictionary<T, TValue> dictionary, IEnumerable<KeyValuePair<T, TValue>> items)
+        public static IImmutableList<T> ToSafeImmutableList<T>(this IEnumerable<T> items)
         {
-            if (items == null) return dictionary;
-            if (ReferenceEquals(dictionary, ImmutableDictionary<T, TValue>.Empty)) return items.ToImmutableDictionary();
-            return dictionary.AddRange(items);
+            if (items == null) return ImmutableList<T>.Empty;
+            return items.ToImmutableList();
+        }
+
+        public static IImmutableDictionary<T, TValue> ToSafeImmutableDictionary<T, TValue>(this IEnumerable<KeyValuePair<T, TValue>> items)
+        {
+            if (items == null) return ImmutableDictionary<T, TValue>.Empty;
+            return items.ToImmutableDictionary();
         }
 
         public static bool HasEqualElementsInOrder<T>(this IReadOnlyCollection<T> self, IReadOnlyCollection<T> other)
@@ -261,13 +287,6 @@ namespace KafkaClient.Common
         {
             for (var i = 0; i < count; i++) {
                 yield return producer();
-            }
-        }
-
-        public static IEnumerable<T> Repeat<T>(this int count, Func<int, T> producer)
-        {
-            for (var i = 0; i < count; i++) {
-                yield return producer(i);
             }
         }
 

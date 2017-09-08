@@ -447,7 +447,7 @@ namespace KafkaClient
         /// <param name="router">The router which provides the route and metadata.</param>
         /// <param name="topicName">Name of the topic to get offset information from.</param>
         /// <param name="maxOffsets">How many to get, at most.</param>
-        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.timestamp"/></param>
+        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.Timestamp"/></param>
         /// <param name="cancellationToken"></param>
         public static Task<IImmutableList<OffsetsResponse.Topic>> GetOffsetsAsync(this IRouter router, string topicName, int maxOffsets, long offsetTime, CancellationToken cancellationToken)
         {
@@ -456,7 +456,7 @@ namespace KafkaClient
                 partitions =>
                     new OffsetsRequest(
                         partitions.Select(
-                            _ => new OffsetsRequest.Topic(topicName, _.partition_id, offsetTime, maxOffsets))),
+                            _ => new OffsetsRequest.Topic(topicName, _.PartitionId, offsetTime, maxOffsets))),
                 cancellationToken);
         }
 
@@ -478,13 +478,13 @@ namespace KafkaClient
         /// <param name="topicName">Name of the topic to get offset information from.</param>
         /// <param name="partitionId">The partition to get offsets for.</param>
         /// <param name="maxOffsets">How many to get, at most.</param>
-        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.timestamp"/></param>
+        /// <param name="offsetTime">These are best described by <see cref="OffsetsRequest.Topic.Timestamp"/></param>
         /// <param name="cancellationToken"></param>
         public static async Task<OffsetsResponse.Topic> GetOffsetsAsync(this IRouter router, string topicName, int partitionId, int maxOffsets, long offsetTime, CancellationToken cancellationToken)
         {
             var request = new OffsetsRequest(new OffsetsRequest.Topic(topicName, partitionId, offsetTime, maxOffsets));
             var response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
-            return response.responses.SingleOrDefault(t => t.topic == topicName && t.partition_id == partitionId);
+            return response.Responses.SingleOrDefault(t => t.TopicName == topicName && t.PartitionId == partitionId);
         }
 
         /// <summary>
@@ -507,7 +507,7 @@ namespace KafkaClient
         {
             var request = new OffsetFetchRequest(groupId, new TopicPartition(topicName, partitionId));
             var response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
-            return response.responses.SingleOrDefault(t => t.topic == topicName && t.partition_id == partitionId);
+            return response.Responses.SingleOrDefault(t => t.TopicName == topicName && t.PartitionId == partitionId);
         }
 
         /// <summary>
@@ -523,7 +523,7 @@ namespace KafkaClient
                 topicName,
                 partitions =>
                     new OffsetFetchRequest(
-                        groupId, partitions.Select(_ => new OffsetsRequest.Topic(topicName, _.partition_id))),
+                        groupId, partitions.Select(_ => new OffsetsRequest.Topic(topicName, _.PartitionId))),
                 cancellationToken);
         }
 
@@ -550,21 +550,21 @@ namespace KafkaClient
 
                     var topicMetadata = await router.GetTopicMetadataAsync(topicName, cancellationToken).ConfigureAwait(false);
                     routedTopicRequests = topicMetadata
-                        .partition_metadata
-                        .Where(_ => !offsets.ContainsKey(_.partition_id)) // skip partitions already successfully retrieved
-                        .GroupBy(x => x.leader)
+                        .PartitionMetadata
+                        .Where(_ => !offsets.ContainsKey(_.PartitionId)) // skip partitions already successfully retrieved
+                        .GroupBy(x => x.Leader)
                         .Select(partitions => 
                             new RoutedTopicRequest<TResponse>(requestFunc(partitions),
                                 topicName, 
-                                partitions.Select(_ => _.partition_id).First(), 
+                                partitions.Select(_ => _.PartitionId).First(), 
                                 router.Log))
                         .ToArray();
 
                     await Task.WhenAll(routedTopicRequests.Select(_ => _.SendAsync(router, cancellationToken))).ConfigureAwait(false);
                     var responses = routedTopicRequests.Select(_ => _.MetadataRetryResponse(retryAttempt, out metadataInvalid)).ToArray();
                     foreach (var response in responses.Where(_ => _.IsSuccessful)) {
-                        foreach (var offsetTopic in response.Value.responses) {
-                            offsets[offsetTopic.partition_id] = offsetTopic;
+                        foreach (var offsetTopic in response.Value.Responses) {
+                            offsets[offsetTopic.PartitionId] = offsetTopic;
                         }
                     }
 
@@ -581,8 +581,8 @@ namespace KafkaClient
         {
             var protocols = metadata?.Select(m => new JoinGroupRequest.GroupProtocol(m));
             var request = new JoinGroupRequest(groupId, configuration.GroupHeartbeat, null, protocolType, protocols, configuration.GroupRebalanceTimeout);
-            var response = await router.SendAsync(request, request.group_id, cancellationToken, new RequestContext(protocolType: request.protocol_type), configuration.GroupCoordinationRetry).ConfigureAwait(false);
-            if (response == null || !response.error_code.IsSuccess()) {
+            var response = await router.SendAsync(request, request.GroupId, cancellationToken, new RequestContext(protocolType: request.ProtocolType), configuration.GroupCoordinationRetry).ConfigureAwait(false);
+            if (response == null || !response.Error.IsSuccess()) {
                 throw request.ExtractExceptions(response);
             }
             return response;
@@ -613,12 +613,12 @@ namespace KafkaClient
                     response = await router.SendAsync(request, topicName, partitionId, cancellationToken).ConfigureAwait(false);
                 } catch (BufferUnderRunException ex) {
                     if (configuration.FetchByteMultiplier <= 1) throw;
-                    var maxBytes = topic.max_bytes * configuration.FetchByteMultiplier;
-                    router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.max_bytes} -> {maxBytes}"));
-                    topic = new FetchRequest.Topic(topic.topic, topic.partition_id, topic.fetch_offset, maxBytes);
+                    var maxBytes = topic.MaxBytes * configuration.FetchByteMultiplier;
+                    router.Log.Warn(() => LogEvent.Create(ex, $"Retrying Fetch Request with multiplier {Math.Pow(configuration.FetchByteMultiplier, attempt)}, {topic.MaxBytes} -> {maxBytes}"));
+                    topic = new FetchRequest.Topic(topic.TopicName, topic.PartitionId, topic.FetchOffset, topic.LogStartOffset, maxBytes);
                 }
             }
-            return response?.responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;
+            return response?.Responses?.SingleOrDefault()?.Messages?.ToImmutableList() ?? ImmutableList<Message>.Empty;
         }
 
         private static ImmutableList<Message> ExtractMessages(ImmutableList<Message> existingMessages, long offset)

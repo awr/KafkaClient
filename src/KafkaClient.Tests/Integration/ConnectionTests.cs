@@ -54,9 +54,9 @@ namespace KafkaClient.Tests.Integration
             var requestTasks = new ConcurrentBag<Task<MetadataResponse>>();
             using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
-                    var singleResult = await router.Connections.First().SendAsync(new MetadataRequest(TestConfig.TopicName()), CancellationToken.None);
-                    Assert.True(singleResult.topic_metadata.Count > 0);
-                    Assert.True(singleResult.topic_metadata.First().partition_metadata.Count > 0);
+                    var singleResult = await router.Connections.First().SendAsync(new MetadataRequest(topicName), CancellationToken.None);
+                    Assert.True(singleResult.TopicMetadata.Count > 0);
+                    Assert.True(singleResult.TopicMetadata.First().PartitionMetadata.Count > 0);
 
                     var senderTasks = new List<Task>();
                     for (var s = 0; s < senders; s++) {
@@ -92,17 +92,17 @@ namespace KafkaClient.Tests.Integration
 
                         await Task.WhenAll(result1, result2, result3, result4);
 
-                        Assert.AreEqual(result1.Result.responses.Count, 1);
-                        Assert.True(result1.Result.responses.First().topic == topicName, "ProduceRequest did not return expected topic.");
+                        Assert.AreEqual(result1.Result.Responses.Count, 1);
+                        Assert.True(result1.Result.Responses.First().TopicName == topicName, "ProduceRequest did not return expected topic.");
 
-                        Assert.True(result2.Result.topic_metadata.Count > 0);
-                        Assert.True(result2.Result.topic_metadata.Any(x => x.topic == topicName), "MetadataRequest did not return expected topic.");
+                        Assert.True(result2.Result.TopicMetadata.Count > 0);
+                        Assert.True(result2.Result.TopicMetadata.Any(x => x.TopicName == topicName), "MetadataRequest did not return expected topic.");
 
-                        Assert.AreEqual(result3.Result.responses.Count, 1);
-                        Assert.True(result3.Result.responses.First().topic == topicName, "OffsetRequest did not return expected topic.");
+                        Assert.AreEqual(result3.Result.Responses.Count, 1);
+                        Assert.True(result3.Result.Responses.First().TopicName == topicName, "OffsetRequest did not return expected topic.");
 
-                        Assert.AreEqual(result4.Result.responses.Count, 1);
-                        Assert.True(result4.Result.responses.First().topic == topicName, "FetchRequest did not return expected topic.");
+                        Assert.AreEqual(result4.Result.Responses.Count, 1);
+                        Assert.True(result4.Result.Responses.First().TopicName == topicName, "FetchRequest did not return expected topic.");
                     }
                 );
             }

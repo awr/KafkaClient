@@ -22,6 +22,8 @@ namespace KafkaClient.Tests
         // turned down to reduce log noise -- turn up Level if necessary
         public static readonly ILog Log = new ConsoleLog();
 
+        public static TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
+
         public static Endpoint ServerEndpoint()
         {
             return new Endpoint(new IPEndPoint(IPAddress.Loopback, ServerPort()), "tcp://localhost");
@@ -35,7 +37,7 @@ namespace KafkaClient.Tests
             }
         }
 
-        public static Uri IntegrationUri { get; } = new Uri("tcp://kafkalocal:9092");
+        public static Uri IntegrationUri { get; } = new Uri("tcp://kafka:9092");
 
         public static KafkaOptions Options { get; } = new KafkaOptions(
             IntegrationUri,

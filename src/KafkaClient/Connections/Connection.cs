@@ -29,7 +29,6 @@ namespace KafkaClient.Connections
 
         private readonly Task _receiveTask;
         private int _receiveCount;
-        private static int _correlationIdSeed;
 
         private readonly SemaphoreSlim _versionSupportSemaphore = new SemaphoreSlim(1, 1);
         private IVersionSupport _versionSupport; // = null
@@ -124,12 +123,12 @@ namespace KafkaClient.Connections
                         return await _configuration.ConnectionRetry.TryAsync(
                             async (retryAttempt, elapsed) => {
                                 var response = await SendAsync(new ApiVersionsRequest(), cancellationToken, new RequestContext(version: 0)).ConfigureAwait(false);
-                                if (response.error_code.IsRetryable()) return RetryAttempt<short>.Retry;
-                                if (!response.error_code.IsSuccess()) return RetryAttempt<short>.Abort;
+                                if (response.Error.IsRetryable()) return RetryAttempt<short>.Retry;
+                                if (!response.Error.IsSuccess()) return RetryAttempt<short>.Abort;
 
-                                var supportedVersions = response.api_versions.ToImmutableDictionary(
-                                                                _ => _.api_key,
-                                                                _ => configuredSupport.UseMaxSupported ? _.max_version : _.min_version);
+                                var supportedVersions = response.ApiVersions.ToImmutableDictionary(
+                                                                _ => _.ApiKey,
+                                                                _ => configuredSupport.UseMaxSupported ? _.MaxVersion : _.MinVersion);
                                 _versionSupport = new VersionSupport(supportedVersions);
                                 return new RetryAttempt<short>(_versionSupport.GetVersion(apiKey).GetValueOrDefault());
                             },
@@ -226,13 +225,14 @@ namespace KafkaClient.Connections
             return new AsyncItem(new RequestContext(correlationId), new UnknownRequest());
         }
 
+        internal static int CorrelationIdSeed;
         internal static int OverflowGuard = int.MaxValue >> 1;
         private int NextCorrelationId()
         {
-            var id = Interlocked.Increment(ref _correlationIdSeed);
+            var id = Interlocked.Increment(ref CorrelationIdSeed);
             if (id >= OverflowGuard) {
                 // to avoid integer overflow
-                Interlocked.Exchange(ref _correlationIdSeed, 0);
+                Interlocked.Exchange(ref CorrelationIdSeed, 0);
             }
             return id;
         }

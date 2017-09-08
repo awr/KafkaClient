@@ -102,7 +102,7 @@ namespace KafkaClient
             var topic = await Router.GetTopicMetadataAsync(topicName, cancellationToken);
             var partitionedMessages =
                 from message in messages
-                group message by Configuration.PartitionSelector.Select(topic, message.Key).partition_id
+                group message by Configuration.PartitionSelector.Select(topic, message.Key).PartitionId
                 into partition
                 select new { PartitionId = partition.Key, Messages = partition };
 
@@ -186,14 +186,14 @@ namespace KafkaClient
 
         private async Task SendBatchWithCodecAsync(IImmutableList<ProduceTask> produceTasks, MessageCodec codec, CancellationToken cancellationToken)
         {
-            await Router.GetTopicMetadataAsync(produceTasks.Select(m => m.Partition.topic), cancellationToken).ConfigureAwait(false);
+            await Router.GetTopicMetadataAsync(produceTasks.Select(m => m.Partition.TopicName), cancellationToken).ConfigureAwait(false);
 
             // we must send a different produce request for each ack level and timeout combination.
             // we must also send requests to the correct server
             var endpointGroups = produceTasks.Select(
                 produceTask => new {
                     ProduceTask = produceTask,
-                    TopicConnection = Router.GetTopicConnection(produceTask.Partition.topic, produceTask.Partition.partition_id)
+                    TopicConnection = Router.GetTopicConnection(produceTask.Partition.TopicName, produceTask.Partition.PartitionId)
                 })
                 .GroupBy(_ => new {_.ProduceTask.Acks, _.ProduceTask.AckTimeout, _.TopicConnection.Connection.Endpoint});
 
@@ -203,9 +203,9 @@ namespace KafkaClient
                     .GroupBy(_ => new TopicPartition(_.TopicConnection.TopicName, _.TopicConnection.PartitionId))
                     .ToImmutableDictionary(g => g.Key, g => g.Select(_ => _.ProduceTask).ToImmutableList());
                 var messageCount = produceTasksByTopic.Values.Sum(_ => _.Count);
-                var payloads = produceTasksByTopic.Select(p => new ProduceRequest.Topic(p.Key.topic, p.Key.partition_id, p.Value.SelectMany(_ => _.Messages), codec));
+                var payloads = produceTasksByTopic.Select(p => new ProduceRequest.Topic(p.Key.TopicName, p.Key.PartitionId, p.Value.SelectMany(_ => _.Messages), codec));
                 var request = new ProduceRequest(payloads, endpointGroup.Key.AckTimeout, endpointGroup.Key.Acks);
-                Router.Log.Debug(() => LogEvent.Create($"Produce request for topics{request.topics.Aggregate("", (buffer, p) => $"{buffer} {p}")} with {messageCount} messages"));
+                Router.Log.Debug(() => LogEvent.Create($"Produce request for topics{request.Topics.Aggregate("", (buffer, p) => $"{buffer} {p}")} with {messageCount} messages"));
 
                 var connection = endpointGroup.Select(_ => _.TopicConnection).First().Connection; // they'll all be the same since they're grouped by this
                 // TODO: what about retryability like for the router?? Need this to be robust to node failures
@@ -229,16 +229,16 @@ namespace KafkaClient
                     if (batch.Acks == 0 && batchResult == null) {
                         foreach (var topic in batch.ProduceTasksByTopic.Keys) {
                             foreach (var produceTask in batch.ProduceTasksByTopic[topic]) {
-                                produceTask.Tcs.SetResult(new ProduceResponse.Topic(topic.topic, topic.partition_id, ErrorCode.NONE, -1));
+                                produceTask.Tcs.SetResult(new ProduceResponse.Topic(topic.TopicName, topic.PartitionId, ErrorCode.NONE, -1));
                             }
                         }
                         return;
                     }
-                    var resultTopics = batchResult.responses.ToImmutableDictionary(t => new TopicPartition(t.topic, t.partition_id));
+                    var resultTopics = batchResult.Responses.ToImmutableDictionary(t => new TopicPartition(t.TopicName, t.PartitionId));
                     Router.Log.Debug(() => LogEvent.Create($"Produce response for topics{resultTopics.Keys.Aggregate("", (buffer, p) => $"{buffer} {p}")}"));
 
                     foreach (var topic in batch.ProduceTasksByTopic.Keys.Except(resultTopics.Keys)) {
-                        Router.Log.Warn(() => LogEvent.Create($"No response included for produce batch topic/{topic.topic}/partition/{topic.partition_id} on {batch.Endpoint}"));
+                        Router.Log.Warn(() => LogEvent.Create($"No response included for produce batch topic/{topic.TopicName}/partition/{topic.PartitionId} on {batch.Endpoint}"));
                         foreach (var produceTask in batch.ProduceTasksByTopic[topic]) {
                             produceTask.Tcs.SetResult(null);
                         }
@@ -247,15 +247,15 @@ namespace KafkaClient
                     foreach (var pair in resultTopics) {
                         var topic = pair.Value;
                         if (!batch.ProduceTasksByTopic.TryGetValue(pair.Key, out ImmutableList<ProduceTask> produceTasks)) {
-                            Router.Log.Error(LogEvent.Create($"Extra response to produce batch topic/{topic.topic}/partition/{topic.partition_id} on {batch.Endpoint}"));
+                            Router.Log.Error(LogEvent.Create($"Extra response to produce batch topic/{topic.TopicName}/partition/{topic.PartitionId} on {batch.Endpoint}"));
                             continue;
                         }
 
                         var messageCount = produceTasks.Sum(t => t.Messages.Count);
                         foreach (var produceTask in produceTasks) {
                             produceTask.Tcs.SetResult(batch.Acks == 0
-                                ? new ProduceResponse.Topic(topic.topic, topic.partition_id, ErrorCode.NONE, -1)
-                                : new ProduceResponse.Topic(topic.topic, topic.partition_id, topic.error_code, topic.base_offset + messageCount - 1, topic.timestamp));
+                                ? new ProduceResponse.Topic(topic.TopicName, topic.PartitionId, ErrorCode.NONE, -1)
+                                : new ProduceResponse.Topic(topic.TopicName, topic.PartitionId, topic.Error, topic.BaseOffset + messageCount - 1, topic.Timestamp));
                         }
                     }
                 } catch (Exception ex) {

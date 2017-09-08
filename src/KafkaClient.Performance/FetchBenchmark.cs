@@ -26,8 +26,6 @@ namespace KafkaClient.Performance
 
         public short Version { get; } = 0;
 
-        public byte MessageVersion { get; } = 0;
-
         private ArraySegment<byte> _bytes;
 
         [GlobalSetup]
@@ -41,8 +39,8 @@ namespace KafkaClient.Performance
                               partitionId, 
                               500,
                               ErrorCode.NONE,
-                              Enumerable.Range(1, Messages)
-                                        .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec, version: MessageVersion))
+                              messages: Enumerable.Range(1, Messages)
+                                        .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec))
                           )));
             _bytes = KafkaDecoder.EncodeResponseBytes(new RequestContext(1, Version), response);
         }

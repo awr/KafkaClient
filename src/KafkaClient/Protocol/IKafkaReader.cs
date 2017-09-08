@@ -8,13 +8,15 @@ namespace KafkaClient.Protocol
         byte ReadByte();
         short ReadInt16();
         int ReadInt32();
+        int ReadVarint32();
         uint ReadUInt32();
         long ReadInt64();
-        string ReadString();
+        long ReadVarint64();
+        string ReadString(int? length = null);
+        ArraySegment<byte> ReadBytes(int count);
         ArraySegment<byte> ReadBytes();
-        uint ReadCrc(int count);
+        uint ReadCrc(int count, bool castagnoli = false);
 
-        ArraySegment<byte> ReadSegment(int count);
         int Position { get; set; }
 
         bool HasBytes(int count);

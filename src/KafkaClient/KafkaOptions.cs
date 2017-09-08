@@ -17,7 +17,7 @@ namespace KafkaClient
             IConsumerConfiguration consumerConfiguration = null, 
             ILog log = null)
         {
-            ServerUris = ImmutableList<Uri>.Empty.AddNotNullRange(kafkaServerUris);
+            ServerUris = kafkaServerUris.ToSafeImmutableList();
             RouterConfiguration = routerConfiguration ?? KafkaClient.RouterConfiguration.Default;
             ConnectionConfiguration = connectionConfiguration ?? Connections.ConnectionConfiguration.Default;
             ConnectionFactory = connectionFactory ?? new ConnectionFactory();

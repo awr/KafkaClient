@@ -1,22 +1,21 @@
 ﻿using System;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     public class TopicOffset : TopicPartition, IEquatable<TopicOffset>
     {
-        public override string ToString() => $"{{topic:{topic},partition_id:{partition_id},offset:{offset}}}";
+        public override string ToString() => $"{{{this.PartitionToString()},offset:{Offset}}}";
 
         public TopicOffset(string topic, int partitionId, long offset = -1) 
             : base(topic, partitionId)
         {
-            this.offset = offset;
+            Offset = offset;
         }
 
         /// <summary>
         /// The offset found on the server.
         /// </summary>
-        public long offset { get; }
+        public long Offset { get; }
 
         #region Equality
 
@@ -30,14 +29,14 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return base.Equals(other) 
-                && offset == other.offset;
+                && Offset == other.Offset;
         }
 
         public override int GetHashCode()
         {
             unchecked {
                 var hashCode = base.GetHashCode();
-                hashCode = (hashCode*397) ^ offset.GetHashCode();
+                hashCode = (hashCode*397) ^ Offset.GetHashCode();
                 return hashCode;
             }
         }

@@ -34,7 +34,7 @@ namespace KafkaClient
             if (!Encoders.ContainsKey(protocolType ?? "")) throw new ArgumentOutOfRangeException(nameof(protocolType), $"ProtocolType {protocolType} is unknown");
 
             GroupId = groupId;
-            MemberId = response.member_id;
+            MemberId = response.MemberId;
             ProtocolType = protocolType;
 
             OnJoinGroup(response);
@@ -286,15 +286,15 @@ namespace KafkaClient
         /// </summary>
         private void OnJoinGroup(JoinGroupResponse response)
         {
-            if (response.member_id != MemberId) throw new ArgumentOutOfRangeException(nameof(response), $"Member is not valid ({MemberId} != {response.member_id})");
+            if (response.MemberId != MemberId) throw new ArgumentOutOfRangeException(nameof(response), $"Member is not valid ({MemberId} != {response.MemberId})");
             if (_disposeCount > 0) throw new ObjectDisposedException($"Consumer {{GroupId:{GroupId},MemberId:{MemberId}}} is no longer valid");
 
             _joinSemaphore.Lock(
                 () => {
-                    IsLeader = response.leader_id == MemberId;
-                    GenerationId = response.generation_id;
-                    _groupProtocol = response.group_protocol;
-                    _memberMetadata = response.members.ToImmutableDictionary(member => member.member_id, member => member.member_metadata);
+                    IsLeader = response.LeaderId == MemberId;
+                    GenerationId = response.GenerationId;
+                    _groupProtocol = response.GroupProtocol;
+                    _memberMetadata = response.Members.ToImmutableDictionary(member => member.MemberId, member => member.MemberMetadata);
                     Router.Log.Info(() => LogEvent.Create(GenerationId > 1 
                         ? $"Consumer {MemberId} Rejoined {GroupId} Generation{GenerationId}"
                         : $"Consumer {MemberId} Joined {GroupId}"));
@@ -339,8 +339,8 @@ namespace KafkaClient
             }
 
             _syncSemaphore.Lock(() => {
-                _assignment = response.member_assignment;
-                var validPartitions = response.member_assignment.PartitionAssignments.ToImmutableHashSet();
+                _assignment = response.MemberAssignment;
+                var validPartitions = response.MemberAssignment.PartitionAssignments.ToImmutableHashSet();
                 var invalidPartitions = _batches.Where(pair => !validPartitions.Contains(pair.Key)).ToList();
                 foreach (var invalidPartition in invalidPartitions) {
                     invalidPartition.Value.Dispose();
@@ -428,9 +428,9 @@ namespace KafkaClient
                     var partition = _syncSemaphore.Lock(() => _assignment?.PartitionAssignments.FirstOrDefault(p => !_batches.ContainsKey(p)), _disposeToken.Token);
 
                     if (partition == null) return MessageBatch.Empty;
-                    var currentOffset = await Router.GetOffsetsAsync(GroupId, partition.topic, partition.partition_id, cancellationToken).ConfigureAwait(false);
-                    var offset = currentOffset.offset + 1;
-                    var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, partition.topic, partition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
+                    var currentOffset = await Router.GetOffsetsAsync(GroupId, partition.TopicName, partition.PartitionId, cancellationToken).ConfigureAwait(false);
+                    var offset = currentOffset.Offset + 1;
+                    var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, partition.TopicName, partition.PartitionId, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
                     var batch = new MessageBatch(messages, partition, offset, Router, Configuration, AutoConsume, batchSize, GroupId, MemberId, generationId);
                     _syncSemaphore.Lock(() => _batches = _batches.Add(partition, batch), cancellationToken);
                     return batch;                    

@@ -3,72 +3,83 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// CreateTopics Request => [create_topic_requests] timeout 
-    ///  create_topic_requests => topic num_partitions replication_factor [replica_assignment] [configs] 
-    ///    topic => STRING             -- Name for newly created topic.
-    ///    num_partitions => INT32     -- Number of partitions to be created. -1 indicates unset.
-    ///    replication_factor => INT16 -- Replication factor for the topic. -1 indicates unset.
-    ///    replica_assignment => partition_id [replicas] 
-    ///      partition_id => INT32
-    ///      replica => INT32          -- The set of all nodes that should host this partition. The first replica in the list is the preferred leader.
-    ///    configs => config_key config_value 
-    ///      config_key => STRING      -- Configuration key name
-    ///      config_value => STRING    -- Configuration value
-    ///  timeout => INT32              -- The time in ms to wait for a topic to be completely created on the controller node. Values &lt;= 0 will trigger topic creation and return immediately
+    /// CreateTopics Request => [create_topic_requests] timeout *validate_only 
     /// </summary>
+    /// <remarks>
+    /// CreateTopics Request => [create_topic_requests] timeout *validate_only 
+    ///   create_topic_requests => topic num_partitions replication_factor [replica_assignment] [config_entries] 
+    ///     topic => STRING
+    ///     num_partitions => INT32
+    ///     replication_factor => INT16
+    ///     replica_assignment => partition_id [replicas] 
+    ///       partition_id => INT32
+    ///       replicas => INT32
+    ///     config_entries => config_name config_value 
+    ///       config_name => STRING
+    ///       config_value => NULLABLE_STRING
+    ///   timeout => INT32
+    ///   validate_only => BOOLEAN
+    ///
+    /// Version 1+: validate_only
+    /// From http://kafka.apache.org/protocol.html#The_Messages_CreateTopics
+    /// </remarks>
     public class CreateTopicsRequest : Request, IRequest<CreateTopicsResponse>, IEquatable<CreateTopicsRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},create_topic_requests:[{create_topic_requests.ToStrings()}],timeout:{timeout}}}";
+        public override string ToString() => $"{{{this.RequestToString()},create_topic_requests:[{Topics.ToStrings()}],timeout:{Timeout.TotalMilliseconds:##########},validate_only:{ValidateOnly}}}";
 
-        public override string ShortString() => create_topic_requests.Count == 1 ? $"{ApiKey} {create_topic_requests[0].topic}" : ApiKey.ToString();
+        public override string ShortString() => Topics.Count == 1 ? $"{ApiKey} {Topics[0].TopicName}" : ApiKey.ToString();
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            writer.Write(create_topic_requests.Count);
-            foreach (var topic in create_topic_requests) {
-                writer.Write(topic.topic)
-                        .Write(topic.num_partitions)
-                        .Write(topic.replication_factor)
-                        .Write(topic.replica_assignments.Count);
-                foreach (var assignment in topic.replica_assignments) {
-                    writer.Write(assignment.partition_id)
-                          .Write(assignment.replicas);
+            writer.Write(Topics.Count);
+            foreach (var topic in Topics) {
+                writer.Write(topic.TopicName)
+                        .Write(topic.NumPartitions)
+                        .Write(topic.ReplicationFactor)
+                        .Write(topic.ReplicaAssignments.Count);
+                foreach (var assignment in topic.ReplicaAssignments) {
+                    writer.Write(assignment.PartitionId)
+                          .Write(assignment.Replicas);
                 }
-                writer.Write(topic.configs.Count);
-                foreach (var config in topic.configs) {
-                    writer.Write(config.Key)
-                          .Write(config.Value);
+                writer.Write(topic.Configs.Count);
+                foreach (var config in topic.Configs) {
+                    writer.Write(config.ConfigName)
+                          .Write(config.ConfigValue);
                 }
             }
-            writer.Write((int)timeout.TotalMilliseconds);
+            writer.WriteMilliseconds(Timeout);
+            if (context.ApiVersion >= 1) {
+                writer.Write(ValidateOnly.GetValueOrDefault());
+            }
         }
 
         public CreateTopicsResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => CreateTopicsResponse.FromBytes(context, bytes);
 
-        public CreateTopicsRequest(params Topic[] topics)
-            : this(topics, null)
-        {
-        }
-
-        public CreateTopicsRequest(IEnumerable<Topic> topics = null, TimeSpan? timeout = null)
+        public CreateTopicsRequest(IEnumerable<Topic> topics = null, TimeSpan? timeout = null, bool? validateOnly = null)
             : base(ApiKey.CreateTopics)
         {
-            create_topic_requests = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            this.timeout = timeout ?? TimeSpan.Zero;
+            Topics = topics.ToSafeImmutableList();
+            Timeout = timeout ?? TimeSpan.Zero;
+            ValidateOnly = validateOnly;
         }
 
-        public IImmutableList<Topic> create_topic_requests { get; }
+        public IImmutableList<Topic> Topics { get; }
 
         /// <summary>
         /// The time in ms to wait for a topic to be completely created on the controller node. Values &lt;= 0 will trigger 
         /// topic creation and return immediately
         /// </summary>
-        public TimeSpan timeout { get; }
+        public TimeSpan Timeout { get; }
+
+        /// <summary>
+        /// If this is true, the request will be validated, but the topic won't be created.
+        /// Version: 1+
+        /// </summary>
+        public bool? ValidateOnly { get; }
 
         #region Equality
 
@@ -81,14 +92,18 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return create_topic_requests.HasEqualElementsInOrder(other.create_topic_requests)
-                && timeout.Equals(other.timeout);
+            return Topics.HasEqualElementsInOrder(other.Topics)
+                && Timeout.Equals(other.Timeout)
+                && ValidateOnly == other.ValidateOnly;
         }
 
         public override int GetHashCode()
         {
             unchecked {
-                return ((create_topic_requests?.Count.GetHashCode() ?? 0) * 397) ^ timeout.GetHashCode();
+                var hashCode = Topics?.Count.GetHashCode() ?? 0;
+                hashCode = (hashCode*397) ^ Timeout.GetHashCode();
+                hashCode = (hashCode*397) ^ (ValidateOnly?.GetHashCode() ?? 0);
+                return hashCode;
             }
         }
 
@@ -96,55 +111,55 @@ namespace KafkaClient.Protocol
 
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{topic:{topic},num_partitions:{num_partitions},replication_factor:{replication_factor},replica_assignments:[{replica_assignments.ToStrings()}],configs:{{{string.Join(",",configs.Select(pair => $"{pair.Key}:{pair.Value}"))}}}}}";
+            public override string ToString() => $"{{topic:{TopicName},num_partitions:{NumPartitions},replication_factor:{ReplicationFactor},replica_assignments:[{ReplicaAssignments.ToStrings()}],configs:[{Configs.ToStrings()}]}}";
 
-            public Topic(string topic, int numberOfPartitions, short replicationFactor, IEnumerable<KeyValuePair<string, string>> configs = null)
-                : this (topic, configs)
+            public Topic(string topicName, int numberOfPartitions, short replicationFactor, IEnumerable<ConfigEntry> configs = null)
+                : this (topicName, configs)
             {
-                num_partitions = numberOfPartitions;
-                replication_factor = replicationFactor;
-                replica_assignments = ImmutableList<ReplicaAssignment>.Empty;
+                NumPartitions = numberOfPartitions;
+                ReplicationFactor = replicationFactor;
+                ReplicaAssignments = ImmutableList<ReplicaAssignment>.Empty;
             }
 
-            public Topic(string topic, IEnumerable<ReplicaAssignment> replicaAssignments, IEnumerable<KeyValuePair<string, string>> configs = null)
-                : this (topic, configs)
+            public Topic(string topicName, IEnumerable<ReplicaAssignment> replicaAssignments, IEnumerable<ConfigEntry> configs = null)
+                : this (topicName, configs)
             {
-                num_partitions = -1;
-                replication_factor = -1;
-                replica_assignments = ImmutableList<ReplicaAssignment>.Empty.AddNotNullRange(replicaAssignments);
+                NumPartitions = -1;
+                ReplicationFactor = -1;
+                ReplicaAssignments = replicaAssignments.ToSafeImmutableList();
             }
 
-            private Topic(string topic, IEnumerable<KeyValuePair<string, string>> configs)
+            private Topic(string topicName, IEnumerable<ConfigEntry> configs)
             {
-                this.topic = topic;
-                this.configs = ImmutableDictionary<string, string>.Empty.AddNotNullRange(configs);
+                TopicName = topicName;
+                Configs = configs.ToSafeImmutableList();
             }
 
             /// <summary>
             /// Name for newly created topic.
             /// </summary>
-            public string topic { get; }
+            public string TopicName { get; }
 
             /// <summary>
             /// Number of partitions to be created. -1 indicates unset.
             /// </summary>
-            public int num_partitions { get; }
+            public int NumPartitions { get; }
 
             /// <summary>
             /// Replication factor for the topic. -1 indicates unset.
             /// </summary>
-            public short replication_factor { get; }
+            public short ReplicationFactor { get; }
 
             /// <summary>
             /// Replica assignment among kafka brokers for this topic partitions. 
             /// If this is set num_partitions and replication_factor must be unset.
             /// </summary>
-            public IImmutableList<ReplicaAssignment> replica_assignments { get; }
+            public IImmutableList<ReplicaAssignment> ReplicaAssignments { get; }
 
             /// <summary>
             /// Topic level configuration for topic to be set.
             /// </summary>
-            public IImmutableDictionary<string, string> configs { get; }
+            public IImmutableList<ConfigEntry> Configs { get; }
 
             #region Equality
 
@@ -157,21 +172,21 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return String.Equals(topic, other.topic) 
-                    && num_partitions == other.num_partitions 
-                    && replication_factor == other.replication_factor 
-                    && replica_assignments.HasEqualElementsInOrder(other.replica_assignments) 
-                    && configs.HasEqualElementsInOrder(other.configs);
+                return string.Equals(TopicName, other.TopicName) 
+                    && NumPartitions == other.NumPartitions 
+                    && ReplicationFactor == other.ReplicationFactor 
+                    && ReplicaAssignments.HasEqualElementsInOrder(other.ReplicaAssignments) 
+                    && Configs.HasEqualElementsInOrder(other.Configs);
             }
 
             public override int GetHashCode()
             {
                 unchecked {
-                    var hashCode = topic?.GetHashCode() ?? 0;
-                    hashCode = (hashCode * 397) ^ num_partitions;
-                    hashCode = (hashCode * 397) ^ replication_factor.GetHashCode();
-                    hashCode = (hashCode * 397) ^ (replica_assignments?.Count.GetHashCode() ?? 0);
-                    hashCode = (hashCode * 397) ^ (configs?.Count.GetHashCode() ?? 0);
+                    var hashCode = TopicName?.GetHashCode() ?? 0;
+                    hashCode = (hashCode * 397) ^ NumPartitions;
+                    hashCode = (hashCode * 397) ^ ReplicationFactor.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (ReplicaAssignments?.Count.GetHashCode() ?? 0);
+                    hashCode = (hashCode * 397) ^ (Configs?.Count.GetHashCode() ?? 0);
                     return hashCode;
                 }
             }
@@ -181,21 +196,21 @@ namespace KafkaClient.Protocol
 
         public class ReplicaAssignment : IEquatable<ReplicaAssignment>
         {
-            public override string ToString() => $"{{partition_id:{partition_id},replicas:[{replicas.ToStrings()}]}}";
+            public override string ToString() => $"{{partition_id:{PartitionId},replicas:[{Replicas.ToStrings()}]}}";
 
             public ReplicaAssignment(int partitionId, IEnumerable<int> replicas = null)
             {
-                partition_id = partitionId;
-                this.replicas = ImmutableList<int>.Empty.AddNotNullRange(replicas);
+                PartitionId = partitionId;
+                Replicas = replicas.ToSafeImmutableList();
             }
 
-            public int partition_id { get; }
+            public int PartitionId { get; }
 
             /// <summary>
             /// The set of all nodes that should host this partition. 
             /// The first replica in the list is the preferred leader.
             /// </summary>
-            public IImmutableList<int> replicas { get; }
+            public IImmutableList<int> Replicas { get; }
 
             #region Equality
 
@@ -208,14 +223,14 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return partition_id == other.partition_id 
-                    && replicas.HasEqualElementsInOrder(other.replicas);
+                return PartitionId == other.PartitionId 
+                    && Replicas.HasEqualElementsInOrder(other.Replicas);
             }
 
             public override int GetHashCode()
             {
                 unchecked {
-                    return (partition_id * 397) ^ (replicas?.Count.GetHashCode() ?? 0);
+                    return (PartitionId * 397) ^ (Replicas?.Count.GetHashCode() ?? 0);
                 }
             }
 

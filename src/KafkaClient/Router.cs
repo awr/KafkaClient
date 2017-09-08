@@ -126,7 +126,7 @@ namespace KafkaClient
 
         private TopicConnection GetCachedTopicConnection(string topicName, int partitionId, MetadataResponse.Topic topic)
         {
-            var partition = topic.partition_metadata.FirstOrDefault(x => x.partition_id == partitionId);
+            var partition = topic.PartitionMetadata.FirstOrDefault(x => x.PartitionId == partitionId);
             if (partition == null) throw new RoutingException($"The topic ({topicName}) has no partitionId {partitionId} defined.");
 
             return GetCachedTopicConnection(topicName, partition);
@@ -140,11 +140,11 @@ namespace KafkaClient
 
         private TopicConnection GetCachedTopicConnection(string topicName, MetadataResponse.Partition partition)
         {
-            if (_serverEndpoints.TryGetValue(partition.leader, out Endpoint endpoint) 
+            if (_serverEndpoints.TryGetValue(partition.Leader, out Endpoint endpoint) 
                 && _connections.TryGetValue(endpoint, out IImmutableList<IConnection> connections))
             {
                 var index = _selector.Next(0, connections.Count - 1);
-                return new TopicConnection(topicName, partition.partition_id, partition.leader, connections[index]);
+                return new TopicConnection(topicName, partition.PartitionId, partition.Leader, connections[index]);
             }
 
             throw new RoutingException($"Lead server cannot be found for {partition}");
@@ -249,18 +249,18 @@ namespace KafkaClient
                         response = await this.GetMetadataAsync(request, cancellationToken).ConfigureAwait(false);
                     } else {
                         Log.Info(() => LogEvent.Create($"Router refreshing metadata for topics {string.Join(",", cachedResults.Misses)}"));
-                        request = new MetadataRequest(cachedResults.Misses);
+                        request = new MetadataRequest(cachedResults.Misses, false);
                         response = await this.GetMetadataAsync(request, cancellationToken).ConfigureAwait(false);
                     }
 
                     if (response != null) {
-                        await UpdateConnectionCacheAsync(response.brokers, cancellationToken);
+                        await UpdateConnectionCacheAsync(response.Brokers, cancellationToken);
                     }
                     UpdateTopicCache(response);
 
                     // since the above may take some time to complete, it's necessary to hold on to the topics we found before
                     // just in case they expired between when we searched for them and now.
-                    var result = cachedResults.Hits.AddNotNullRange(response?.topic_metadata);
+                    var result = cachedResults.Hits.AddNotNullRange(response?.TopicMetadata);
                     return result;
                 }, cancellationToken).ConfigureAwait(false);
         }
@@ -282,17 +282,17 @@ namespace KafkaClient
         {
             if (metadata == null) return;
 
-            var partitionElections = metadata.topic_metadata.SelectMany(
-                t => t.partition_metadata
+            var partitionElections = metadata.TopicMetadata.SelectMany(
+                t => t.PartitionMetadata
                       .Where(p => p.IsElectingLeader)
-                      .Select(p => new TopicPartition(t.topic, p.partition_id)))
+                      .Select(p => new TopicPartition(t.TopicName, p.PartitionId)))
                       .ToList();
             if (partitionElections.Any()) throw GetPartitionElectionException(partitionElections);
 
             var topicCache = _topicCache;
             try {
-                foreach (var topic in metadata.topic_metadata) {
-                    topicCache = topicCache.SetItem(topic.topic, new Tuple<MetadataResponse.Topic, DateTimeOffset>(topic, DateTimeOffset.UtcNow));
+                foreach (var topic in metadata.TopicMetadata) {
+                    topicCache = topicCache.SetItem(topic.TopicName, new Tuple<MetadataResponse.Topic, DateTimeOffset>(topic, DateTimeOffset.UtcNow));
                 }
             } finally {
                 _topicCache = topicCache;
@@ -368,7 +368,7 @@ namespace KafkaClient
                     }
 
                     Log.Info(() => LogEvent.Create($"Router refreshing servers for group {groupId}"));
-                    var request = new GroupCoordinatorRequest(groupId);
+                    var request = new FindCoordinatorRequest(groupId);
                     try {
                         var response = await this.SendToAnyAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -385,12 +385,12 @@ namespace KafkaClient
                 }, cancellationToken).ConfigureAwait(false);
         }
 
-        private void UpdateGroupServerCache(GroupCoordinatorRequest request, GroupCoordinatorResponse response)
+        private void UpdateGroupServerCache(FindCoordinatorRequest request, FindCoordinatorResponse response)
         {
             if (request == null || response == null) return;
 
-            _groupServerCache = _groupServerCache.SetItem(request.group_id, new Tuple<int, DateTimeOffset>(response.Id, DateTimeOffset.UtcNow));
-            Log.Verbose(() => LogEvent.Create($"Router set serverId to {response.Id} for group {request.group_id}"));
+            _groupServerCache = _groupServerCache.SetItem(request.CoordinatorId, new Tuple<int, DateTimeOffset>(response.Id, DateTimeOffset.UtcNow));
+            Log.Verbose(() => LogEvent.Create($"Router set serverId to {response.Id} for group {request.CoordinatorId}"));
         }
 
         #endregion
@@ -480,7 +480,7 @@ namespace KafkaClient
 
                     // since the above may take some time to complete, it's necessary to hold on to the groups we found before
                     // just in case they expired between when we searched for them and now.
-                    var result = cachedResults.Hits.AddNotNullRange(response?.groups);
+                    var result = cachedResults.Hits.AddNotNullRange(response?.Groups);
                     return result;
                 }, cancellationToken).ConfigureAwait(false);
         }
@@ -491,8 +491,8 @@ namespace KafkaClient
 
             var groupCache = _groupCache;
             try {
-                foreach (var group in metadata.groups) {
-                    groupCache = groupCache.SetItem(group.group_id, new Tuple<DescribeGroupsResponse.Group, DateTimeOffset>(group, DateTimeOffset.UtcNow));
+                foreach (var group in metadata.Groups) {
+                    groupCache = groupCache.SetItem(group.GroupId, new Tuple<DescribeGroupsResponse.Group, DateTimeOffset>(group, DateTimeOffset.UtcNow));
                 }
             } finally {
                 _groupCache = groupCache;
@@ -505,19 +505,19 @@ namespace KafkaClient
 
         public Task<SyncGroupResponse> SyncGroupAsync(SyncGroupRequest request, IRequestContext context, IRetry retryPolicy, CancellationToken cancellationToken)
         {
-            if (request.group_assignments.Count > 0) {
-                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.group_assignments, request.generation_id);
-                _memberAssignmentCache.AddOrUpdate(request.group_id, value, (key, old) => value);
+            if (request.GroupAssignments.Count > 0) {
+                var value = new Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int>(request.GroupAssignments, request.GenerationId);
+                _memberAssignmentCache.AddOrUpdate(request.GroupId, value, (key, old) => value);
             }
 
-            return this.SendAsync(request, request.group_id, cancellationToken, context, retryPolicy); 
+            return this.SendAsync(request, request.GroupId, cancellationToken, context, retryPolicy); 
         }
 
         public IImmutableDictionary<string, IMemberAssignment> GetGroupMemberAssignment(string groupId, int? generationId = null)
         {
             var assignment = TryGetCachedMemberAssignment(groupId, generationId);
             if (assignment == null && !generationId.HasValue) {
-                assignment = TryGetCachedGroup(groupId)?.members?.ToImmutableDictionary(member => member.member_id, member => member.member_assignment);
+                assignment = TryGetCachedGroup(groupId)?.Members?.ToImmutableDictionary(member => member.member_id, member => member.member_assignment);
             }
             return assignment ?? ImmutableDictionary<string, IMemberAssignment>.Empty;
         }
@@ -525,7 +525,7 @@ namespace KafkaClient
         private IImmutableDictionary<string, IMemberAssignment> TryGetCachedMemberAssignment(string groupId, int? generationId = null)
         {
             if (_memberAssignmentCache.TryGetValue(groupId, out Tuple<IImmutableList<SyncGroupRequest.GroupAssignment>, int> cachedValue) && (!generationId.HasValue || generationId.Value == cachedValue.Item2)) {
-                return cachedValue.Item1.ToImmutableDictionary(assignment => assignment.member_id, assignment => assignment.member_assignment);
+                return cachedValue.Item1.ToImmutableDictionary(assignment => assignment.MemberId, assignment => assignment.MemberAssignment);
             }
             return null;
         }
@@ -544,8 +544,8 @@ namespace KafkaClient
 
             public CachedResults(IEnumerable<T> hits = null, IEnumerable<string> misses = null)
             {
-                Hits = ImmutableList<T>.Empty.AddNotNullRange(hits);
-                Misses = ImmutableList<string>.Empty.AddNotNullRange(misses);
+                Hits = hits.ToSafeImmutableList();
+                Misses = misses.ToSafeImmutableList();
             }
 
             public static CachedResults<T> ProduceResults(IEnumerable<string> keys, Func<string, T> producer)

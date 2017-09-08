@@ -19,7 +19,7 @@ namespace KafkaClient.Connections
         public ConnectionException(IList<Endpoint> endpoints, Exception innerException)
             : base($"Failure on connection to {endpoints.ToStrings()}", innerException)
         {
-            _endpoints = ImmutableList<Endpoint>.Empty.AddRange(endpoints);
+            _endpoints = endpoints.ToSafeImmutableList();
         }
 
         public ConnectionException(string message)
@@ -29,6 +29,6 @@ namespace KafkaClient.Connections
         }
 
         // ReSharper disable once NotAccessedField.Local -- for debugging
-        private readonly ImmutableList<Endpoint> _endpoints;
+        private readonly IImmutableList<Endpoint> _endpoints;
     }
 }

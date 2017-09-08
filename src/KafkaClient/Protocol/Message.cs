@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using KafkaClient.Common;
 
@@ -6,7 +9,47 @@ namespace KafkaClient.Protocol
 {
     /// <summary>
     /// Message represents the data from a single event occurance.
-    /// Message => Crc MagicByte Attributes Key Value
+    /// </summary>
+    /// <remarks>
+    /// Version 2+:
+    /// RecordBatch => FirstOffset Length PartitionLeaderEpoch Magic CRC Attributes LastOffsetDelta FirstTimestamp MaxTimestamp ProducerId ProducerEpoch FirstSequence [Record]
+    ///   FirstOffset => int64
+    ///   Length => int32
+    ///   PartitionLeaderEpoch => int32
+    ///   Magic => int8 
+    ///   CRC => int32
+    ///   Attributes => int16
+    ///   LastOffsetDelta => int32
+    ///   FirstTimestamp => int64
+    ///   MaxTimestamp => int64
+    ///   ProducerId => int64
+    ///   ProducerEpoch => int16
+    ///   FirstSequence => int32
+    ///   Records => [Record]
+    /// 
+    /// PartitionLeaderEpoch is set by the broker upon receipt of a produce request and is used to ensure no loss of data when there are leader changes with log truncation. 
+    ///   Client developers do not need to worry about setting this value.
+    /// 
+    /// Record => Length Attributes TimestampDelta OffsetDelta Key Value [Header] 
+    ///   Length => varint
+    ///   Attributes => int8
+    ///   TimestampDelta => varint
+    ///   OffsetDelta => varint
+    ///   KeyLen => varint
+    ///   Key => data
+    ///   ValueLen => varint
+    ///   Value => data
+    ///   Headers => [Header]
+    /// 
+    /// Version 0-1:
+    /// MessageSet => [Offset MessageSize Message]
+    ///   Offset => int64
+    ///   MessageSize => int32
+    /// 
+    /// MessageSets are not preceded by an int32 like other array elements in the protocol.
+    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Messagesets
+    /// 
+    /// Message => Crc MagicByte Attributes *Timestamp Key Value
     ///   Crc => int32
     ///   MagicByte => int8
     ///   Attributes => int8
@@ -22,37 +65,34 @@ namespace KafkaClient.Protocol
     ///   Timestamp => int64
     ///   Key => bytes
     ///   Value => bytes
-    /// </summary>
+    /// 
+    /// Version 1 only: Timestamp
+    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Messagesets
+    /// </remarks>>
     public class Message : IEquatable<Message>
     {
-        public override string ToString() => $"{{KeySize:{Key.Count},ValueSize:{Value.Count},Offset:{Offset}}}";
-
-        public void WriteTo(IKafkaWriter writer)
+        public string ToVerboseString()
         {
-            using (writer.MarkForCrc()) {
-                writer.Write(MessageVersion)
-                      .Write((byte)0);
-                if (MessageVersion >= 1) {
-                    writer.Write(Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
-                }
-                writer.Write(Key)
-                      .Write(Value);
-            }
+            var keyString = string.Join("", Key.ToArray().Select(b => $"{b:X2}"));
+            var valueString = string.Join("", Value.ToArray().Select(b => $"{b:X2}"));
+            return $"{{Offset:{Offset:D},Timestamp:{Timestamp?.ToUnixTimeMilliseconds()},Attribute:{Attribute:X2},Key:0x{keyString},Value:0x{valueString},Headers:{Headers.Count}";  
         }
 
-        public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null)
-            : this(value, EmptySegment, attribute, offset, version, timestamp)
+        public override string ToString() => $"{{Offset:{Offset},Timestamp:{Timestamp?.ToUnixTimeMilliseconds()},KeySize:{Key.Count},ValueSize:{Value.Count}}}";
+
+        public Message(ArraySegment<byte> value, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null)
+            : this(value, EmptySegment, attribute, offset, timestamp)
         {
         }
 
-        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, byte version = 0, DateTimeOffset? timestamp = null)
+        public Message(ArraySegment<byte> value, ArraySegment<byte> key, byte attribute, long offset = 0L, DateTimeOffset? timestamp = null, IEnumerable<MessageHeader> headers = null)
         {
             Offset = offset;
-            MessageVersion = version;
             Attribute = (byte)(attribute & CodecMask);
-            Key = key;
+            Key = key.Count > 0 ? key : EmptySegment;
             Value = value;
             Timestamp = timestamp;
+            Headers = headers.ToSafeImmutableList();
         }
 
         /// <summary>
@@ -62,14 +102,13 @@ namespace KafkaClient.Protocol
         /// <param name="key">The key value for the message.  Can be null.</param>
         /// <param name="value">The main content data of this message.</param>
         public Message(string value, string key = null)
+            : this(ToSegment(value), ToSegment(key), 0)
         {
-            Key = ToSegment(key);
-            Value = ToSegment(value);
         }
 
         private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
 
-        private ArraySegment<byte> ToSegment(string value)
+        private static ArraySegment<byte> ToSegment(string value)
         {
             if (string.IsNullOrEmpty(value)) return EmptySegment;
             return new ArraySegment<byte>(Encoding.UTF8.GetBytes(value));
@@ -77,13 +116,12 @@ namespace KafkaClient.Protocol
 
         /// <summary>
         /// The log offset of this message as stored by the Kafka server.
+        /// Version 0-1: When the producer is sending non compressed messages, it can set the offsets to anything. 
+        ///              When the producer is sending compressed messages, to avoid server side recompression, each 
+        ///              compressed message should have offset starting from 0 and increasing by one for each inner 
+        ///              message in the compressed message.
         /// </summary>
         public long Offset { get; }
-
-        /// <summary>
-        /// This is a version id used to allow backwards compatible evolution of the message binary format.
-        /// </summary>
-        public byte MessageVersion { get; }
 
         /// <summary>
         /// Attribute value outside message body used for added codec/compression info.
@@ -95,9 +133,9 @@ namespace KafkaClient.Protocol
         public byte Attribute { get; }
 
         /// <summary>
-        ///  The lowest 2 bits contain the compression codec used for the message. The other bits should be set to 0.
+        ///  The lowest 3 bits contain the compression codec used for the message. The other bits should be set to 0.
         /// </summary>
-        public const byte CodecMask = 0x3;
+        public const byte CodecMask = 0x7;
 
         /// <summary>
         /// Key value used for routing message to partitions.
@@ -114,6 +152,12 @@ namespace KafkaClient.Protocol
         /// </summary>
         public DateTimeOffset? Timestamp { get; }
 
+        /// <summary>
+        /// Application level record level headers
+        /// Version 2+ only.
+        /// </summary>
+        public IImmutableList<MessageHeader> Headers { get; }
+
         #region Equality
 
         /// <inheritdoc />
@@ -128,11 +172,11 @@ namespace KafkaClient.Protocol
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Offset == other.Offset 
-                && MessageVersion == other.MessageVersion 
                 && Attribute == other.Attribute 
                 && Key.HasEqualElementsInOrder(other.Key)
                 && Value.HasEqualElementsInOrder(other.Value) 
-                && Timestamp?.ToUnixTimeMilliseconds() == other.Timestamp?.ToUnixTimeMilliseconds();
+                && Timestamp?.ToUnixTimeMilliseconds() == other.Timestamp?.ToUnixTimeMilliseconds()
+                && Headers.HasEqualElementsInOrder(other.Headers);
         }
 
         /// <inheritdoc />
@@ -140,11 +184,11 @@ namespace KafkaClient.Protocol
         {
             unchecked {
                 var hashCode = Offset.GetHashCode();
-                hashCode = (hashCode*397) ^ MessageVersion.GetHashCode();
                 hashCode = (hashCode*397) ^ Attribute.GetHashCode();
                 hashCode = (hashCode*397) ^ Key.Count.GetHashCode();
                 hashCode = (hashCode*397) ^ Value.Count.GetHashCode();
                 hashCode = (hashCode*397) ^ Timestamp.GetHashCode();
+                hashCode = (hashCode*397) ^ Headers.Count.GetHashCode();
                 return hashCode;
             }
         }

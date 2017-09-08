@@ -7,12 +7,12 @@ namespace KafkaClient.Protocol
     public interface IRequestContext
     {
         /// <summary>
-        /// Descriptive name used to identify the source of this request.
+        /// An identifier for the client making the request. Used to log errors, calculate aggregates for monitoring, etc.
         /// </summary>
         string ClientId { get; }
 
         /// <summary>
-        /// Id which will be echoed back by Kafka to correlate responses to this request.  Usually automatically assigned by driver.
+        /// Id which will be echoed back by Kafka unchanged to correlate responses to this request.
         /// </summary>
         int CorrelationId { get; }
 

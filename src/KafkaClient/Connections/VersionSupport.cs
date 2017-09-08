@@ -18,7 +18,7 @@ namespace KafkaClient.Connections
                 {ApiKey.Metadata, 0},
                 {ApiKey.OffsetCommit, 1},
                 {ApiKey.OffsetFetch, 1},
-                {ApiKey.GroupCoordinator, 0}
+                {ApiKey.FindCoordinator, 0}
             }.ToImmutableDictionary()));
 
         private static VersionSupport _kafka9;
@@ -33,7 +33,7 @@ namespace KafkaClient.Connections
                 {ApiKey.Metadata, 0},
                 {ApiKey.OffsetCommit, 2},
                 {ApiKey.OffsetFetch, 1},
-                {ApiKey.GroupCoordinator, 0},
+                {ApiKey.FindCoordinator, 0},
                 {ApiKey.JoinGroup, 0},
                 {ApiKey.Heartbeat, 0},
                 {ApiKey.LeaveGroup, 0},
@@ -55,7 +55,7 @@ namespace KafkaClient.Connections
                 {ApiKey.Metadata, 1},
                 {ApiKey.OffsetCommit, 2},
                 {ApiKey.OffsetFetch, 1},
-                {ApiKey.GroupCoordinator, 0},
+                {ApiKey.FindCoordinator, 0},
                 {ApiKey.JoinGroup, 0},
                 {ApiKey.Heartbeat, 0},
                 {ApiKey.LeaveGroup, 0},
@@ -78,7 +78,7 @@ namespace KafkaClient.Connections
                 {ApiKey.Metadata, 2},
                 {ApiKey.OffsetCommit, 2},
                 {ApiKey.OffsetFetch, 1},
-                {ApiKey.GroupCoordinator, 0},
+                {ApiKey.FindCoordinator, 0},
                 {ApiKey.JoinGroup, 1},
                 {ApiKey.Heartbeat, 0},
                 {ApiKey.LeaveGroup, 0},

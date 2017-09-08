@@ -30,8 +30,6 @@ namespace KafkaClient.Performance
 
         public short Version { get; } = 0;
 
-        public byte MessageVersion { get; } = 0;
-
         private ProduceRequest _request;
 
         private TcpServer _server;
@@ -47,10 +45,10 @@ namespace KafkaClient.Performance
                               "topic", 
                               partitionId, 
                               Enumerable.Range(1, Messages)
-                                        .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec, version: MessageVersion)), 
+                                        .Select(i => new Message(GenerateMessageBytes(), new ArraySegment<byte>(), (byte) Codec)), 
                               Codec)));
 
-            var response = new ProduceResponse(new ProduceResponse.Topic("topic", 1, ErrorCode.NONE, 0));
+            var response = new ProduceResponse(new [] { new ProduceResponse.Topic("topic", 1, ErrorCode.NONE, 0) });
 
             var port = 10000;
             var endpoint = new Endpoint(new IPEndPoint(IPAddress.Loopback, port), "localhost");

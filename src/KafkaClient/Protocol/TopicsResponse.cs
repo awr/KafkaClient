@@ -6,14 +6,13 @@ using KafkaClient.Common;
 
 namespace KafkaClient.Protocol
 {
-    public abstract class TopicsResponse : IResponse, IEquatable<TopicsResponse>
+    public abstract class TopicsResponse : ThrottledResponse, IResponse, IEquatable<TopicsResponse>
     {
-        public override string ToString() => $"{{Topics:[{Topics.ToStrings()}]}}";
-
-        protected TopicsResponse(IEnumerable<Topic> topics = null)
+        protected TopicsResponse(IEnumerable<Topic> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
-            Topics = ImmutableList<Topic>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(Topics.Select(t => t.ErrorCode));
+            Topics = topics.ToSafeImmutableList();
+            Errors = Topics.Select(t => t.ErrorCode).ToImmutableList();
         }
 
         public IImmutableList<Topic> Topics { get; } 
@@ -30,28 +29,35 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Topics.HasEqualElementsInOrder(other.Topics);
+            return base.Equals(other) 
+                && Topics.HasEqualElementsInOrder(other.Topics);
         }
 
         public override int GetHashCode()
         {
-            return Topics?.Count.GetHashCode() ?? 0;
+            unchecked {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Topics?.Count.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
 
         #endregion
 
         public class Topic : IEquatable<Topic>
         {
-            public override string ToString() => $"{{TopicName:{TopicName},ErrorCode:{ErrorCode}}}";
+            public override string ToString() => $"{{topic:{TopicName},error_code:{ErrorCode},error_message:{ErrorMessage}}}";
 
-            public Topic(string topicName, ErrorCode errorCode)
+            public Topic(string topicName, ErrorCode errorCode, string errorMessage = null)
             {
                 TopicName = topicName;
                 ErrorCode = errorCode;
+                ErrorMessage = errorMessage;
             }
 
             public string TopicName { get; }
             public ErrorCode ErrorCode { get; }
+            public string ErrorMessage { get; }
 
             #region Equality
 
@@ -64,13 +70,18 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return string.Equals(TopicName, other.TopicName) && ErrorCode == other.ErrorCode;
+                return string.Equals(TopicName, other.TopicName) 
+                    && string.Equals(ErrorMessage, other.ErrorMessage) 
+                    && ErrorCode == other.ErrorCode;
             }
 
             public override int GetHashCode()
             {
                 unchecked {
-                    return ((TopicName?.GetHashCode() ?? 0) * 397) ^ (int) ErrorCode;
+                    var hashCode = TopicName?.GetHashCode() ?? 0;
+                    hashCode = (hashCode * 397) ^ ErrorCode.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (ErrorMessage?.GetHashCode() ?? 0);
+                    return hashCode;
                 }
             }
 

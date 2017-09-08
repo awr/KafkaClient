@@ -120,6 +120,49 @@ namespace KafkaClient.Tests.Unit
             }
         }
 
+        [TestCase((uint)0, new byte[] { 0x00 })]
+        [TestCase((uint)1, new byte[] { 0x01 })]
+        [TestCase((uint)227, new byte[] { 0xE3, 0x01 })]
+        [TestCase((uint)300, new byte[] { 0xAC, 0x02 })]
+        [TestCase((uint)123456789, new byte[] { 0x95, 0x9A, 0xEF, 0x3A })]
+        public void Varint32Tests(uint expectedValue, byte[] givenBytes)
+        {
+            for (var offset = 0; offset <= givenBytes.Length; offset++) {
+                // arrange
+                var binaryReader = new KafkaReader(OffsetBytes(givenBytes, offset));
+
+                // act
+                var actualValue = binaryReader.ReadVarint32();
+
+                // assert
+
+                Assert.AreEqual(expectedValue, actualValue);
+            }
+        }
+
+        [TestCase(0L, new byte[] { 0x00 })]
+        [TestCase(1L, new byte[] { 0x01 })]
+        [TestCase(227L, new byte[] { 0xE3, 0x01 })]
+        [TestCase(300L, new byte[] { 0xAC, 0x02 })]
+        [TestCase(1234567890123L, new byte[] { 0xCB, 0x89, 0xEC, 0x8F, 0xF7, 0x23 })]
+        [TestCase(123456789L, new byte[] { 0x95, 0x9A, 0xEF, 0x3A })]
+        [TestCase(long.MaxValue, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F })]
+        [TestCase(1504052908796L, new byte[] { 0xFC, 0xA5, 0xA8, 0x84, 0xE3, 0x2B })]
+        public void Varint64Tests(long expectedValue, byte[] givenBytes)
+        {
+            for (var offset = 0; offset <= givenBytes.Length; offset++) {
+                // arrange
+                var binaryReader = new KafkaReader(OffsetBytes(givenBytes, offset));
+
+                // act
+                var actualValue = binaryReader.ReadVarint64();
+
+                // assert
+
+                Assert.AreEqual(expectedValue, actualValue);
+            }
+        }
+
         [TestCase("0000", new byte[] { 0x00, 0x04, 0x30, 0x30, 0x30, 0x30 })]
         [TestCase("€€€€", new byte[] { 0x00, 0x0C, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC, 0xE2, 0x82, 0xAC })]
         [TestCase("", new byte[] { 0x00, 0x00 })]

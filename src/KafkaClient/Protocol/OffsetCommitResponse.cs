@@ -3,27 +3,32 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// OffsetCommit Response => [responses]
-    ///  responses => topic [partition_responses] 
-    ///   topic => STRING       -- The topic name.
-    ///   partition_response => partition_id error_code 
-    ///   partition_id => INT32 -- The id of the partition.
-    ///   error_code => INT16   -- The error code for the partition, if any.
-    ///
-    /// From https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommit/FetchAPI
+    /// OffsetCommit Response => *throttle_time_ms [responses] 
     /// </summary>
-    public class OffsetCommitResponse : IResponse<TopicResponse>, IEquatable<OffsetCommitResponse>
+    /// <remarks>
+    /// OffsetCommit Response => *throttle_time_ms [responses] 
+    ///   throttle_time_ms => INT32
+    ///   responses => topic [partition_responses] 
+    ///     topic => STRING
+    ///     partition_responses => partition error_code 
+    ///       partition => INT32
+    ///       error_code => INT16
+    /// 
+    /// Version 3+: throttle_time_ms
+    /// From http://kafka.apache.org/protocol.html#The_Messages_OffsetCommit
+    /// </remarks>
+    public class OffsetCommitResponse : ThrottledResponse, IResponse<TopicResponse>, IEquatable<OffsetCommitResponse>
     {
-        public override string ToString() => $"{{responses:[{responses.ToStrings()}]}}";
+        public override string ToString() => $"{{{this.ThrottleToString()},responses:[{Responses.ToStrings()}]}}";
 
         public static OffsetCommitResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 3);
                 var topics = new List<TopicResponse>();
                 var topicCount = reader.ReadInt32();
                 for (var t = 0; t < topicCount; t++) {
@@ -38,19 +43,20 @@ namespace KafkaClient.Protocol
                     }
                 }
 
-                return new OffsetCommitResponse(topics);
+                return new OffsetCommitResponse(topics, throttleTime);
             }
         }
 
-        public OffsetCommitResponse(IEnumerable<TopicResponse> topics = null)
+        public OffsetCommitResponse(IEnumerable<TopicResponse> topics = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
-            responses = ImmutableList<TopicResponse>.Empty.AddNotNullRange(topics);
-            Errors = ImmutableList<ErrorCode>.Empty.AddRange(responses.Select(t => t.error_code));
+            Responses = topics.ToSafeImmutableList();
+            Errors = Responses.Select(t => t.Error).ToImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
 
-        public IImmutableList<TopicResponse> responses { get; }
+        public IImmutableList<TopicResponse> Responses { get; }
 
         #region Equality
 
@@ -65,13 +71,19 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return responses.HasEqualElementsInOrder(other.responses);
+            return base.Equals(other) 
+                && Responses.HasEqualElementsInOrder(other.Responses);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return responses?.Count.GetHashCode() ?? 0;
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Responses?.Count.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
 
         #endregion

@@ -23,16 +23,16 @@ namespace KafkaClient.Tests
         public IConnectionFactory KafkaConnectionFactory { get; }
 
         public Func<Task<MetadataResponse>> MetadataResponse = DefaultMetadataResponse;
-        public Func<Task<GroupCoordinatorResponse>> GroupCoordinatorResponse = () => DefaultGroupCoordinatorResponse(0);
+        public Func<Task<FindCoordinatorResponse>> GroupCoordinatorResponse = () => DefaultGroupCoordinatorResponse(0);
 
         public RoutingScenario()
         {
             //setup mock IConnection
 #pragma warning disable 1998
             Connection1 = new FakeConnection(new Endpoint(new IPEndPoint(IPAddress.Loopback, 1))) {
-                { ApiKey.Produce, async _ => new ProduceResponse(new ProduceResponse.Topic(TestTopic, 0, ErrorCode.NONE, _offset1++)) },
+                { ApiKey.Produce, async _ => new ProduceResponse(new [] { new ProduceResponse.Topic(TestTopic, 0, ErrorCode.NONE, _offset1++) }) },
                 { ApiKey.Metadata, async _ => await MetadataResponse() },
-                { ApiKey.GroupCoordinator, async _ => await GroupCoordinatorResponse() },
+                { ApiKey.FindCoordinator, async _ => await GroupCoordinatorResponse() },
                 { ApiKey.Offsets, async _ => new OffsetsResponse(
                     new[] {
                         new OffsetsResponse.Topic(TestTopic, 0, ErrorCode.NONE, 0L),
@@ -51,9 +51,9 @@ namespace KafkaClient.Tests
             };
 
             Connection2 = new FakeConnection(new Endpoint(new IPEndPoint(IPAddress.Loopback, 2))) {
-                { ApiKey.Produce, async _ => new ProduceResponse(new ProduceResponse.Topic(TestTopic, 1, ErrorCode.NONE, _offset2++)) },
+                { ApiKey.Produce, async _ => new ProduceResponse(new [] { new ProduceResponse.Topic(TestTopic, 1, ErrorCode.NONE, _offset2++) }) },
                 { ApiKey.Metadata, async _ => await MetadataResponse() },
-                { ApiKey.GroupCoordinator, async _ => await GroupCoordinatorResponse() },
+                { ApiKey.FindCoordinator, async _ => await GroupCoordinatorResponse() },
                 { ApiKey.Offsets, async _ => new OffsetsResponse(
                     new[] {
                         new OffsetsResponse.Topic(TestTopic, 1, ErrorCode.NONE, 0L),
@@ -129,9 +129,9 @@ namespace KafkaClient.Tests
                 });
         }
 
-        public static async Task<GroupCoordinatorResponse> DefaultGroupCoordinatorResponse(int brokerId)
+        public static async Task<FindCoordinatorResponse> DefaultGroupCoordinatorResponse(int brokerId)
         {
-            return new GroupCoordinatorResponse(ErrorCode.NONE, 0, "localhost", brokerId + 1);
+            return new FindCoordinatorResponse(ErrorCode.NONE, 0, "localhost", brokerId + 1);
         }
 
         public static async Task<MetadataResponse> MetadataResponseWithSingleBroker()

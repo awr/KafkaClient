@@ -37,7 +37,7 @@ namespace KafkaClient.Tests
         {
             var topicName = TestConfig.TopicName(name);
             try {
-                await router.SendToAnyAsync(new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TimeSpan.FromSeconds(1)), CancellationToken.None);
+                await router.SendToAnyAsync(new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TestConfig.DefaultTimeout), CancellationToken.None);
             } catch (RequestException ex) when (ex.ErrorCode == ErrorCode.TOPIC_ALREADY_EXISTS) {
                 // ignore already exists
             }
@@ -123,6 +123,13 @@ namespace KafkaClient.Tests
         public static TimeSpan Times(this TimeSpan span, double multiplier)
         {
             return TimeSpan.FromMilliseconds(span.TotalMilliseconds * multiplier);
+        }
+
+        public static IEnumerable<T> Repeat<T>(this int count, Func<int, T> producer)
+        {
+            for (var i = 0; i < count; i++) {
+                yield return producer(i);
+            }
         }
     }
 }

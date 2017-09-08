@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using KafkaClient.Protocol;
 using NUnit.Framework;
@@ -49,7 +50,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.AreEqual(expectedBytes, actualBytes.ToArray());
+            AssertEqual(expectedBytes, actualBytes);
         }
 
         [TestCase(0, new byte[] { 0x00, 0x00, 0x00, 0x00 })]
@@ -70,7 +71,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.AreEqual(expectedBytes, actualBytes.ToArray());
+            AssertEqual(expectedBytes, actualBytes);
         }
 
         [TestCase(0L, new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })]
@@ -90,24 +91,52 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.AreEqual(expectedBytes, actualBytes.ToArray());
+            AssertEqual(expectedBytes, actualBytes);
         }
 
-        [TestCase((uint)0, new byte[] { 0x00, 0x00, 0x00, 0x00 })]
-        [TestCase((uint)1, new byte[] { 0x00, 0x00, 0x00, 0x01 })]
-        [TestCase((uint)123456789, new byte[] { 0x07, 0x5B, 0xCD, 0x15 })]
-        [TestCase((uint)0xffffffff, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF })]
-        public void UInt32Tests(uint number, byte[] expectedBytes)
+        [TestCase((uint)0, new byte[] { 0x00 })]
+        [TestCase((uint)1, new byte[] { 0x01 })]
+        [TestCase((uint)227, new byte[] { 0xE3, 0x01 })]
+        [TestCase((uint)300, new byte[] { 0xAC, 0x02 })]
+        [TestCase((uint)123456789, new byte[] { 0x95, 0x9A, 0xEF, 0x3A })]
+        public void Varint32Tests(uint number, byte[] expectedBytes)
         {
             // arrange
             var writer = new KafkaWriter();
 
             // act
-            writer.Write(number);
+            writer.WriteVarint(number);
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.AreEqual(expectedBytes, actualBytes.ToArray());
+            AssertEqual(expectedBytes, actualBytes);
+        }
+
+        private static void AssertEqual(byte[] expectedBytes, ArraySegment<byte> actualBytes)
+        {
+            var actualBytesCode = string.Join(", ", actualBytes.ToArray().Select(b => $"0x{b:X2}"));
+            Assert.AreEqual(expectedBytes, actualBytes.ToArray(), $"actual is {{ {actualBytesCode} }}");
+        }
+
+        [TestCase(0L, new byte[] { 0x00 })]
+        [TestCase(1L, new byte[] { 0x01 })]
+        [TestCase(227L, new byte[] { 0xE3, 0x01 })]
+        [TestCase(300L, new byte[] { 0xAC, 0x02 })]
+        [TestCase(1234567890123L, new byte[] { 0xCB, 0x89, 0xEC, 0x8F, 0xF7, 0x23 })]
+        [TestCase(123456789L, new byte[] { 0x95, 0x9A, 0xEF, 0x3A })]
+        [TestCase(long.MaxValue, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F })]
+        [TestCase(1504052908796L, new byte[] { 0xFC, 0xA5, 0xA8, 0x84, 0xE3, 0x2B })]
+        public void Varint64Tests(long number, byte[] expectedBytes)
+        {
+            // arrange
+            var writer = new KafkaWriter();
+
+            // act
+            writer.WriteVarint(number);
+
+            // assert
+            var actualBytes = writer.ToSegment(false);
+            AssertEqual(expectedBytes, actualBytes);
         }
 
         [TestCase("0000", new byte[] { 0x00, 0x04, 0x30, 0x30, 0x30, 0x30 })]
@@ -124,7 +153,7 @@ namespace KafkaClient.Tests.Unit
 
             // assert
             var actualBytes = writer.ToSegment(false);
-            Assert.AreEqual(expectedBytes, actualBytes.ToArray());
+            AssertEqual(expectedBytes, actualBytes);
         }
     }
 }

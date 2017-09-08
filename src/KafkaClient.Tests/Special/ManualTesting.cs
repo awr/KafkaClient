@@ -22,11 +22,11 @@ namespace KafkaClient.Tests.Special
             var expectedTopic = Guid.NewGuid().ToString();
             var router = await TestConfig.IntegrationOptions.CreateRouterAsync();
             var response = router.GetMetadataAsync(new MetadataRequest(expectedTopic), CancellationToken.None);
-            var topic = (await response).topic_metadata.FirstOrDefault();
+            var topic = (await response).TopicMetadata.FirstOrDefault();
 
             Assert.NotNull(topic);
-            Assert.AreEqual(topic.topic, expectedTopic);
-            Assert.AreEqual(topic.topic_error_code, ErrorCode.NONE);
+            Assert.AreEqual(topic.TopicName, expectedTopic);
+            Assert.AreEqual(topic.TopicError, ErrorCode.NONE);
         }
 
         [Test]
@@ -38,7 +38,7 @@ namespace KafkaClient.Tests.Special
                 var consumer = new Consumer(offset, await TestConfig.IntegrationOptions.CreateRouterAsync(), new ConsumerConfiguration(maxPartitionFetchBytes: 10000));
 
                 var producer = new Producer(router);
-                var send = SandMessageForever(producer, offset.topic, offset.partition_id);
+                var send = SandMessageForever(producer, offset.TopicName, offset.PartitionId);
                 var read = consumer.ConsumeAsync(
                     message => TestConfig.Log.Info(() => LogEvent.Create($"Offset{message.Offset}")), 
                     CancellationToken.None);

@@ -33,7 +33,7 @@ namespace KafkaClient
         public Consumer(IEnumerable<TopicPartition> partitions, IRouter router, IConsumerConfiguration configuration = null, bool? leaveRouterOpen = null, bool? autoConsume = null)
         {
             Router = router;
-            _topicPartitions = ImmutableList<TopicPartition>.Empty.AddNotNullRange(partitions);
+            _topicPartitions = partitions.ToSafeImmutableList();
             _leaveRouterOpen = leaveRouterOpen.GetValueOrDefault(true);
             AutoConsume = autoConsume.GetValueOrDefault(true);
             Configuration = configuration ?? ConsumerConfiguration.Default;
@@ -54,9 +54,9 @@ namespace KafkaClient
 
             var topicPartition = _topicPartitions[index];
             var currentOffset = topicPartition as TopicOffset 
-                ?? await Router.GetOffsetsAsync(topicPartition.topic, topicPartition.partition_id, cancellationToken);
-            var offset = currentOffset.offset;
-            var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, topicPartition.topic, topicPartition.partition_id, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
+                ?? await Router.GetOffsetsAsync(topicPartition.TopicName, topicPartition.PartitionId, cancellationToken);
+            var offset = currentOffset.Offset;
+            var messages = await Router.FetchMessagesAsync(ImmutableList<Message>.Empty, topicPartition.TopicName, topicPartition.PartitionId, offset, Configuration, cancellationToken, batchSize).ConfigureAwait(false);
             return new MessageBatch(messages, topicPartition, offset, Router, Configuration, AutoConsume, batchSize);
         }
 

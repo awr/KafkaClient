@@ -23,7 +23,7 @@ namespace KafkaClient.Tests.Unit
             router.GetConnectionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                   .Returns(_ => Task.FromResult(conn));
             conn.SendAsync(Arg.Any<JoinGroupRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
-                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().member_id, _.Arg<JoinGroupRequest>().member_id, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().member_id, metadata) })));
+                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().MemberId, _.Arg<JoinGroupRequest>().MemberId, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().MemberId, metadata) })));
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
@@ -51,7 +51,7 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                   .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment())));
             conn.SendAsync(Arg.Any<JoinGroupRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
-                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().member_id, _.Arg<JoinGroupRequest>().member_id, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().member_id, metadata) })));
+                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().MemberId, _.Arg<JoinGroupRequest>().MemberId, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().MemberId, metadata) })));
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
@@ -78,7 +78,7 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                   .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment())));
             conn.SendAsync(Arg.Any<JoinGroupRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
-                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().member_id, _.Arg<JoinGroupRequest>().member_id, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().member_id, metadata) })));
+                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().MemberId, _.Arg<JoinGroupRequest>().MemberId, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().MemberId, metadata) })));
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
@@ -103,7 +103,7 @@ namespace KafkaClient.Tests.Unit
             router.SyncGroupAsync(Arg.Any<SyncGroupRequest>(), Arg.Any<IRequestContext>(), Arg.Any<IRetry>(), Arg.Any<CancellationToken>())
                   .Returns(_ => Task.FromResult(new SyncGroupResponse(ErrorCode.NONE, new ConsumerMemberAssignment())));
             conn.SendAsync(Arg.Any<JoinGroupRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
-                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().member_id, _.Arg<JoinGroupRequest>().member_id, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().member_id, metadata) })));
+                  .Returns(_ => Task.FromResult(new JoinGroupResponse(ErrorCode.NONE, 1, metadata.AssignmentStrategy, _.Arg<JoinGroupRequest>().MemberId, _.Arg<JoinGroupRequest>().MemberId, new []{ new JoinGroupResponse.Member(_.Arg<JoinGroupRequest>().MemberId, metadata) })));
             conn.SendAsync(Arg.Any<DescribeGroupsRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                   .Returns(_ => Task.FromResult(new DescribeGroupsResponse(null)));
 
@@ -119,7 +119,7 @@ namespace KafkaClient.Tests.Unit
             var request = new SyncGroupRequest("group", 5, "member", new[] { new SyncGroupRequest.GroupAssignment("member", new ConsumerMemberAssignment(new[] { new TopicPartition("topic-foo", 0), new TopicPartition("topic", 1) })) });
             var formatted = request.ToString();
             Assert.True(formatted.Contains("topic:topic-foo"));
-            Assert.True(formatted.Contains("partition_id:1"));
+            Assert.True(formatted.Contains("partition:1"));
         }
 
         // design unit TESTS to write:

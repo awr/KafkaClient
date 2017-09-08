@@ -2,23 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using KafkaClient.Common;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// ApiVersions Response => error_code [api_versions]
-    ///  error_code => INT16   -- The error code.
-    ///  api_version => api_key min_version max_version 
-    ///   api_key => INT16     -- The Api Key.
-    ///   min_version => INT16 -- The minimum supported version.
-    ///   max_version => INT16 -- The maximum supported version.
-    ///
-    /// From http://kafka.apache.org/protocol.html#protocol_messages
+    /// ApiVersions Response => error_code [api_versions] *throttle_time_ms 
     /// </summary>
-    public class ApiVersionsResponse : IResponse, IEquatable<ApiVersionsResponse>
+    /// <remarks>
+    /// ApiVersions Response => error_code [api_versions] *throttle_time_ms 
+    ///   error_code => INT16
+    ///   api_versions => api_key min_version max_version 
+    ///     api_key => INT16
+    ///     min_version => INT16
+    ///     max_version => INT16
+    ///   throttle_time_ms => INT32
+    ///
+    /// Version 1+: throttle_time_ms
+    /// From http://kafka.apache.org/protocol.html#The_Messages_ApiVersions
+    /// </remarks>
+    public class ApiVersionsResponse : ThrottledResponse, IResponse, IEquatable<ApiVersionsResponse>
     {
-        public override string ToString() => $"{{error_code:{error_code},api_versions:[{api_versions.ToStrings()}]}}";
+        public override string ToString() => $"{{error_code:{Error},api_versions:[{ApiVersions.ToStrings()}],{this.ThrottleToString()}}}";
 
         public static ApiVersionsResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
@@ -32,15 +36,17 @@ namespace KafkaClient.Protocol
                     var maxVersion = reader.ReadInt16();
                     apiKeys[i] = new VersionSupport(apiKey, minVersion, maxVersion);
                 }
-                return new ApiVersionsResponse(errorCode, apiKeys);
+                var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
+                return new ApiVersionsResponse(errorCode, apiKeys, throttleTime);
             }
         }
 
-        public ApiVersionsResponse(ErrorCode errorCode = ErrorCode.NONE, IEnumerable<VersionSupport> supportedVersions = null)
+        public ApiVersionsResponse(ErrorCode errorCode = ErrorCode.NONE, IEnumerable<VersionSupport> supportedVersions = null, TimeSpan? throttleTime = null)
+            : base(throttleTime)
         {
-            error_code = errorCode;
-            Errors = ImmutableList<ErrorCode>.Empty.Add(error_code);
-            api_versions = ImmutableList<VersionSupport>.Empty.AddNotNullRange(supportedVersions);
+            Error = errorCode;
+            Errors = ImmutableList<ErrorCode>.Empty.Add(Error);
+            ApiVersions = supportedVersions.ToSafeImmutableList();
         }
 
         public IImmutableList<ErrorCode> Errors { get; }
@@ -48,9 +54,9 @@ namespace KafkaClient.Protocol
         /// <summary>
         /// The error code.
         /// </summary>
-        public ErrorCode error_code { get; }
+        public ErrorCode Error { get; }
 
-        public IImmutableList<VersionSupport> api_versions { get; }
+        public IImmutableList<VersionSupport> ApiVersions { get; }
 
         #region Equality
 
@@ -65,15 +71,18 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return error_code == other.error_code
-                && api_versions.HasEqualElementsInOrder(other.api_versions);
+            return base.Equals(other) 
+                && Error == other.Error
+                && ApiVersions.HasEqualElementsInOrder(other.ApiVersions);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                return ((int) error_code*397) ^ (api_versions?.Count.GetHashCode() ?? 0);
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (ApiVersions?.Count.GetHashCode() ?? 0);
+                return hashCode;
             }
         }
 
@@ -81,29 +90,29 @@ namespace KafkaClient.Protocol
 
         public class VersionSupport : IEquatable<VersionSupport>
         {
-            public override string ToString() => $"{{api_key:{api_key},min_version:{min_version},max_version:{max_version}}}";
+            public override string ToString() => $"{{api_key:{ApiKey},min_version:{MinVersion},max_version:{MaxVersion}}}";
 
             public VersionSupport(ApiKey apiKey, short minVersion, short maxVersion)
             {
-                api_key = apiKey;
-                min_version = minVersion;
-                max_version = maxVersion;
+                ApiKey = apiKey;
+                MinVersion = minVersion;
+                MaxVersion = maxVersion;
             }
 
             /// <summary>
             /// API key.
             /// </summary>
-            public ApiKey api_key { get; } 
+            public ApiKey ApiKey { get; } 
 
             /// <summary>
             /// Minimum supported version.
             /// </summary>
-            public short min_version { get; }
+            public short MinVersion { get; }
 
             /// <summary>
             /// Maximum supported version.
             /// </summary>
-            public short max_version { get; }
+            public short MaxVersion { get; }
 
             #region Equality
 
@@ -116,15 +125,15 @@ namespace KafkaClient.Protocol
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return api_key == other.api_key && min_version == other.min_version && max_version == other.max_version;
+                return ApiKey == other.ApiKey && MinVersion == other.MinVersion && MaxVersion == other.MaxVersion;
             }
 
             public override int GetHashCode()
             {
                 unchecked {
-                    var hashCode = (int) api_key;
-                    hashCode = (hashCode*397) ^ min_version.GetHashCode();
-                    hashCode = (hashCode*397) ^ max_version.GetHashCode();
+                    var hashCode = (int) ApiKey;
+                    hashCode = (hashCode*397) ^ MinVersion.GetHashCode();
+                    hashCode = (hashCode*397) ^ MaxVersion.GetHashCode();
                     return hashCode;
                 }
             }

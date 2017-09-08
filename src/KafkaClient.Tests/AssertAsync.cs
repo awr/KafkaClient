@@ -31,6 +31,19 @@ namespace KafkaClient.Tests
             return true;
         }
 
+        public static async Task<bool> ThatEventually(Func<bool> predicate, Func<string> messageFunc, TimeSpan? timeout = null)
+        {
+            var timer = Stopwatch.StartNew();
+            var timeoutMilliseconds = timeout?.TotalMilliseconds ?? 3000;
+            while (predicate() == false) {
+                if (timer.ElapsedMilliseconds > timeoutMilliseconds) {
+                    Assert.True(false, messageFunc());
+                }
+                await Task.Delay(50).ConfigureAwait(false);
+            }
+            return true;
+        }
+
         public static async Task Throws<T>(Func<Task> asyncAction, Func<T, bool> when = null) where T : Exception
         {
             try {

@@ -135,7 +135,7 @@ namespace KafkaClient.Tests.Unit
 
             scenario.Connection1.Add(ApiKey.Metadata, async _ => {
                 var response = await RoutingScenario.DefaultMetadataResponse();
-                return new MetadataResponse(response.brokers, response.topic_metadata.Select(t => new MetadataResponse.Topic("test2", t.topic_error_code, t.partition_metadata)));
+                return new MetadataResponse(response.Brokers, response.TopicMetadata.Select(t => new MetadataResponse.Topic("test2", t.TopicError, t.PartitionMetadata)));
             });
 
             for (int i = 0; i < numberOfCall / 2; i++)
@@ -386,7 +386,7 @@ namespace KafkaClient.Tests.Unit
             var connections = CreateConnections(2);
             foreach (var connection in connections) {
                 connection
-                    .SendAsync(Arg.Any<GroupCoordinatorRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
+                    .SendAsync(Arg.Any<FindCoordinatorRequest>(), Arg.Any<CancellationToken>(), Arg.Any<IRequestContext>())
                     .Returns(_ => RoutingScenario.DefaultGroupCoordinatorResponse(1));
             }
             var factory = CreateFactory(connections);
@@ -418,28 +418,28 @@ namespace KafkaClient.Tests.Unit
         public async Task ShouldCycleThroughEachServerUntilOneIsFoundForGroup()
         {
             var scenario = new RoutingScenario();
-            scenario.Connection1.Add(ApiKey.GroupCoordinator, _ => { throw new Exception("some error"); });
+            scenario.Connection1.Add(ApiKey.FindCoordinator, _ => { throw new Exception("some error"); });
             var router = scenario.CreateRouter();
             var testTopic = RoutingScenario.TestTopic;
             await router.GetGroupConnectionAsync(testTopic, CancellationToken.None);
             var result = router.GetGroupConnection(testTopic);
             Assert.NotNull(result);
-            Assert.AreEqual(1, scenario.Connection1[ApiKey.GroupCoordinator]);
-            Assert.AreEqual(1, scenario.Connection2[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(1, scenario.Connection1[ApiKey.FindCoordinator]);
+            Assert.AreEqual(1, scenario.Connection2[ApiKey.FindCoordinator]);
         }
 
         [Test]
         public async Task ShouldThrowIfCycleCouldNotConnectToAnyServerForGroup()
         {
             var scenario = new RoutingScenario();
-            scenario.Connection1.Add(ApiKey.GroupCoordinator, _ => { throw new Exception("some error"); });
-            scenario.Connection2.Add(ApiKey.GroupCoordinator, _ => { throw new Exception("some error"); });
+            scenario.Connection1.Add(ApiKey.FindCoordinator, _ => { throw new Exception("some error"); });
+            scenario.Connection2.Add(ApiKey.FindCoordinator, _ => { throw new Exception("some error"); });
             var router = scenario.CreateRouter();
 
             Assert.ThrowsAsync<RoutingException>(async () => await router.GetGroupConnectionAsync(RoutingScenario.TestTopic, CancellationToken.None));
 
-            Assert.AreEqual(1, scenario.Connection1[ApiKey.GroupCoordinator]);
-            Assert.AreEqual(1, scenario.Connection2[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(1, scenario.Connection1[ApiKey.FindCoordinator]);
+            Assert.AreEqual(1, scenario.Connection2[ApiKey.FindCoordinator]);
         }
 
         [Test]
@@ -452,7 +452,7 @@ namespace KafkaClient.Tests.Unit
             var result1 = router.GetGroupConnection(testTopic);
             var result2 = router.GetGroupConnection(testTopic);
 
-            Assert.AreEqual(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(1, scenario.Connection1[ApiKey.FindCoordinator]);
             Assert.AreEqual(testTopic, result1.GroupId);
             Assert.AreEqual(testTopic, result2.GroupId);
         }
@@ -465,10 +465,10 @@ namespace KafkaClient.Tests.Unit
             var router = scenario.CreateRouter(cacheExpiration);
             var testTopic = RoutingScenario.TestTopic;
             await router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None);
-            Assert.AreEqual(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(1, scenario.Connection1[ApiKey.FindCoordinator]);
             await Task.Delay(cacheExpiration.Add(TimeSpan.FromMilliseconds(1))); // After cache is expired
             await router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None);
-            Assert.AreEqual(2, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(2, scenario.Connection1[ApiKey.FindCoordinator]);
         }
 
         [Test]
@@ -481,7 +481,7 @@ namespace KafkaClient.Tests.Unit
             await Task.WhenAll(
                 router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None),
                 router.RefreshGroupConnectionAsync(testTopic, true, CancellationToken.None));
-            Assert.AreEqual(2, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(2, scenario.Connection1[ApiKey.FindCoordinator]);
         }
 
         [Test]
@@ -494,7 +494,7 @@ namespace KafkaClient.Tests.Unit
             await Task.WhenAll(
                 router.GetGroupConnectionAsync(testTopic, CancellationToken.None), 
                 router.GetGroupConnectionAsync(testTopic, CancellationToken.None));
-            Assert.AreEqual(1, scenario.Connection1[ApiKey.GroupCoordinator]);
+            Assert.AreEqual(1, scenario.Connection1[ApiKey.FindCoordinator]);
         }
 
         #endregion
@@ -683,7 +683,7 @@ namespace KafkaClient.Tests.Unit
             await router.GetTopicMetadataAsync(RoutingScenario.TestTopic, CancellationToken.None);
 
             var result = router.GetTopicMetadata(RoutingScenario.TestTopic);
-            Assert.AreEqual(RoutingScenario.TestTopic, result.topic);
+            Assert.AreEqual(RoutingScenario.TestTopic, result.TopicName);
         }
 
         [Test]
@@ -707,8 +707,8 @@ namespace KafkaClient.Tests.Unit
 
             Assert.AreEqual(router.GetTopicMetadata().Count, 1);
             Assert.AreEqual(1, scenario.Connection1[ApiKey.Metadata]);
-            Assert.AreEqual(testTopic, result1.topic);
-            Assert.AreEqual(testTopic, result2.topic);
+            Assert.AreEqual(testTopic, result1.TopicName);
+            Assert.AreEqual(testTopic, result2.TopicName);
         }
 
         [Test]
@@ -735,9 +735,9 @@ namespace KafkaClient.Tests.Unit
             Assert.AreEqual(1, scenario.Connection1[ApiKey.Metadata]);
             Assert.AreEqual(1, result1.Count);
             var testTopic = RoutingScenario.TestTopic;
-            Assert.AreEqual(testTopic, result1[0].topic);
+            Assert.AreEqual(testTopic, result1[0].TopicName);
             Assert.AreEqual(1, result2.Count);
-            Assert.AreEqual(testTopic, result2[0].topic);
+            Assert.AreEqual(testTopic, result2[0].TopicName);
         }
 
         [Test]
@@ -879,7 +879,7 @@ namespace KafkaClient.Tests.Unit
         public async Task SelectExactPartitionShouldThrowWhenTopicsCollectionIsEmpty()
         {
             var metadataResponse = await RoutingScenario.DefaultMetadataResponse();
-            metadataResponse.topic_metadata.Clear();
+            metadataResponse.TopicMetadata.Clear();
 
             var scenario = new RoutingScenario();
 #pragma warning disable 1998
@@ -893,7 +893,7 @@ namespace KafkaClient.Tests.Unit
         public async Task SelectExactPartitionShouldThrowWhenServerCollectionIsEmpty()
         {
             var metadataResponse = await RoutingScenario.DefaultMetadataResponse();
-            metadataResponse = new MetadataResponse(topics: metadataResponse.topic_metadata);
+            metadataResponse = new MetadataResponse(topics: metadataResponse.TopicMetadata);
 
             var scenario = new RoutingScenario();
 #pragma warning disable 1998

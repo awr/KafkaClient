@@ -18,10 +18,10 @@ namespace KafkaClient
         public MetadataResponse.Partition Select(MetadataResponse.Topic topic, ArraySegment<byte> key)
         {
             if (topic == null) throw new ArgumentNullException(nameof(topic));
-            if (topic.partition_metadata.Count == 0) throw new RoutingException($"No partitions to choose on {topic}.");
+            if (topic.PartitionMetadata.Count == 0) throw new RoutingException($"No partitions to choose on {topic}.");
 
-            var paritionIndex = _tracker.AddOrUpdate(topic.topic, p => 0, (s, i) => (i + 1) % topic.partition_metadata.Count);
-            return topic.partition_metadata[paritionIndex];
+            var paritionIndex = _tracker.AddOrUpdate(topic.TopicName, p => 0, (s, i) => (i + 1) % topic.PartitionMetadata.Count);
+            return topic.PartitionMetadata[paritionIndex];
         }
     }
 }

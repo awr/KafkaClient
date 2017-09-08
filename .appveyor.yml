@@ -1,0 +1,35 @@
+version: 1.0.{build}
+
+# branches / commits to build
+skip_commits:
+  message: /WIP/
+skip_branch_with_pr: true
+skip_tags: true
+
+# environment
+image: Visual Studio 2017
+cache:
+  - packages
+configuration: Release
+os: Visual Studio 2017
+
+build_script:
+  - appveyor-retry dotnet restore --packages packages
+  - dotnet build -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj --no-dependencies --no-incremental --version-suffix %APPVEYOR_BUILD_NUMBER%
+  - dotnet pack -c %CONFIGURATION% src\KafkaClient\KafkaClient.csproj -o artifacts 
+
+test_script:
+  - dotnet test -c %CONFIGURATION% -f netcoreapp2.0 src\KafkaClient.Tests\KafkaClient.Tests.csproj --filter "(TestCategory=CI) & (TestCategory!=Flaky)" --logger:trx;LogFileName=test-results.xml;format=AppVeyor
+  - ps: $wc = New-Object 'System.Net.WebClient'; $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/${env:APPVEYOR_JOB_ID}", (Resolve-Path src\KafkaClient.Tests\TestResults\test-results.xml))
+  - .\packages\OpenCover\4.6.519\tools\OpenCover.Console.exe -register:user -target:"packages\nunit.consolerunner\3.7.0\tools\nunit3-console.exe" -targetargs:"src\KafkaClient.Tests\bin\%CONFIGURATION%\netcoreapp2.0\KafkaClient.Tests.dll --noheader --where \"cat!=Flaky AND cat=CI\" --result=test-results-coverage.xml" -output:"coverage.xml" -filter:"+[KafkaClient]* -[KafkaClient.*]*""
+
+after_test:
+  - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
+  - pip install codecov
+  - codecov -f "coverage.xml" -t e0624899-30ed-4b32-99cb-3337baf1c68c    
+
+artifacts:
+  - path: src\KafkaClient\artifacts\**\*.*
+
+# on_finish:
+#   - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

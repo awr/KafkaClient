@@ -39,15 +39,24 @@ namespace KafkaClient.Protocol
             return this;
         }
 
-        public IKafkaWriter Write(uint value)
-        {
-            _stream.Write(value.ToBytes(), 0, 4);
-            return this;
-        }
-
         public IKafkaWriter Write(long value)
         {
             _stream.Write(value.ToBytes(), 0, 8);
+            return this;
+        }
+
+        public IKafkaWriter WriteVarint(long value)
+        {
+            // assumption here that we're using simple rather than zigzag encoding since all the values are >= 0
+            var segment = ((ulong)value).ToVarint();
+            _stream.Write(segment.Array, segment.Offset, segment.Count);
+            return this;
+        }
+
+        public IKafkaWriter WriteVarint(uint value)
+        {
+            var segment = value.ToVarint();
+            _stream.Write(segment.Array, segment.Offset, segment.Count);
             return this;
         }
 
@@ -67,15 +76,23 @@ namespace KafkaClient.Protocol
             return this;
         }
 
-        public IKafkaWriter Write(string value)
+        public IKafkaWriter Write(string value, bool varint = false)
         {
             if (value == null) {
-                Write((short)-1);
+                if (varint) {
+                    WriteVarint((uint)0);
+                } else {
+                    Write((short)-1);
+                }
                 return this;
             }
 
             var bytes = Encoding.UTF8.GetBytes(value); 
-            Write((short)bytes.Length);
+            if (varint) {
+                WriteVarint((uint)bytes.Length);
+            } else {
+                Write((short)bytes.Length);
+            }
             _stream.Write(bytes, 0, bytes.Length);
             return this;
         }
@@ -109,18 +126,31 @@ namespace KafkaClient.Protocol
             Write(length);
         }
 
-        private void WriteCrc(int offset)
+        public IDisposable MarkForVarintLength(int expectedLength)
         {
-            uint crc;
-            var computeFrom = offset + Request.IntegerByteSize;
-            if (!_stream.TryGetBuffer(out ArraySegment<byte> segment)) {
-                // the stream is a memorystream, always owning its own buffer
-                throw new NotSupportedException();
+            var byteSpacer = ((uint)expectedLength).ToVarint().Count;
+            void WriteLength(int offset)
+            {
+                var length = (int)_stream.Length - (offset + byteSpacer); 
+                var lengthBytes = ((uint) length).ToVarint();
+
+                if (lengthBytes.Count != byteSpacer) {
+                    if (!_stream.TryGetBuffer(out ArraySegment<byte> segment)) {
+                        // the stream is a memorystream, always owning its own buffer
+                        throw new NotSupportedException();
+                    }
+                    var source = segment.Skip(offset + byteSpacer);
+                    var destination = segment.Skip(offset + lengthBytes.Count);
+                    Buffer.BlockCopy(source.Array, source.Offset, destination.Array, destination.Offset, source.Count);
+                    _stream.SetLength(_stream.Length + lengthBytes.Count - byteSpacer);
+                }
+                _stream.Position = offset;
+                _stream.Write(lengthBytes.Array, lengthBytes.Offset, lengthBytes.Count);
             }
 
-            crc = Crc32.Compute(segment.Skip(computeFrom));
-            _stream.Position = offset;
-            Write(crc);            
+            var markerPosition = (int)_stream.Position;
+            _stream.Seek(byteSpacer, SeekOrigin.Current); //pre-allocate space for marker
+            return new WriteAt(this, WriteLength, markerPosition);
         }
 
         public IDisposable MarkForLength()
@@ -130,8 +160,22 @@ namespace KafkaClient.Protocol
             return new WriteAt(this, WriteLength, markerPosition);
         }
 
-        public IDisposable MarkForCrc()
+        public IDisposable MarkForCrc(bool castagnoli = false)
         {
+            void WriteCrc(int offset)
+            {
+                uint crc;
+                var computeFrom = offset + Request.IntegerByteSize;
+                if (!_stream.TryGetBuffer(out ArraySegment<byte> segment)) {
+                    // the stream is a memorystream, always owning its own buffer
+                    throw new NotSupportedException();
+                }
+
+                crc = Crc32.Compute(segment.Skip(computeFrom), castagnoli);
+                _stream.Position = offset;
+                _stream.Write(crc.ToBytes(), 0, 4);
+            }
+
             var markerPosition = (int)_stream.Position;
             _stream.Seek(Request.IntegerByteSize, SeekOrigin.Current); //pre-allocate space for marker
             return new WriteAt(this, WriteCrc, markerPosition);

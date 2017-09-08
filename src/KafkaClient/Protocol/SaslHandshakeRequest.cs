@@ -1,33 +1,37 @@
 using System;
-// ReSharper disable InconsistentNaming
 
 namespace KafkaClient.Protocol
 {
     /// <summary>
-    /// SaslHandshake Request (Version: 0) => mechanism 
-    ///   mechanism => STRING
+    /// SaslHandshake Request => mechanism 
     /// </summary>
+    /// <remarks>
+    /// SaslHandshake Request => mechanism 
+    ///   mechanism => STRING
+    /// 
+    /// From http://kafka.apache.org/protocol.html#The_Messages_SaslHandshake
+    /// </remarks>
     public class SaslHandshakeRequest : Request, IRequest<SaslHandshakeResponse>, IEquatable<SaslHandshakeRequest>
     {
-        public override string ToString() => $"{{Api:{ApiKey},mechanism:{mechanism}}}";
+        public override string ToString() => $"{{{this.RequestToString()},mechanism:{Mechanism}}}";
 
         public SaslHandshakeResponse ToResponse(IRequestContext context, ArraySegment<byte> bytes) => SaslHandshakeResponse.FromBytes(context, bytes);
 
         protected override void EncodeBody(IKafkaWriter writer, IRequestContext context)
         {
-            writer.Write(mechanism);
+            writer.Write(Mechanism);
         }
 
         public SaslHandshakeRequest(string mechanism)
             : base(ApiKey.SaslHandshake)
         {
-            this.mechanism = mechanism;
+            Mechanism = mechanism;
         }
 
         /// <summary>
         /// SASL Mechanism chosen by the client.
         /// </summary>
-        public string mechanism { get; }
+        public string Mechanism { get; }
 
         #region Equality
 
@@ -42,14 +46,14 @@ namespace KafkaClient.Protocol
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return base.Equals(other) && string.Equals(mechanism, other.mechanism);
+            return base.Equals(other) && string.Equals(Mechanism, other.Mechanism);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
             unchecked {
-                return (base.GetHashCode()*397) ^ (mechanism?.GetHashCode() ?? 0);
+                return (base.GetHashCode()*397) ^ (Mechanism?.GetHashCode() ?? 0);
             }
         }
         

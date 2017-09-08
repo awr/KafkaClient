@@ -30,31 +30,29 @@ namespace KafkaClient.Protocol
 
         private static Exception ExtractException(this IRequest request, ErrorCode errorCode, Endpoint endpoint) 
         {
-            return ExtractFetchException(request as FetchRequest, errorCode, endpoint) ??
-                   ExtractMemberException(request, errorCode, endpoint) ??
-                   new RequestException(request.ApiKey, errorCode, endpoint);
+            switch (request) {
+                //case OffsetCommitRequest ofsetCommit:
+                //    if (errorCode == ErrorCode.NOT_COORDINATOR_FOR_GROUP) {
+                //        return new 
+                //    }
+                //    break;
+
+                case FetchRequest fetch:
+                    if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && fetch.Topics?.Count == 1) {
+                        return new FetchOutOfRangeException(fetch.Topics.First(), errorCode, endpoint);
+                    }
+                    break;
+
+                case IGroupMember member:
+                    if (errorCode == ErrorCode.UNKNOWN_MEMBER_ID ||
+                        errorCode == ErrorCode.ILLEGAL_GENERATION ||
+                        errorCode == ErrorCode.INCONSISTENT_GROUP_PROTOCOL) {
+                        return new MemberRequestException(member, request.ApiKey, errorCode, endpoint);
+                    }
+                    break;
+            }
+            return new RequestException(request.ApiKey, errorCode, endpoint);
         }
-
-        private static MemberRequestException ExtractMemberException(IRequest request, ErrorCode errorCode, Endpoint endpoint)
-        {
-            var member = request as IGroupMember;
-            if (member != null && 
-                (errorCode == ErrorCode.UNKNOWN_MEMBER_ID ||
-                errorCode == ErrorCode.ILLEGAL_GENERATION || 
-                errorCode == ErrorCode.INCONSISTENT_GROUP_PROTOCOL))
-            {
-                return new MemberRequestException(member, request.ApiKey, errorCode, endpoint);
-            }
-            return null;
-        } 
-
-        private static FetchOutOfRangeException ExtractFetchException(FetchRequest request, ErrorCode errorCode, Endpoint endpoint)
-        {
-            if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && request?.topics?.Count == 1) {
-                return new FetchOutOfRangeException(request.topics.First(), errorCode, endpoint);
-            }
-            return null;
-        }        
 
         #endregion
 
@@ -94,6 +92,16 @@ namespace KafkaClient.Protocol
             return writer.Write((short)errorCode);
         }
 
+        public static IKafkaWriter WriteMilliseconds(this IKafkaWriter writer, TimeSpan? span)
+        {
+            return writer.WriteMilliseconds(span.GetValueOrDefault());
+        }
+
+        public static IKafkaWriter WriteMilliseconds(this IKafkaWriter writer, TimeSpan span)
+        {
+            return writer.Write((int)Math.Min(int.MaxValue, span.TotalMilliseconds));
+        }
+
         public static IKafkaWriter Write(this IKafkaWriter writer, IEnumerable<string> values, bool includeLength = false)
         {
             if (includeLength) {
@@ -109,44 +117,223 @@ namespace KafkaClient.Protocol
             return writer;
         }
 
-        public static IKafkaWriter Write(this IKafkaWriter writer, IEnumerable<Message> messages)
+        public static IKafkaWriter WriteGroupedTopics<T>(this IKafkaWriter writer, IEnumerable<T> topics, Action<T> partitionWriter = null) where T : TopicPartition
         {
-            foreach (var message in messages) {
-                writer.Write(0L);
-                using (writer.MarkForLength()) {
-                    message.WriteTo(writer);
+            var groupedTopics = topics.GroupBy(t => t.TopicName).ToList();
+            writer.Write(groupedTopics.Count);
+            foreach (var topic in groupedTopics) {
+                var partitions = topic.ToList();
+                writer.Write(topic.Key)
+                      .Write(partitions.Count);
+                foreach (var partition in partitions) {
+                    if (partitionWriter != null) {
+                        partitionWriter(partition);
+                    } else {
+                        writer.Write(partition.PartitionId);
+                    }
                 }
             }
             return writer;
         }
 
-        public static int Write(this IKafkaWriter writer, IEnumerable<Message> messages, MessageCodec codec)
+        public static IKafkaWriter WriteMessages(this IKafkaWriter writer, IEnumerable<Message> messages, ITransactionContext transaction, byte version, MessageCodec codec, out int compressedBytes)
         {
-            if (codec == MessageCodec.None) {
-                using (writer.MarkForLength()) {
-                    writer.Write(messages);
-                }
-                return 0;
-            }
-            using (var messageWriter = new KafkaWriter()) {
-                messageWriter.Write(messages);
-                var messageSet = messageWriter.ToSegment(false);
+            // RecordBatch was introduced with version 2, and is significantly different from the MessageSet approach (see MessageBatch for details)
+            var context = new MessageContext(codec, version);
+            return version >= 2
+                ? writer.WriteRecordBatch(messages.ToList(), transaction, context, out compressedBytes)
+                : writer.WriteMessageSet(messages, context, out compressedBytes);
+        }
 
-                using (writer.MarkForLength()) { // messageset
-                    writer.Write(0L); // offset
-                    using (writer.MarkForLength()) { // message
-                        using (writer.MarkForCrc()) {
-                            writer.Write((byte)0) // message version
-                                    .Write((byte)codec) // attribute
-                                    .Write(-1); // key  -- null, so -1 length
-                            using (writer.MarkForLength()) { // value
-                                var initialPosition = writer.Position;
-                                writer.WriteCompressed(messageSet, codec);
-                                var compressedMessageLength = writer.Position - initialPosition;
-                                return messageSet.Count - compressedMessageLength;
-                            }
-                        }
+        /// <summary>
+        /// The fifth lowest bit indicates whether the RecordBatch is part of a transaction or not. 0 indicates that the RecordBatch is not transactional, while 1 indicates that it is. (since 0.11.0.0)
+        /// </summary>
+        public const byte IsTransactionMask = 0x10; 
+
+        internal static IKafkaWriter WriteRecordBatch(this IKafkaWriter writer, IList<Message> messages, ITransactionContext transaction, IMessageContext context, out int compressedBytes)
+        {
+            // Denotes the first offset in the RecordBatch. The 'offsetDelta' of each Record in the batch would be be computed relative to this FirstOffset. 
+            // In particular, the offset of each Record in the Batch is its 'OffsetDelta' + 'FirstOffset'.
+            var firstOffset = 0L;
+
+            // Attributes int16
+            // The lowest 3 bits contain the compression codec used for the message.
+            // The fourth lowest bit represents the timestamp type. 0 stands for CreateTime and 1 stands for LogAppendTime. The producer should always set this bit to 0. (since 0.10.0)
+            // The fifth lowest bit indicates whether the RecordBatch is part of a transaction or not. 0 indicates that the RecordBatch is not transactional, while 1 indicates that it is. (since 0.11.0.0)
+            // 
+            // The sixth lowest bit indicates whether the RecordBatch includes a control message. 1 indicates that the RecordBatch is contains a control message, 0 indicates that it doesn't. 
+            // Control messages are used to enable transactions in Kafka and are generated by the broker. Clients should not return control batches (ie. those with this bit set) to applications. (since 0.11.0.0)
+            // 
+            // All other bits should be set to 0.
+            var attributes = (short) (Message.CodecMask & (short) context.Codec);
+            if (transaction?.ProducerId > 0L && transaction?.ProducerEpoch > 0) {
+                attributes = (short) (attributes | IsTransactionMask);
+            }
+
+            // The timestamp of the first Record in the batch. The timestamp of each Record in the RecordBatch is its 'TimestampDelta' + 'FirstTimestamp'.
+            var firstTimestamp = 0L;
+
+            // The offset of the last message in the RecordBatch. This is used by the broker to ensure correct behavior even when Records within a batch are compacted out.
+            var lastOffsetDelta = messages.Count;
+
+            // The timestamp of the last Record in the batch. This is used by the broker to ensure the correct behavior even when Records within the batch are compacted out.
+            var maxTimestamp = 0L;
+            if (messages.Count > 0) {
+                firstOffset = messages[0].Offset;
+                var first = messages[0].Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow);
+                firstTimestamp = first.ToUnixTimeMilliseconds();
+                maxTimestamp = messages
+                                .Where(m => m.Timestamp.HasValue).Max(m => m.Timestamp)
+                                .GetValueOrDefault(first).ToUnixTimeMilliseconds();
+            }
+
+            void WriteUncompressedTo(IKafkaWriter uncompressedWriter)
+            {
+                uncompressedWriter.Write(messages.Count);
+                foreach (var record in messages) {
+                    uncompressedWriter.WriteRecord(record, MessageCodec.None, firstOffset, firstTimestamp, out int _);
+                }
+            }
+
+            writer.Write(firstOffset);
+            using (writer.MarkForLength()) {
+                writer.Write(0) // PartitionLeaderEpoch int32
+                      .Write(context.MessageVersion.GetValueOrDefault()); // AKA Magic
+
+                // the CRC includes everything from the attribute on
+                using (writer.MarkForCrc(castagnoli: true)) {
+                    writer.Write(attributes)
+                          .Write(lastOffsetDelta)
+                          .Write(firstTimestamp)
+                          .Write(maxTimestamp)
+                          .Write(transaction?.ProducerId ?? 0L)
+                          .Write(transaction?.ProducerEpoch ?? (short)0)
+                          .Write(transaction?.FirstSequence ?? 0);
+
+                    if (context.Codec == MessageCodec.None) {
+                        WriteUncompressedTo(writer);
+                        compressedBytes = 0;
+                        return writer;
                     }
+
+                    using (var uncompressedWriter = new KafkaWriter()) {
+                        WriteUncompressedTo(uncompressedWriter);
+                        var recordsValue = uncompressedWriter.ToSegment(false);
+                        var uncompressedRecord = new Message(recordsValue, 0, firstOffset);
+
+                        writer.Write(1) // record count = 1 for compressed set
+                              .WriteRecord(uncompressedRecord, context.Codec, firstOffset, firstTimestamp, out compressedBytes);
+                        compressedBytes -= 8; // minimum size of record used to do the compression -- actual size *might* be larger for the varint for the value
+                        return writer;
+                    }                    
+                }
+            }
+        }
+
+        internal static IKafkaWriter WriteRecord(this IKafkaWriter writer, Message record, MessageCodec codec, long firstOffset, long firstTimestamp, out int compressedBytes)
+        {
+            var timestamp = 0L;
+            if (record.Timestamp.HasValue) {
+                timestamp = Math.Max(0L, record.Timestamp.Value.ToUnixTimeMilliseconds() - firstTimestamp);
+            }
+
+            var timestampDelta = ((ulong)timestamp).ToVarint();
+            var offsetDelta = ((ulong)Math.Max(0L, record.Offset - firstOffset)).ToVarint();
+            var keyLenth = ((uint) record.Key.Count).ToVarint();
+            var valueLenth = ((uint) record.Value.Count).ToVarint();
+            var headerCount = ((uint) record.Headers.Count).ToVarint();
+
+            var expectedLength = 1 // attribute
+                + timestampDelta.Count 
+                + offsetDelta.Count 
+                + keyLenth.Count + record.Key.Count 
+                + valueLenth.Count + record.Value.Count 
+                + headerCount.Count 
+                + record.Headers.Sum(h => 5 + (2 * (h.Key ?? "").Length) + 5 + h.Value.Count);
+
+            using (writer.MarkForVarintLength(expectedLength)) {
+                writer.Write((byte) 0) // attributes
+                      .Write(timestampDelta, false)
+                      .Write(offsetDelta, false)
+                      .Write(keyLenth, false)
+                      .Write(record.Key, false);
+                if (codec == MessageCodec.None) {
+                    writer.Write(valueLenth, false)
+                          .Write(record.Value, false);
+                    compressedBytes = 0;
+                } else {
+                    var expectedCompressedLength = record.Value.Count;
+                    using (writer.MarkForVarintLength(expectedCompressedLength)) {
+                        var initialPosition = writer.Position;
+                        writer.WriteCompressed(record.Value, codec);
+                        var compressedRecordLength = writer.Position - initialPosition;
+                        compressedBytes = record.Value.Count - compressedRecordLength;
+                    }
+                }
+                writer.Write(headerCount, false);
+                foreach (var header in record.Headers) {
+                    writer.Write(header.Key, varint: true)
+                          .WriteVarint((uint)header.Value.Count)
+                          .Write(header.Value, false);
+                }
+            }
+            return writer;
+        }
+
+        internal static IKafkaWriter WriteMessageSet(this IKafkaWriter writer, IEnumerable<Message> messages, IMessageContext context, out int compressedBytes)
+        {
+            if (context.Codec == MessageCodec.None) {
+                foreach (var message in messages) {
+                    writer.Write(message.Offset);
+                    using (writer.MarkForLength()) { // message length
+                        writer.WriteMessage(message, context, out int _);
+                    }
+                }
+                compressedBytes = 0;
+                return writer;
+            }
+            using (var uncompressedWriter = new KafkaWriter()) {
+                var uncompressedContext = new MessageContext(version: context.MessageVersion);
+                var offset = 0L;
+                foreach (var message in messages) {
+                    uncompressedWriter.Write(offset++); // offset increasing by oneto avoid server side recompression
+                    using (uncompressedWriter.MarkForLength()) { // message length
+                        uncompressedWriter.WriteMessage(message, uncompressedContext, out int _);
+                    }
+                }
+                var messageSetBytes = uncompressedWriter.ToSegment(false);
+                var uncompressedMessage = new Message(messageSetBytes, (byte)context.Codec);
+
+                writer.Write(0L); // offset
+                using (writer.MarkForLength()) { // message length
+                    writer.WriteMessage(uncompressedMessage, context, out compressedBytes);
+                    compressedBytes -= 34; // minimum size of MessageSet used to do the compression
+                    return writer;
+                }
+            }
+        }
+
+        internal static IKafkaWriter WriteMessage(this IKafkaWriter writer, Message message, IMessageContext context, out int compressedBytes)
+        {
+            using (writer.MarkForCrc()) {
+                writer.Write(context.MessageVersion.GetValueOrDefault())
+                      .Write((byte) context.Codec);
+                if (context.MessageVersion >= 1) {
+                    writer.Write(message.Timestamp.GetValueOrDefault(DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
+                }
+                writer.Write(message.Key);
+
+                if (context.Codec == MessageCodec.None) {
+                    writer.Write(message.Value);
+                    compressedBytes = 0;
+                    return writer;
+                }
+                using (writer.MarkForLength()) {
+                    var initialPosition = writer.Position;
+                    writer.WriteCompressed(message.Value, context.Codec);
+                    var compressedMessageLength = writer.Position - initialPosition;
+                    compressedBytes = message.Value.Count - compressedMessageLength;
+                    return writer;
                 }
             }
         }
@@ -155,74 +342,137 @@ namespace KafkaClient.Protocol
 
         #region Decoding
 
-        private const int MessageHeaderSize = 12;
+        private const int MessageSetVersionOffset = 16;
 
-        /// <summary>
-        /// Decode a byte[] that represents a collection of messages.
-        /// </summary>
-        /// <param name="reader">The reader</param>
-        /// <param name="codec">The codec of the containing messageset, if any</param>
-        /// <returns>Enumerable representing stream of messages decoded from byte[]</returns>
-        public static IImmutableList<Message> ReadMessages(this IKafkaReader reader, MessageCodec codec = MessageCodec.None)
+        public static MessageTransaction ReadMessages(this IKafkaReader reader, int? messageSetSize = null)
         {
-            var expectedLength = reader.ReadInt32();
-            if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"Message set size of {expectedLength} is not fully available (codec {codec}).");
+            if (!messageSetSize.HasValue) {
+                messageSetSize = reader.ReadInt32();
+            }
+            if (messageSetSize.Value == 0) return new MessageTransaction(ImmutableList<Message>.Empty);
+            if (!reader.HasBytes(messageSetSize.Value)) throw new BufferUnderRunException($"Message set of {messageSetSize} is not available.");
 
-            var messages = ImmutableList<Message>.Empty;
-            var finalPosition = reader.Position + expectedLength;
-            while (reader.Position < finalPosition) {
-                // this checks that we have at least the minimum amount of data to retrieve a header
-                if (reader.HasBytes(MessageHeaderSize) == false) break;
+            if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set header is not available.");
+            reader.Position += MessageSetVersionOffset;
+            var version = reader.ReadByte();
+            reader.Position -= MessageSetVersionOffset + 1;
 
-                var offset = reader.ReadInt64();
-                var messageSize = reader.ReadInt32();
+            if (version >= 2) {
+                return reader.ReadRecordBatch();
+            }
 
-                // if the stream does not have enough left in the payload, we got only a partial message
-                if (reader.HasBytes(messageSize) == false) throw new BufferUnderRunException($"Message header size of {MessageHeaderSize} is not fully available (codec {codec}).");
+            return new MessageTransaction(reader.ReadMessageSet(MessageCodec.None, (reader.Position - 4) + messageSetSize.Value));
+        }
 
-                try {
-                    messages = messages.AddRange(reader.ReadMessage(messageSize, offset));
-                } catch (EndOfStreamException ex) {
-                    throw new BufferUnderRunException($"Message size of {messageSize} is not available (codec {codec}).", ex);
+        internal static MessageTransaction ReadRecordBatch(this IKafkaReader reader)
+        {
+            var firstOffset = reader.ReadInt64();
+            var length = reader.ReadInt32();
+            var partitionLeaderEpoch = reader.ReadInt32();
+            var version = reader.ReadByte();
+
+            var crc = reader.ReadUInt32();
+            var crcHash = reader.ReadCrc(length - 9, castagnoli: true);
+            if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
+
+            var attributes = reader.ReadInt16();
+            var lastOffsetDelta = reader.ReadInt32();
+            var firstTimestamp = reader.ReadInt64();
+            var maxTimestamp = reader.ReadInt64();
+            var producerId = reader.ReadInt64();
+            var producerEpoch = reader.ReadInt16();
+            var firstSequence = reader.ReadInt32();
+
+            var codec = (MessageCodec) (attributes & Message.CodecMask);
+            var messages = reader.ReadRecords(new MessageContext(codec, version), firstOffset, firstTimestamp);
+            var transaction = new TransactionContext(producerId, producerEpoch, firstSequence);
+            return new MessageTransaction(messages, transaction);
+        }
+
+        private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
+
+        internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IMessageContext context, long firstOffset, long firstTimestamp)
+        {
+            var messages = new List<Message>();
+            var messageCount = reader.ReadInt32();
+
+            for (var m = 0; m < messageCount; m++) {
+                var length = reader.ReadVarint32();
+                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {context.Codec}).");
+
+                var attribute = reader.ReadByte();
+                var timestampDelta = reader.ReadVarint64();
+                var offsetDelta = reader.ReadVarint64();
+                var keyLength = reader.ReadVarint32();
+                var key = keyLength > 0 ? reader.ReadBytes(keyLength) : EmptySegment;
+                var valueLength = reader.ReadVarint32();
+                var value = valueLength > 0 ? reader.ReadBytes(valueLength) : EmptySegment;
+
+                MessageHeader[] headers = null;
+                var headerCount = reader.ReadVarint32();
+                if (headerCount > 0) {
+                    headers = new MessageHeader[headerCount];
+                    for (var h = 0; h < headerCount; h++) {
+                        var headerKeyLength = reader.ReadVarint32();
+                        var headerKey = headerKeyLength > 0 ? reader.ReadString(headerKeyLength) : null;
+                        var headerValueLength = reader.ReadVarint32();
+                        var headerValue = headerKeyLength > 0 ? reader.ReadBytes(headerValueLength) : EmptySegment;
+                        headers[h] = new MessageHeader(headerKey, headerValue);
+                    }
+                }
+
+                var timestampMilliseconds = firstTimestamp + timestampDelta;
+                if (context.Codec == MessageCodec.None) {
+                    messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestampMilliseconds > 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(timestampMilliseconds) : null, headers));
+                } else {
+                    var uncompressedBytes = value.ToUncompressed(context.Codec);
+                    using (var messageRecordsReader = new KafkaReader(uncompressedBytes)) {
+                        messages.AddRange(messageRecordsReader.ReadRecords(new MessageContext(version: context.MessageVersion), firstOffset, firstTimestamp));
+                    }
                 }
             }
             return messages;
         }
 
-        /// <summary>
-        /// Decode messages from a payload and assign it a given kafka offset.
-        /// </summary>
-        /// <param name="reader">The reader</param>
-        /// <param name="messageSize">The size of the message, for Crc Hash calculation</param>
-        /// <param name="offset">The offset represting the log entry from kafka of this message.</param>
-        /// <returns>Enumerable representing stream of messages decoded from byte[].</returns>
-        /// <remarks>The return type is an Enumerable as the message could be a compressed message set.</remarks>
-        public static IImmutableList<Message> ReadMessage(this IKafkaReader reader, int messageSize, long offset)
+        internal static IEnumerable<Message> ReadMessageSet(this IKafkaReader reader, MessageCodec codec, int finalPosition)
         {
-            var crc = reader.ReadUInt32();
-            var crcHash = reader.ReadCrc(messageSize - 4);
-            if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
+            var messages = new List<Message>();
+            while (reader.Position < finalPosition) {
+                int? length = null;
+                try {
+                    var offset = reader.ReadInt64();
+                    length = reader.ReadInt32();
 
-            var messageVersion = reader.ReadByte();
-            var attribute = reader.ReadByte();
-            DateTimeOffset? timestamp = null;
-            if (messageVersion >= 1) {
-                var milliseconds = reader.ReadInt64();
-                if (milliseconds >= 0) {
-                    timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+                    var crc = reader.ReadUInt32();
+                    var crcHash = reader.ReadCrc(length.Value - 4);
+                    if (crc != crcHash) throw new CrcValidationException(crc, crcHash);
+
+                    var version = reader.ReadByte();
+                    var attribute = reader.ReadByte();
+                    DateTimeOffset? timestamp = null;
+                    if (version >= 1) {
+                        var milliseconds = reader.ReadInt64();
+                        if (milliseconds >= 0) {
+                            timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+                        }
+                    }
+                    var key = reader.ReadBytes();
+                    var value = reader.ReadBytes();
+
+                    codec = (MessageCodec)(Message.CodecMask & attribute);
+                    if (codec == MessageCodec.None) {
+                        messages.Add(new Message(value, key, attribute, offset, timestamp));
+                    } else {
+                        var uncompressedBytes = value.ToUncompressed(codec);
+                        using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
+                            messages.AddRange(messageSetReader.ReadMessageSet(codec, uncompressedBytes.Count));
+                        }
+                    }
+                } catch (EndOfStreamException ex) {
+                    throw new BufferUnderRunException($"Message size of {length} is not available (codec {codec}).", ex);
                 }
             }
-            var key = reader.ReadBytes();
-            var value = reader.ReadBytes();
-
-            var codec = (MessageCodec)(Message.CodecMask & attribute);
-            if (codec == MessageCodec.None) {
-                return ImmutableList<Message>.Empty.Add(new Message(value, key, attribute, offset, messageVersion, timestamp));
-            }
-            var uncompressedBytes = value.ToUncompressed(codec);
-            using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
-                return messageSetReader.ReadMessages(codec);
-            }
+            return messages;
         }
 
         public static IResponse ToResponse(this ApiKey apiKey, IRequestContext context, ArraySegment<byte> bytes)
@@ -240,8 +490,8 @@ namespace KafkaClient.Protocol
                     return OffsetCommitResponse.FromBytes(context, bytes);
                 case ApiKey.OffsetFetch:
                     return OffsetFetchResponse.FromBytes(context, bytes);
-                case ApiKey.GroupCoordinator:
-                    return GroupCoordinatorResponse.FromBytes(context, bytes);
+                case ApiKey.FindCoordinator:
+                    return FindCoordinatorResponse.FromBytes(context, bytes);
                 case ApiKey.JoinGroup:
                     return JoinGroupResponse.FromBytes(context, bytes);
                 case ApiKey.Heartbeat:
@@ -262,6 +512,32 @@ namespace KafkaClient.Protocol
                     return CreateTopicsResponse.FromBytes(context, bytes);
                 case ApiKey.DeleteTopics:
                     return DeleteTopicsResponse.FromBytes(context, bytes);
+                case ApiKey.DeleteRecords:
+                    return DeleteRecordsResponse.FromBytes(context, bytes);
+                case ApiKey.InitProducerId:
+                    return InitProducerIdResponse.FromBytes(context, bytes);
+                case ApiKey.OffsetForLeaderEpoch:
+                    return OffsetForLeaderEpochResponse.FromBytes(context, bytes);
+                case ApiKey.AddPartitionsToTxn:
+                    return AddPartitionsToTxnResponse.FromBytes(context, bytes);
+                case ApiKey.AddOffsetsToTxn:
+                    return AddOffsetsToTxnResponse.FromBytes(context, bytes);
+                case ApiKey.EndTxn:
+                    return EndTxnResponse.FromBytes(context, bytes);
+                case ApiKey.WriteTxnMarkers:
+                    return WriteTxnMarkersResponse.FromBytes(context, bytes);
+                case ApiKey.TxnOffsetCommit:
+                    return TxnOffsetCommitResponse.FromBytes(context, bytes);
+                case ApiKey.DescribeAcls:
+                    return DescribeAclsResponse.FromBytes(context, bytes);
+                case ApiKey.CreateAcls:
+                    return CreateAclsResponse.FromBytes(context, bytes);
+                case ApiKey.DeleteAcls:
+                    return DeleteAclsResponse.FromBytes(context, bytes);
+                case ApiKey.DescribeConfigs:
+                    return DescribeConfigsResponse.FromBytes(context, bytes);
+                case ApiKey.AlterConfigs:
+                    return AlterConfigsResponse.FromBytes(context, bytes);
                 default:
                     throw new NotImplementedException($"Unknown response type {apiKey}");
             }
@@ -270,6 +546,12 @@ namespace KafkaClient.Protocol
         public static ErrorCode ReadErrorCode(this IKafkaReader reader)
         {
             return (ErrorCode) reader.ReadInt16();
+        }
+
+        public static TimeSpan? ReadThrottleTime(this IKafkaReader reader, bool inThisVersion = true)
+        {
+            if (!inThisVersion) return null;
+            return TimeSpan.FromMilliseconds(reader.ReadInt32());
         }
 
         public static bool IsSuccess(this ErrorCode code)
@@ -293,7 +575,8 @@ namespace KafkaClient.Protocol
                 || code == ErrorCode.NOT_COORDINATOR_FOR_GROUP
                 || code == ErrorCode.NOT_ENOUGH_REPLICAS
                 || code == ErrorCode.NOT_ENOUGH_REPLICAS_AFTER_APPEND
-                || code == ErrorCode.NOT_CONTROLLER;
+                || code == ErrorCode.NOT_CONTROLLER
+                || code == ErrorCode.DUPLICATE_SEQUENCE_NUMBER;
         }
 
         public static bool IsFromStaleMetadata(this ErrorCode code)
@@ -367,7 +650,8 @@ namespace KafkaClient.Protocol
             return exception is FetchOutOfRangeException
                 || exception is TimeoutException
                 || exception is ConnectionException
-                || exception is RoutingException;
+                || exception is RoutingException
+                || exception is RequestException r && r.ErrorCode.IsFromStaleMetadata();
         }
 
         /// <summary>
@@ -389,9 +673,9 @@ namespace KafkaClient.Protocol
                     var response = await connection.SendAsync(request, cancellationToken).ConfigureAwait(false);
                     if (response == null) return new RetryAttempt<MetadataResponse>(null);
 
-                    var results = response.brokers
+                    var results = response.Brokers
                         .Select(ValidateServer)
-                        .Union(response.topic_metadata.Select(ValidateTopic))
+                        .Union(response.TopicMetadata.Select(ValidateTopic))
                         .Where(r => !r.IsValid.GetValueOrDefault())
                         .ToList();
 
@@ -443,11 +727,23 @@ namespace KafkaClient.Protocol
 
         private static MetadataResult ValidateTopic(MetadataResponse.Topic topic)
         {
-            var errorCode = topic.topic_error_code;
+            var errorCode = topic.TopicError;
             if (errorCode.IsSuccess())   return new MetadataResult(isValid: true);
-            if (errorCode.IsRetryable()) return new MetadataResult(errorCode, null, $"topic {topic.topic} returned error code of {errorCode}: Retrying");
-            return new MetadataResult(errorCode, false, $"topic {topic.topic} returned an error of {errorCode}");
+            if (errorCode.IsRetryable()) return new MetadataResult(errorCode, null, $"topic {topic.TopicName} returned error code of {errorCode}: Retrying");
+            return new MetadataResult(errorCode, false, $"topic {topic.TopicName} returned an error of {errorCode}");
         }
+
+        #endregion
+
+        #region ToString
+
+        internal static string ThrottleToString(this IThrottledResponse response) => $"throttle_time_ms:{response.ThrottleTime?.TotalMilliseconds:##########}";
+
+        internal static string RequestToString(this IRequest request) => $"Api:{request.ApiKey}";
+
+        internal static string PartitionToString(this TopicPartition partition) => $"topic:{partition.TopicName},partition:{partition.PartitionId}";
+
+        internal static string AclToString(this IAclResource acl) => $"resource_type:{acl.ResourceType},resource_name:{acl.ResourceName},principal:{acl.Principal},host:{acl.Host},operation:{acl.Operation},permission_type:{acl.PermissionType}";
 
         #endregion
     }

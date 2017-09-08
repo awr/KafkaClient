@@ -1,12 +1,11 @@
 # KafkaClient
-Native async C# client for Apache Kafka, supporting versions [0.9, 0.10.1]
+Native async C# client for Apache Kafka, supporting versions [0.9, 0.11]
 
 ## Status
 
 | OS      | Framework | Status |
 |---------|-----------|--------|
-| Windows | .net 4.6.2 | [![Build status](https://ci.appveyor.com/api/projects/status/54mgnutld37dpn9a?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkaclient) [![codecov](https://codecov.io/gh/awr/KafkaClient/branch/master/graph/badge.svg)](https://codecov.io/gh/awr/KafkaClient) |
-| Windows | .net standard 1.6 | [![Build status](https://ci.appveyor.com/api/projects/status/e7ej2g9q77if8mkf?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkanetclient) |
+| Windows | .net standard 1.6 | [![Build status](https://ci.appveyor.com/api/projects/status/54mgnutld37dpn9a?svg=true)](https://ci.appveyor.com/project/AndrewRobinson/kafkaclient) [![codecov](https://codecov.io/gh/awr/KafkaClient/branch/master/graph/badge.svg)](https://codecov.io/gh/awr/KafkaClient)] |
 | Linux   | .net standard 1.6 | [![Build status](https://api.travis-ci.org/awr/KafkaClient.svg?branch=master)](https://travis-ci.org/awr/KafkaClient) |
 
 [![NuGet Badge](https://buildstats.info/nuget/KafkaClient)](https://www.nuget.org/packages/KafkaClient)
@@ -125,6 +124,8 @@ History
 This client is a fork of [gigya]'s [KafkaNetClient], itself a fork of [jroland]'s [kafka-net] client, which was based on [David Arthur]'s [kafka-python] client. Thanks to all those who spent so much time working on the ancestors to this client, and to all contributors!
 
 A big thank you to [Nudge Software] for backing this project.
+
+Also thank you to AppVeyor and Travis for providing CI infrastructure, and to github for hosting the code.
 
 [Apache Kafka protocol]:https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol
 [kafka-python]:https://github.com/mumrah/kafka-python

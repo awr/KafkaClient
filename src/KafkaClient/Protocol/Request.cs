@@ -20,7 +20,7 @@ namespace KafkaClient.Protocol
         /// </summary>
         public bool ExpectResponse { get; }
 
-        public override string ToString() => $"{{Api:{ApiKey}}}";
+        public override string ToString() => $"{{{this.RequestToString()}}}";
 
         public virtual string ShortString() => ApiKey.ToString();
 
