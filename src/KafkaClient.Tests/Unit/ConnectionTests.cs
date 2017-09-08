@@ -581,34 +581,26 @@ namespace KafkaClient.Tests.Unit
         [Test]
         public async Task CorrelationOverflowGuardWorks()
         {
-            var correlationId = -1;
-            var correlationIds = new ConcurrentBag<int>();
-
             var endpoint = TestConfig.ServerEndpoint();
             using (var server = new TcpServer(endpoint.Ip.Port, TestConfig.Log))
             using (var conn = new Connection(endpoint, new ConnectionConfiguration(requestTimeout: TimeSpan.FromMilliseconds(5)), TestConfig.Log)) {
                 try {
                     Connection.OverflowGuard = 10;
+                    Connection.CorrelationIdSeed = 0;
+
+                    var correlationIds = new ConcurrentBag<int>();
                     server.OnReceivedAsync = data => {
                         (IRequestContext context, ApiKey apiKey) = KafkaDecoder.DecodeFullHeader(data.Skip(Request.IntegerByteSize));
                         // currently no other tests are using the DeleteAclsRequest -- do this to avoid responses from other tests
                         if (apiKey == ApiKey.DeleteAcls) {
                             correlationIds.Add(context.CorrelationId);
-                            correlationId = context.CorrelationId;
                         }
                         TestConfig.Log.Write(LogLevel.Info, () => LogEvent.Create($"correlation {context.CorrelationId}"));
                         return Task.FromResult(0);
                     };
 
-                    await AssertAsync.Throws<TimeoutException>(() => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None));
-                    var initialCount = 3;
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(initialCount.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationId > correlationIds.Last() || (correlationIds.Last() + initialCount) > Connection.OverflowGuard, () => $"correlation {correlationId}");
-                    
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
-                    await AssertAsync.ThatEventually(() => correlationIds.Max() == Connection.OverflowGuard, () => $"correlation ids {string.Join(',', correlationIds.Select(id => id.ToString()))}");
-
-                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(Connection.OverflowGuard.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
+                    var requests = Connection.OverflowGuard * 3;
+                    await AssertAsync.Throws<TimeoutException>(() => Task.WhenAll(requests.Repeat(i => conn.SendAsync(new DeleteAclsRequest(), CancellationToken.None))));
                     Assert.That(correlationIds.All(id => 0 <= id && id <= Connection.OverflowGuard), $"correlation ids {string.Join(',', correlationIds.Select(id => id.ToString()))}");
                 }
                 finally {
