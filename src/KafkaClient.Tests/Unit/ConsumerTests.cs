@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading;
@@ -184,10 +185,10 @@ namespace KafkaClient.Tests.Unit
 #pragma warning restore 4014
         }
 
-        [TestCase(0, 100, 0)]
-        [TestCase(9, 100, 1000)]
-        [Category("Flaky")]
-        public async Task ConsumerHeartbeatsAtDesiredIntervals(int expectedHeartbeats, int heartbeatMilliseconds, int totalMilliseconds)
+        [TestCase(0, 100)]
+        [TestCase(5, 150)]
+        [TestCase(9, 100)]
+        public async Task ConsumerHeartbeatsAtDesiredIntervals(int expectedHeartbeats, int heartbeatMilliseconds)
         {
             var protocol = new JoinGroupRequest.GroupProtocol(new ConsumerProtocolMetadata("mine"));
             var router = Substitute.For<IRouter>();
@@ -204,18 +205,30 @@ namespace KafkaClient.Tests.Unit
             var memberId = Guid.NewGuid().ToString("N");
             var response = new JoinGroupResponse(ErrorCode.NONE, 1, protocol.ProtocolName, memberId, memberId, new []{ new JoinGroupResponse.Member(memberId, new ConsumerProtocolMetadata("mine")) });
 
+            int GetHeartbeatCount() => conn.ReceivedCalls().Count(
+                                               c => c.GetMethodInfo().Name == nameof(Connection.SendAsync)
+                                                   && c.GetArguments()[0] is HeartbeatRequest s
+                                                   && s.GroupId == request.GroupId &&
+                                                   s.MemberId == memberId &&
+                                                   s.GenerationId == response.GenerationId);
+            var millisecondsToFirstHeartbeat = 0L;
+            var timer = new Stopwatch();
+            timer.Start();
             using (new GroupConsumer(router, request.GroupId, request.ProtocolType, response, config)) {
-                await Task.Delay(totalMilliseconds);
+                await AssertAsync.ThatEventually(() => GetHeartbeatCount() > 0, () => "timed out getting first heartbeat", TimeSpan.FromSeconds(3));
+                millisecondsToFirstHeartbeat = timer.ElapsedMilliseconds;
+                await AssertAsync.ThatEventually(() => GetHeartbeatCount() >= expectedHeartbeats, () => "timed out getting remaining heartbeats", TimeSpan.FromSeconds(5));
             }
+            timer.Stop();
 
-            Assert.That(conn.ReceivedCalls()
-                            .Count(c => {
-                                if (c.GetMethodInfo().Name != nameof(Connection.SendAsync)) return false;
-                                var s = c.GetArguments()[0] as HeartbeatRequest;
-                                if (s == null) return false;
-                                return s.GroupId == request.GroupId && s.MemberId == memberId && s.GenerationId == response.GenerationId;
-                            }),
-                            Is.InRange(expectedHeartbeats - 1, expectedHeartbeats + 1));
+            var heartbeats = GetHeartbeatCount();
+            var millisecondsForRemainingHeartbeats = timer.ElapsedMilliseconds - millisecondsToFirstHeartbeat;
+
+            Assert.That(millisecondsToFirstHeartbeat, Is.AtLeast(heartbeatMilliseconds));
+            Assert.That(heartbeats, Is.AtLeast(expectedHeartbeats));
+            if (heartbeats > 1) {
+                Assert.That(millisecondsForRemainingHeartbeats / (heartbeats - 1), Is.InRange(heartbeatMilliseconds, heartbeatMilliseconds * 2));
+            }
         }
 
         [TestCase(100, 700)]

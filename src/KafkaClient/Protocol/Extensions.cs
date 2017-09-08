@@ -30,31 +30,29 @@ namespace KafkaClient.Protocol
 
         private static Exception ExtractException(this IRequest request, ErrorCode errorCode, Endpoint endpoint) 
         {
-            return ExtractFetchException(request as FetchRequest, errorCode, endpoint) ??
-                   ExtractMemberException(request, errorCode, endpoint) ??
-                   new RequestException(request.ApiKey, errorCode, endpoint);
+            switch (request) {
+                //case OffsetCommitRequest ofsetCommit:
+                //    if (errorCode == ErrorCode.NOT_COORDINATOR_FOR_GROUP) {
+                //        return new 
+                //    }
+                //    break;
+
+                case FetchRequest fetch:
+                    if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && fetch.Topics?.Count == 1) {
+                        return new FetchOutOfRangeException(fetch.Topics.First(), errorCode, endpoint);
+                    }
+                    break;
+
+                case IGroupMember member:
+                    if (errorCode == ErrorCode.UNKNOWN_MEMBER_ID ||
+                        errorCode == ErrorCode.ILLEGAL_GENERATION ||
+                        errorCode == ErrorCode.INCONSISTENT_GROUP_PROTOCOL) {
+                        return new MemberRequestException(member, request.ApiKey, errorCode, endpoint);
+                    }
+                    break;
+            }
+            return new RequestException(request.ApiKey, errorCode, endpoint);
         }
-
-        private static MemberRequestException ExtractMemberException(IRequest request, ErrorCode errorCode, Endpoint endpoint)
-        {
-            var member = request as IGroupMember;
-            if (member != null && 
-                (errorCode == ErrorCode.UNKNOWN_MEMBER_ID ||
-                errorCode == ErrorCode.ILLEGAL_GENERATION || 
-                errorCode == ErrorCode.INCONSISTENT_GROUP_PROTOCOL))
-            {
-                return new MemberRequestException(member, request.ApiKey, errorCode, endpoint);
-            }
-            return null;
-        } 
-
-        private static FetchOutOfRangeException ExtractFetchException(FetchRequest request, ErrorCode errorCode, Endpoint endpoint)
-        {
-            if (errorCode == ErrorCode.OFFSET_OUT_OF_RANGE && request?.Topics?.Count == 1) {
-                return new FetchOutOfRangeException(request.Topics.First(), errorCode, endpoint);
-            }
-            return null;
-        }        
 
         #endregion
 
@@ -652,7 +650,8 @@ namespace KafkaClient.Protocol
             return exception is FetchOutOfRangeException
                 || exception is TimeoutException
                 || exception is ConnectionException
-                || exception is RoutingException;
+                || exception is RoutingException
+                || exception is RequestException r && r.ErrorCode.IsFromStaleMetadata();
         }
 
         /// <summary>
