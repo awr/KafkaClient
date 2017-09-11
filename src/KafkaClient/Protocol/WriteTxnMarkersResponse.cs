@@ -28,15 +28,19 @@ namespace KafkaClient.Protocol
         public static WriteTxnMarkersResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
-                var markers = new TransactionMarker[reader.ReadInt32()];
-                for (var m = 0; m < markers.Length; m++) {
+                var markerCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(markerCount);
+                var markers = new TransactionMarker[markerCount];
+                for (var m = 0; m < markerCount; m++) {
                     var producerId = reader.ReadInt64();
-                    var topics = new List<TopicResponse>();
                     var topicCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(topicCount);
+                    var topics = new List<TopicResponse>();
                     for (var t = 0; t < topicCount; t++) {
                         var topicName = reader.ReadString();
 
                         var partitionCount = reader.ReadInt32();
+                        context.ThrowIfCountTooBig(partitionCount);
                         for (var j = 0; j < partitionCount; j++) {
                             var partitionId = reader.ReadInt32();
                             var errorCode = (ErrorCode) reader.ReadInt16();

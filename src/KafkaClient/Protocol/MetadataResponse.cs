@@ -45,7 +45,9 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 3);
-                var brokers = new Server[reader.ReadInt32()];
+                var brokerCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(brokerCount);
+                var brokers = new Server[brokerCount];
                 for (var b = 0; b < brokers.Length; b++) {
                     var brokerId = reader.ReadInt32();
                     var host = reader.ReadString();
@@ -68,7 +70,9 @@ namespace KafkaClient.Protocol
                     controllerId = reader.ReadInt32();
                 }
 
-                var topics = new Topic[reader.ReadInt32()];
+                var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
+                var topics = new Topic[topicCount];
                 for (var t = 0; t < topics.Length; t++) {
                     var topicError = (ErrorCode) reader.ReadInt16();
                     var topicName = reader.ReadString();
@@ -77,16 +81,20 @@ namespace KafkaClient.Protocol
                         isInternal = reader.ReadBoolean();
                     }
 
-                    var partitions = new Partition[reader.ReadInt32()];
+                    var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
+                    var partitions = new Partition[partitionCount];
                     for (var p = 0; p < partitions.Length; p++) {
                         var partitionError = (ErrorCode) reader.ReadInt16();
                         var partitionId = reader.ReadInt32();
                         var leaderId = reader.ReadInt32();
 
                         var replicaCount = reader.ReadInt32();
+                        context.ThrowIfCountTooBig(replicaCount);
                         var replicas = replicaCount.Repeat(() => reader.ReadInt32()).ToArray();
 
                         var isrCount = reader.ReadInt32();
+                        context.ThrowIfCountTooBig(isrCount);
                         var isrs = isrCount.Repeat(() => reader.ReadInt32()).ToArray();
 
                         partitions[p] = new Partition(partitionId, leaderId, partitionError, replicas, isrs);

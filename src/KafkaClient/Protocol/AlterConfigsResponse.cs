@@ -30,6 +30,7 @@ namespace KafkaClient.Protocol
                 var throttleTime = reader.ReadThrottleTime();
 
                 var resourceCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(resourceCount);
                 var resources = new ConfigResource[resourceCount];
                 for (var r = 0; r < resourceCount; r++ ) {
                     var errorCode = reader.ReadErrorCode();

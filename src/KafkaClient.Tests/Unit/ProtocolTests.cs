@@ -40,7 +40,7 @@ namespace KafkaClient.Tests.Unit
                 var encoded = writer.ToSegment(true);
                 encoded.Array[encoded.Offset + 20] += 1;
                 using (var reader = new KafkaReader(encoded)) {
-                    Assert.Throws<CrcValidationException>(() => reader.ReadMessages());
+                    Assert.Throws<CrcValidationException>(() => reader.ReadMessages(new RequestContext()));
                 }
             }
         }
@@ -97,7 +97,7 @@ namespace KafkaClient.Tests.Unit
                 writer.WriteMessages(messages, new TransactionContext(), version, codec, out int _);
                 var encoded = writer.ToSegment(false);
                 using (var reader = new KafkaReader(encoded)) {
-                    var result = reader.ReadMessages(encoded.Count).Messages;
+                    var result = reader.ReadMessages(new RequestContext(), encoded.Count).Messages;
 
                     for (var i = 0; i < messages.Count; i++) {
                         if (!messages[i].Equals(result[i])) {
@@ -135,11 +135,62 @@ namespace KafkaClient.Tests.Unit
         }
 
         [Test]
+        public void MaxBytesLimitIsObeyedWithMessages(
+            [Values(0, 1, 2)] byte version,
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec,
+            [Values(10)] int valueLength,
+            [Values(11)] int keyLength)
+        {
+            var random = new Random(42);
+            var messages = new List<Message>();
+            for (var m = 0; m < 3; m++) {
+                var key = keyLength > 0 ? new byte[keyLength] : null;
+                var value = new byte[valueLength];
+                if (key != null) {
+                    random.NextBytes(key);
+                }
+                random.NextBytes(value);
+
+                var offset = codec == MessageCodec.None ? m*2 : m;
+                var keyBytes = key != null ? new ArraySegment<byte>(key) : new ArraySegment<byte>();
+                var dateTimeOffset = version > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(m) : (DateTimeOffset?)null;
+
+                var headers = new List<MessageHeader>();
+                if (version > 0) {
+                    for (var h = 0; h < keyLength; h++) {
+                        var headerValue = new byte[valueLength];
+                        random.NextBytes(headerValue);
+                        headers.Add(new MessageHeader(h.ToString(), new ArraySegment<byte>(headerValue)));
+                    }
+                }
+                messages.Add(new Message(new ArraySegment<byte>(value), keyBytes, 0, offset, dateTimeOffset));
+            }
+
+            using (var writer = new KafkaWriter()) {
+                writer.WriteMessages(messages, new TransactionContext(), version, codec, out int _);
+                var encoded = writer.ToSegment(false);
+
+                var oldMaxBytes = RequestContext.MaxByteSize;
+                try {
+                    RequestContext.MaxByteSize = valueLength;
+                    using (var reader = new KafkaReader(encoded)) {
+                        var result = reader.ReadMessages(new RequestContext(), encoded.Count).Messages;
+                    }
+                    Assert.Fail("should have thrown BufferUnderRunException");
+                } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && ex.Message.EndsWith($"bytes (> {valueLength}). Configure this through RequestContext.MaxByteSize.")) {
+                    // expected
+                } finally {
+                    RequestContext.MaxByteSize = oldMaxBytes;
+                }
+            }
+        }
+
+        [Test]
         public void DecodeMessageSetShouldHandleResponseWithMaxBufferSizeHit()
         {
             using (var reader = new KafkaReader(MessageHelper.FetchResponseMaxBytesOverflow)) {
                 //This message set has a truncated message bytes at the end of it
-                var result = reader.ReadMessages();
+                var result = reader.ReadMessages(new RequestContext());
 
                 var message = result.Messages.First().Value.ToUtf8String();
 
@@ -163,7 +214,7 @@ namespace KafkaClient.Tests.Unit
                 using (var reader = new KafkaReader(segment))
                 {
                     // act/assert
-                    Assert.Throws<BufferUnderRunException>(() => reader.ReadMessages(segment.Count));
+                    Assert.Throws<BufferUnderRunException>(() => reader.ReadMessages(new RequestContext(), segment.Count));
                 }
             }
         }
@@ -184,7 +235,7 @@ namespace KafkaClient.Tests.Unit
 
                 // act/assert
                 using (var reader = new KafkaReader(segment)) {
-                    var batch = reader.ReadMessages(segment.Count);
+                    var batch = reader.ReadMessages(new RequestContext(), segment.Count);
                     var messages = batch.Messages;
                     var actualPayload = messages.First().Value;
 
@@ -449,6 +500,46 @@ namespace KafkaClient.Tests.Unit
                 response.ThrottleTime);
 
             response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
+        }
+
+        [Test]
+        public void MaxArrayLimitIsObeyedWithFetchResponse(
+            [Values(0, 1, 2, 3, 4, 5)] short version,
+            [Values(1234)] int throttleTime,
+            [Values("testTopic")] string topicName, 
+            [Values(10)] int topicsPerRequest, 
+            [Values(5)] int totalPartitions, 
+            [Values(MessageCodec.None, MessageCodec.Gzip)] MessageCodec codec, 
+            [Values(
+                ErrorCode.OFFSET_OUT_OF_RANGE
+            )] ErrorCode errorCode, 
+            [Values(3)] int messagesPerSet
+            )
+        {
+            var topics = new List<FetchResponse.Topic>();
+            for (var t = 0; t < topicsPerRequest; t++) {
+                var partitionId = t % totalPartitions;
+                var messages = GenerateMessages(messagesPerSet, MessageVersion(version), codec);
+                var abortedTransactions = version >= 4
+                    ? totalPartitions.Repeat(i => new FetchResponse.AbortedTransaction(i, i)).ToList()
+                    : null;
+                topics.Add(new FetchResponse.Topic(topicName + t, partitionId, _randomizer.Next(), errorCode, version >= 4 ? (long?)topicsPerRequest : null, version >= 5 ? (long?)topicsPerRequest : null, messages, abortedTransactions));
+            }
+            var response = new FetchResponse(topics, version >= 1 ? TimeSpan.FromMilliseconds(throttleTime) : (TimeSpan?)null);
+            var responseWithUpdatedAttribute = new FetchResponse(response.Responses.Select(t => new FetchResponse.Topic(t.TopicName, t.PartitionId, t.HighWatermark, t.Error, t.LastStableOffset, t.LogStartOffset,
+                    t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.Timestamp)), t.AbortedTransactions)), 
+                response.ThrottleTime);
+
+            var oldMaxArray = RequestContext.MaxArraySize;
+            try {
+                RequestContext.MaxArraySize = topicsPerRequest - 1;
+                response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
+                Assert.Fail("should have thrown BufferUnderRunException");
+            } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && !ex.Message.Contains("bytes") && ex.Message.EndsWith($"(> {topicsPerRequest - 1}). Configure this through RequestContext.MaxArraySize.")) {
+                // expected
+            } finally {
+                RequestContext.MaxArraySize = oldMaxArray;
+            }
         }
 
         [Test]

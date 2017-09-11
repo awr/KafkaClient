@@ -23,8 +23,10 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var errorCode = (ErrorCode)reader.ReadInt16();
-                var enabledMechanisms = new string[reader.ReadInt32()];
-                for (var m = 0; m < enabledMechanisms.Length; m++) {
+                var mechanismCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(mechanismCount);
+                var enabledMechanisms = new string[mechanismCount];
+                for (var m = 0; m < mechanismCount; m++) {
                     enabledMechanisms[m] = reader.ReadString();
                 }
 

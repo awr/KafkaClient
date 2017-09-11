@@ -35,18 +35,21 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 2);
-                var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
+                var topics = new List<Topic>();
                 for (var t = 0; t < topicCount; t++) {
                     var topicName = reader.ReadString();
 
                     var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
                     for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
                         var errorCode = (ErrorCode) reader.ReadInt16();
 
                         if (context.ApiVersion == 0) {
                             var offsetsCount = reader.ReadInt32();
+                            context.ThrowIfCountTooBig(offsetsCount);
                             for (var o = 0; o < offsetsCount; o++) {
                                 var offset = reader.ReadInt64();
                                 topics.Add(new Topic(topicName, partitionId, errorCode, offset));

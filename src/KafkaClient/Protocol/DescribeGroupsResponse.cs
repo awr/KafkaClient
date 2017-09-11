@@ -37,8 +37,10 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
-                var groups = new Group[reader.ReadInt32()];
-                for (var g = 0; g < groups.Length; g++) {
+                var groupCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(groupCount);
+                var groups = new Group[groupCount];
+                for (var g = 0; g < groupCount; g++) {
                     var errorCode = (ErrorCode)reader.ReadInt16();
                     var groupId = reader.ReadString();
                     var state = reader.ReadString();
@@ -46,14 +48,16 @@ namespace KafkaClient.Protocol
                     var protocol = reader.ReadString();
 
                     IMembershipEncoder encoder = null;
-                    var members = new Member[reader.ReadInt32()];
-                    for (var m = 0; m < members.Length; m++) {
+                    var memberCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(memberCount);
+                    var members = new Member[memberCount];
+                    for (var m = 0; m < memberCount; m++) {
                         encoder = encoder ?? context.GetEncoder(protocolType);
                         var memberId = reader.ReadString();
                         var clientId = reader.ReadString();
                         var clientHost = reader.ReadString();
-                        var memberMetadata = encoder.DecodeMetadata(protocol, reader);
-                        var memberAssignment = encoder.DecodeAssignment(reader);
+                        var memberMetadata = encoder.DecodeMetadata(protocol, context, reader);
+                        var memberAssignment = encoder.DecodeAssignment(context, reader);
                         members[m] = new Member(memberId, clientId, clientHost, memberMetadata, memberAssignment);
                     }
                     groups[g] = new Group(errorCode, groupId, state, protocolType, protocol, members);

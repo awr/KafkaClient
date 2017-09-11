@@ -30,12 +30,14 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime();
 
-                var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
+                var topics = new List<Topic>();
                 for (var i = 0; i < topicCount; i++) {
                     var topicName = reader.ReadString();
 
                     var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
                     for (var j = 0; j < partitionCount; j++) {
                         var partitionId = reader.ReadInt32();
                         var lowWatermark = reader.ReadInt64();

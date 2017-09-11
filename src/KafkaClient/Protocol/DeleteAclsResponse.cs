@@ -36,11 +36,15 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime();
 
-                var filters = new FilterResponse[reader.ReadInt32()];
-                for (var r = 0; r < filters.Length; r++ ) {
+                var filterCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(filterCount);
+                var filters = new FilterResponse[filterCount];
+                for (var r = 0; r < filterCount; r++ ) {
                     var errorCode = (ErrorCode) reader.ReadInt16();
                     var errorMessage = reader.ReadString();
-                    var acls = new MatchingAcl[reader.ReadInt32()];
+                    var aclCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(aclCount);
+                    var acls = new MatchingAcl[aclCount];
                     for (var a = 0; a < acls.Length; a++) {
                         var aclErrorCode = (ErrorCode) reader.ReadInt16();
                         var aclErrorMessage = reader.ReadString();

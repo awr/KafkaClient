@@ -14,7 +14,6 @@ namespace KafkaClient.Protocol
         long ReadVarint64();
         string ReadString(int? length = null);
         ArraySegment<byte> ReadBytes(int count);
-        ArraySegment<byte> ReadBytes();
         uint ReadCrc(int count, bool castagnoli = false);
 
         int Position { get; set; }

@@ -29,8 +29,10 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var errorCode = (ErrorCode)reader.ReadInt16();
 
-                var apiKeys = new VersionSupport[reader.ReadInt32()];
-                for (var i = 0; i < apiKeys.Length; i++) {
+                var apiKeyCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(apiKeyCount);
+                var apiKeys = new VersionSupport[apiKeyCount];
+                for (var i = 0; i < apiKeyCount; i++) {
                     var apiKey = (ApiKey)reader.ReadInt16();
                     var minVersion = reader.ReadInt16();
                     var maxVersion = reader.ReadInt16();

@@ -98,16 +98,8 @@ namespace KafkaClient.Protocol
 
         public ArraySegment<byte> ReadBytes(int count)
         {
+            if (count == KafkaNullSize) { return EmptySegment; }
             return ToSegment(count);
-        }
-
-        public ArraySegment<byte> ReadBytes()
-        {
-            var size = ReadInt32();
-            if (size == KafkaNullSize) { return EmptySegment; }
-
-            var result = ReadBytes(size);
-            return result;
         }
 
         public uint ReadCrc(int count, bool castagnoli = false)

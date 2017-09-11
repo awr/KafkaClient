@@ -22,14 +22,18 @@ namespace KafkaClient.Tests
             writer.Write(value.Bytes);
         }
 
-        protected override ByteTypeMetadata DecodeMetadata(string assignmentStrategy, IKafkaReader reader, int expectedLength)
+        protected override ByteTypeMetadata DecodeMetadata(string assignmentStrategy, IRequestContext context, IKafkaReader reader, int expectedLength)
         {
-            return new ByteTypeMetadata(assignmentStrategy, reader.ReadBytes());
+            var byteCount = reader.ReadInt32();
+            context.ThrowIfCountTooBig(byteCount, true);
+            return new ByteTypeMetadata(assignmentStrategy, reader.ReadBytes(byteCount));
         }
 
-        protected override ByteTypeAssignment DecodeAssignment(IKafkaReader reader, int expectedLength)
+        protected override ByteTypeAssignment DecodeAssignment(IRequestContext context, IKafkaReader reader, int expectedLength)
         {
-            return new ByteTypeAssignment(reader.ReadBytes());
+            var byteCount = reader.ReadInt32();
+            context.ThrowIfCountTooBig(byteCount, true);
+            return new ByteTypeAssignment(reader.ReadBytes(byteCount));
         }
     }
 }

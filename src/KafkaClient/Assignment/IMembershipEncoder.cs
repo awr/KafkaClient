@@ -9,8 +9,8 @@ namespace KafkaClient.Assignment
         void EncodeMetadata(IKafkaWriter writer, IMemberMetadata value);
         void EncodeAssignment(IKafkaWriter writer, IMemberAssignment value);
 
-        IMemberMetadata DecodeMetadata(string protocol, IKafkaReader reader);
-        IMemberAssignment DecodeAssignment(IKafkaReader reader);
+        IMemberMetadata DecodeMetadata(string protocol, IRequestContext context, IKafkaReader reader);
+        IMemberAssignment DecodeAssignment(IRequestContext context, IKafkaReader reader);
 
         IMembershipAssignor GetAssignor(string strategy);
     }

@@ -39,12 +39,14 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
-                var topics = new List<Topic>();
                 var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
+                var topics = new List<Topic>();
                 for (var t = 0; t < topicCount; t++) {
                     var topicName = reader.ReadString();
 
                     var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
                     for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
                         var errorCode = (ErrorCode) reader.ReadInt16();
@@ -58,15 +60,16 @@ namespace KafkaClient.Protocol
                             if (context.ApiVersion >= 5) {
                                 logStartOffset = reader.ReadInt64();
                             }
-                            var count = reader.ReadInt32();
-                            for (var a = 0; a < count; a++) {
+                            var transactionCount = reader.ReadInt32();
+                            context.ThrowIfCountTooBig(transactionCount);
+                            for (var a = 0; a < transactionCount; a++) {
                                 var producerId = reader.ReadInt64();
                                 var firstOffset = reader.ReadInt64();
                                 transactions.Add(new AbortedTransaction(producerId, firstOffset));
                             }
                         }
 
-                        var messageBatch = reader.ReadMessages();
+                        var messageBatch = reader.ReadMessages(context);
                         topics.Add(new Topic(topicName, partitionId, highWaterMarkOffset, errorCode, lastStableOffset, logStartOffset, messageBatch.Messages, transactions));
                     }
                 }

@@ -50,6 +50,18 @@ namespace KafkaClient.Protocol
         /// <inheritdoc />
         public ProduceRequestMessages OnProduceRequestMessages { get; }
 
+        public void ThrowIfCountTooBig(int size, bool byteSize = false)
+        {
+            if (byteSize) {
+                if (size > MaxByteSize) throw new BufferUnderRunException($"Cannot allocate an array of size {size} bytes (> {MaxByteSize}). Configure this through {nameof(RequestContext)}.{nameof(MaxByteSize)}.");
+                return;
+            }
+            if (size > MaxArraySize) throw new BufferUnderRunException($"Cannot allocate an array of size {size} (> {MaxArraySize}). Configure this through {nameof(RequestContext)}.{nameof(MaxArraySize)}.");
+        }
+
+        public static int MaxArraySize = 1000;
+        public static int MaxByteSize = 1000000;
+
         public override string ToString() => $"{{id:{CorrelationId},version:{ApiVersion},client:{ClientId}}}";
     }
 }

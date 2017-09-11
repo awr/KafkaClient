@@ -10,14 +10,10 @@ namespace KafkaClient.Protocol
             ExpectResponse = expectResponse;
         }
 
-        /// <summary>
-        /// Enum identifying the specific type of request message being represented.
-        /// </summary>
+        /// <inheritdoc />
         public ApiKey ApiKey { get; }
 
-        /// <summary>
-        /// Flag which tells the broker call to expect a response for this request.
-        /// </summary>
+        /// <inheritdoc />
         public bool ExpectResponse { get; }
 
         public override string ToString() => $"{{{this.RequestToString()}}}";

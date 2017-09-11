@@ -28,8 +28,10 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
                 var errorCode = (ErrorCode)reader.ReadInt16();
-                var groups = new Group[reader.ReadInt32()];
-                for (var g = 0; g < groups.Length; g++) {
+                var groupCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(groupCount);
+                var groups = new Group[groupCount];
+                for (var g = 0; g < groupCount; g++) {
                     var groupId = reader.ReadString();
                     var protocolType = reader.ReadString();
                     groups[g] = new Group(groupId, protocolType);

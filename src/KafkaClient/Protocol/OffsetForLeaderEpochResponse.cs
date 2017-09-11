@@ -27,11 +27,13 @@ namespace KafkaClient.Protocol
         public static OffsetForLeaderEpochResponse FromBytes(IRequestContext context, ArraySegment<byte> bytes)
         {
             using (var reader = new KafkaReader(bytes)) {
-                var groupedTopics = reader.ReadInt32();
+                var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
                 var topics = new List<Topic>();
-                for (var t = 0; t < groupedTopics; t++) {
+                for (var t = 0; t < topicCount; t++) {
                     var topicName = reader.ReadString();
                     var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
                     for (var p = 0; p < partitionCount; p++) {
                         var errorCode = reader.ReadErrorCode();
                         var partitionId = reader.ReadInt32();

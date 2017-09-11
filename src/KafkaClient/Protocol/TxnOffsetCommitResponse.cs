@@ -28,11 +28,13 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime();
-                var topics = new List<TopicResponse>();
                 var topicCount = reader.ReadInt32();
+                context.ThrowIfCountTooBig(topicCount);
+                var topics = new List<TopicResponse>();
                 for (var t = 0; t < topicCount; t++) {
                     var topicName = reader.ReadString();
                     var partitionCount = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(partitionCount);
                     for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
                         var errorCode = reader.ReadErrorCode();

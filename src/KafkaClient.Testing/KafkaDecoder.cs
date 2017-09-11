@@ -136,7 +136,7 @@ namespace KafkaClient.Testing
                     var partitionCount = reader.ReadInt32();
                     for (var p = 0; p < partitionCount; p++) {
                         var partitionId = reader.ReadInt32();
-                        var messageBatch = reader.ReadMessages();
+                        var messageBatch = reader.ReadMessages(context);
 
                         topics.Add(new ProduceRequest.Topic(topicName, partitionId, messageBatch.Messages));
                     }
@@ -323,7 +323,7 @@ namespace KafkaClient.Testing
                 var encoder = context.GetEncoder(protocolType);
                 for (var g = 0; g < groupProtocols.Length; g++) {
                     var protocolName = reader.ReadString();
-                    var metadata = encoder.DecodeMetadata(protocolName, reader);
+                    var metadata = encoder.DecodeMetadata(protocolName, context, reader);
                     groupProtocols[g] = new JoinGroupRequest.GroupProtocol(metadata);
                 }
 
@@ -363,7 +363,7 @@ namespace KafkaClient.Testing
                 var groupAssignments = new SyncGroupRequest.GroupAssignment[reader.ReadInt32()];
                 for (var a = 0; a < groupAssignments.Length; a++) {
                     var groupMemberId = reader.ReadString();
-                    var assignment = encoder.DecodeAssignment(reader);
+                    var assignment = encoder.DecodeAssignment(context, reader);
 
                     groupAssignments[a] = new SyncGroupRequest.GroupAssignment(groupMemberId, assignment);
                 }

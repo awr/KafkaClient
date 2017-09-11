@@ -35,5 +35,10 @@ namespace KafkaClient.Protocol
         /// Triggered when encoding ProduceRequest messages.
         /// </summary>
         ProduceRequestMessages OnProduceRequestMessages { get; }
+
+        /// <summary>
+        /// Check for scenarios where the count from the server is too big and may cause a memory issue.
+        /// </summary>
+        void ThrowIfCountTooBig(int size, bool byteSize = false);
     }
 }

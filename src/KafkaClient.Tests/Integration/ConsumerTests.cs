@@ -169,11 +169,14 @@ namespace KafkaClient.Tests.Integration
                     topicName += "-deleted";
                     await router.DeleteTopicAsync(topicName);
                 }
-                using (var consumer = new Consumer(new TopicOffset(topicName, 0, 0), router, new ConsumerConfiguration(maxPartitionFetchBytes: TestConfig.IntegrationOptions.ConsumerConfiguration.MaxFetchBytes * 2))) {
-
-                    await AssertAsync.Throws<RoutingException>(
-                        () => consumer.FetchAsync(CancellationToken.None, 5),
-                        ex => ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {0} defined."));
+                var partitionId = 0;
+                using (var consumer = new Consumer(new TopicOffset(topicName, partitionId, 0), router, new ConsumerConfiguration(maxPartitionFetchBytes: TestConfig.IntegrationOptions.ConsumerConfiguration.MaxFetchBytes * 2))) {
+                    try {
+                        await consumer.FetchAsync(CancellationToken.None, 5);
+                        Assert.True(false, "should have thrown RoutingException");
+                    } catch (RoutingException ex) when (ex.Message.StartsWith($"The topic ({topicName}) has no partitionId {partitionId} defined.")) {
+                        // expected
+                    }
                 }
             }
         }

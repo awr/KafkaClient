@@ -344,13 +344,14 @@ namespace KafkaClient.Protocol
 
         private const int MessageSetVersionOffset = 16;
 
-        public static MessageTransaction ReadMessages(this IKafkaReader reader, int? messageSetSize = null)
+        public static MessageTransaction ReadMessages(this IKafkaReader reader, IRequestContext context, int? messageSetSize = null)
         {
             if (!messageSetSize.HasValue) {
                 messageSetSize = reader.ReadInt32();
             }
             if (messageSetSize.Value == 0) return new MessageTransaction(ImmutableList<Message>.Empty);
             if (!reader.HasBytes(messageSetSize.Value)) throw new BufferUnderRunException($"Message set of {messageSetSize} is not available.");
+            context.ThrowIfCountTooBig(messageSetSize.Value, true);
 
             if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set header is not available.");
             reader.Position += MessageSetVersionOffset;
@@ -358,16 +359,17 @@ namespace KafkaClient.Protocol
             reader.Position -= MessageSetVersionOffset + 1;
 
             if (version >= 2) {
-                return reader.ReadRecordBatch();
+                return reader.ReadRecordBatch(context);
             }
 
-            return new MessageTransaction(reader.ReadMessageSet(MessageCodec.None, (reader.Position - 4) + messageSetSize.Value));
+            return new MessageTransaction(reader.ReadMessageSet(context, MessageCodec.None, (reader.Position - 4) + messageSetSize.Value));
         }
 
-        internal static MessageTransaction ReadRecordBatch(this IKafkaReader reader)
+        internal static MessageTransaction ReadRecordBatch(this IKafkaReader reader, IRequestContext context)
         {
             var firstOffset = reader.ReadInt64();
             var length = reader.ReadInt32();
+            context.ThrowIfCountTooBig(length, true);
             var partitionLeaderEpoch = reader.ReadInt32();
             var version = reader.ReadByte();
 
@@ -384,57 +386,63 @@ namespace KafkaClient.Protocol
             var firstSequence = reader.ReadInt32();
 
             var codec = (MessageCodec) (attributes & Message.CodecMask);
-            var messages = reader.ReadRecords(new MessageContext(codec, version), firstOffset, firstTimestamp);
+            var messages = reader.ReadRecords(context, new MessageContext(codec, version), firstOffset, firstTimestamp);
             var transaction = new TransactionContext(producerId, producerEpoch, firstSequence);
             return new MessageTransaction(messages, transaction);
         }
 
         private static readonly ArraySegment<byte> EmptySegment = new ArraySegment<byte>(new byte[0]);
 
-        internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IMessageContext context, long firstOffset, long firstTimestamp)
+        internal static IEnumerable<Message> ReadRecords(this IKafkaReader reader, IRequestContext requestContext, IMessageContext messageContext, long firstOffset, long firstTimestamp)
         {
             var messages = new List<Message>();
             var messageCount = reader.ReadInt32();
+            requestContext.ThrowIfCountTooBig(messageCount);
 
             for (var m = 0; m < messageCount; m++) {
                 var length = reader.ReadVarint32();
-                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {context.Codec}).");
+                if (!reader.HasBytes(length)) throw new BufferUnderRunException($"Record size of {length} is not fully available (codec {messageContext.Codec}).");
 
                 var attribute = reader.ReadByte();
                 var timestampDelta = reader.ReadVarint64();
                 var offsetDelta = reader.ReadVarint64();
                 var keyLength = reader.ReadVarint32();
+                requestContext.ThrowIfCountTooBig(keyLength, true);
                 var key = keyLength > 0 ? reader.ReadBytes(keyLength) : EmptySegment;
                 var valueLength = reader.ReadVarint32();
+                requestContext.ThrowIfCountTooBig(valueLength, true);
                 var value = valueLength > 0 ? reader.ReadBytes(valueLength) : EmptySegment;
 
                 MessageHeader[] headers = null;
                 var headerCount = reader.ReadVarint32();
                 if (headerCount > 0) {
+                    requestContext.ThrowIfCountTooBig(headerCount);
                     headers = new MessageHeader[headerCount];
                     for (var h = 0; h < headerCount; h++) {
                         var headerKeyLength = reader.ReadVarint32();
+                        requestContext.ThrowIfCountTooBig(headerKeyLength, true);
                         var headerKey = headerKeyLength > 0 ? reader.ReadString(headerKeyLength) : null;
                         var headerValueLength = reader.ReadVarint32();
+                        requestContext.ThrowIfCountTooBig(headerValueLength, true);
                         var headerValue = headerKeyLength > 0 ? reader.ReadBytes(headerValueLength) : EmptySegment;
                         headers[h] = new MessageHeader(headerKey, headerValue);
                     }
                 }
 
                 var timestampMilliseconds = firstTimestamp + timestampDelta;
-                if (context.Codec == MessageCodec.None) {
+                if (messageContext.Codec == MessageCodec.None) {
                     messages.Add(new Message(value, key, attribute, firstOffset + offsetDelta, timestampMilliseconds > 0 ? (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(timestampMilliseconds) : null, headers));
                 } else {
-                    var uncompressedBytes = value.ToUncompressed(context.Codec);
+                    var uncompressedBytes = value.ToUncompressed(messageContext.Codec);
                     using (var messageRecordsReader = new KafkaReader(uncompressedBytes)) {
-                        messages.AddRange(messageRecordsReader.ReadRecords(new MessageContext(version: context.MessageVersion), firstOffset, firstTimestamp));
+                        messages.AddRange(messageRecordsReader.ReadRecords(requestContext, new MessageContext(version: messageContext.MessageVersion), firstOffset, firstTimestamp));
                     }
                 }
             }
             return messages;
         }
 
-        internal static IEnumerable<Message> ReadMessageSet(this IKafkaReader reader, MessageCodec codec, int finalPosition)
+        internal static IEnumerable<Message> ReadMessageSet(this IKafkaReader reader, IRequestContext context, MessageCodec codec, int finalPosition)
         {
             var messages = new List<Message>();
             while (reader.Position < finalPosition) {
@@ -442,6 +450,7 @@ namespace KafkaClient.Protocol
                 try {
                     var offset = reader.ReadInt64();
                     length = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(length.Value, true);
 
                     var crc = reader.ReadUInt32();
                     var crcHash = reader.ReadCrc(length.Value - 4);
@@ -456,8 +465,12 @@ namespace KafkaClient.Protocol
                             timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
                         }
                     }
-                    var key = reader.ReadBytes();
-                    var value = reader.ReadBytes();
+                    var keyLength = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(keyLength, true);
+                    var key = reader.ReadBytes(keyLength);
+                    var valueLength = reader.ReadInt32();
+                    context.ThrowIfCountTooBig(valueLength, true);
+                    var value = reader.ReadBytes(valueLength);
 
                     codec = (MessageCodec)(Message.CodecMask & attribute);
                     if (codec == MessageCodec.None) {
@@ -465,7 +478,7 @@ namespace KafkaClient.Protocol
                     } else {
                         var uncompressedBytes = value.ToUncompressed(codec);
                         using (var messageSetReader = new KafkaReader(uncompressedBytes)) {
-                            messages.AddRange(messageSetReader.ReadMessageSet(codec, uncompressedBytes.Count));
+                            messages.AddRange(messageSetReader.ReadMessageSet(context, codec, uncompressedBytes.Count));
                         }
                     }
                 } catch (EndOfStreamException ex) {
