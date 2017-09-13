@@ -38,7 +38,7 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
                 var groupCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(groupCount);
+                reader.AssertMaxArraySize(groupCount);
                 var groups = new Group[groupCount];
                 for (var g = 0; g < groupCount; g++) {
                     var errorCode = (ErrorCode)reader.ReadInt16();
@@ -49,15 +49,15 @@ namespace KafkaClient.Protocol
 
                     IMembershipEncoder encoder = null;
                     var memberCount = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(memberCount);
+                    reader.AssertMaxArraySize(memberCount);
                     var members = new Member[memberCount];
                     for (var m = 0; m < memberCount; m++) {
                         encoder = encoder ?? context.GetEncoder(protocolType);
                         var memberId = reader.ReadString();
                         var clientId = reader.ReadString();
                         var clientHost = reader.ReadString();
-                        var memberMetadata = encoder.DecodeMetadata(protocol, context, reader);
-                        var memberAssignment = encoder.DecodeAssignment(context, reader);
+                        var memberMetadata = encoder.DecodeMetadata(protocol, reader);
+                        var memberAssignment = encoder.DecodeAssignment(reader);
                         members[m] = new Member(memberId, clientId, clientHost, memberMetadata, memberAssignment);
                     }
                     groups[g] = new Group(errorCode, groupId, state, protocolType, protocol, members);

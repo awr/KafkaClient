@@ -39,29 +39,29 @@ namespace KafkaClient.Assignment
         }
 
         /// <inheritdoc />
-        public IMemberMetadata DecodeMetadata(string assignmentStrategy, IRequestContext context, IKafkaReader reader)
+        public IMemberMetadata DecodeMetadata(string assignmentStrategy, IKafkaReader reader)
         {
             var expectedLength = reader.ReadInt32();
             if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"{ProtocolType} Metadata size of {expectedLength} is not fully available.");
 
             if (expectedLength == 0) return null;
-            return DecodeMetadata(assignmentStrategy, context, reader, expectedLength);
+            return DecodeMetadata(assignmentStrategy, reader, expectedLength);
         }
 
         /// <inheritdoc />
-        public IMemberAssignment DecodeAssignment(IRequestContext context, IKafkaReader reader)
+        public IMemberAssignment DecodeAssignment(IKafkaReader reader)
         {
             var expectedLength = reader.ReadInt32();
             if (!reader.HasBytes(expectedLength)) throw new BufferUnderRunException($"{ProtocolType} Assignment size of {expectedLength} is not fully available.");
             
             if (expectedLength == 0) return null;
-            return DecodeAssignment(context, reader, expectedLength);
+            return DecodeAssignment(reader, expectedLength);
         }
 
         protected abstract void EncodeMetadata(IKafkaWriter writer, TMetadata value);
         protected abstract void EncodeAssignment(IKafkaWriter writer, TAssignment value);
-        protected abstract TMetadata DecodeMetadata(string assignmentStrategy, IRequestContext context, IKafkaReader reader, int expectedLength);
-        protected abstract TAssignment DecodeAssignment(IRequestContext context, IKafkaReader reader, int expectedLength);
+        protected abstract TMetadata DecodeMetadata(string assignmentStrategy, IKafkaReader reader, int expectedLength);
+        protected abstract TAssignment DecodeAssignment(IKafkaReader reader, int expectedLength);
 
         public IMembershipAssignor GetAssignor(string strategy)
         {

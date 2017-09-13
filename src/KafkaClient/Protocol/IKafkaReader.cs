@@ -13,11 +13,13 @@ namespace KafkaClient.Protocol
         long ReadInt64();
         long ReadVarint64();
         string ReadString(int? length = null);
+        ArraySegment<byte> ReadBytes();
         ArraySegment<byte> ReadBytes(int count);
         uint ReadCrc(int count, bool castagnoli = false);
 
         int Position { get; set; }
 
         bool HasBytes(int count);
+        void AssertMaxArraySize(int size);
     }
 }

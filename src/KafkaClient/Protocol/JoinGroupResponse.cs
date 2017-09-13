@@ -50,11 +50,11 @@ namespace KafkaClient.Protocol
 
                 var encoder = context.GetEncoder(context.ProtocolType);
                 var memberCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(memberCount);
+                reader.AssertMaxArraySize(memberCount);
                 var members = new Member[memberCount];
                 for (var m = 0; m < members.Length; m++) {
                     var id = reader.ReadString();
-                    var metadata = encoder.DecodeMetadata(groupProtocol, context, reader);
+                    var metadata = encoder.DecodeMetadata(groupProtocol, reader);
                     members[m] = new Member(id, metadata);
                 }
 

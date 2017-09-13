@@ -28,7 +28,7 @@ namespace KafkaClient.Protocol
                 var throttleTime = reader.ReadThrottleTime();
 
                 var errorCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(errorCount);
+                reader.AssertMaxArraySize(errorCount);
                 var responses = new ErrorResponse[errorCount];
                 for (var r = 0; r < responses.Length; r++ ) {
                     var errorCode = (ErrorCode) reader.ReadInt16();

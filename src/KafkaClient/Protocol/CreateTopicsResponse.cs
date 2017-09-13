@@ -28,7 +28,7 @@ namespace KafkaClient.Protocol
             using (var reader = new KafkaReader(bytes)) {
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 2);
                 var topicCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(topicCount);
+                reader.AssertMaxArraySize(topicCount);
                 var topics = new Topic[topicCount];
                 for (var i = 0; i < topicCount; i++) {
                     var topicName = reader.ReadString();

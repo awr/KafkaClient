@@ -170,17 +170,17 @@ namespace KafkaClient.Tests.Unit
                 writer.WriteMessages(messages, new TransactionContext(), version, codec, out int _);
                 var encoded = writer.ToSegment(false);
 
-                var oldMaxBytes = RequestContext.MaxByteSize;
+                var oldMaxBytes = KafkaReader.MaxByteSize;
                 try {
-                    RequestContext.MaxByteSize = valueLength;
+                    KafkaReader.MaxByteSize = valueLength;
                     using (var reader = new KafkaReader(encoded)) {
                         var result = reader.ReadMessages(new RequestContext(), encoded.Count).Messages;
                     }
                     Assert.Fail("should have thrown BufferUnderRunException");
-                } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && ex.Message.EndsWith($"bytes (> {valueLength}). Configure this through RequestContext.MaxByteSize.")) {
+                } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && ex.Message.EndsWith($"bytes (> {valueLength}). Configure this through KafkaReader.MaxByteSize.")) {
                     // expected
                 } finally {
-                    RequestContext.MaxByteSize = oldMaxBytes;
+                    KafkaReader.MaxByteSize = oldMaxBytes;
                 }
             }
         }
@@ -530,15 +530,15 @@ namespace KafkaClient.Tests.Unit
                     t.Messages.Select(m => m.Attribute == 0 ? m : new Message(m.Value, m.Key, 0, m.Offset, m.Timestamp)), t.AbortedTransactions)), 
                 response.ThrottleTime);
 
-            var oldMaxArray = RequestContext.MaxArraySize;
+            var oldMaxArray = KafkaReader.MaxArraySize;
             try {
-                RequestContext.MaxArraySize = topicsPerRequest - 1;
+                KafkaReader.MaxArraySize = topicsPerRequest - 1;
                 response.AssertCanEncodeDecodeResponse(version, forComparison: responseWithUpdatedAttribute);
                 Assert.Fail("should have thrown BufferUnderRunException");
-            } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && !ex.Message.Contains("bytes") && ex.Message.EndsWith($"(> {topicsPerRequest - 1}). Configure this through RequestContext.MaxArraySize.")) {
+            } catch (BufferUnderRunException ex) when (ex.Message.StartsWith("Cannot allocate an array of size") && !ex.Message.Contains("bytes") && ex.Message.EndsWith($"(> {topicsPerRequest - 1}). Configure this through KafkaReader.MaxArraySize.")) {
                 // expected
             } finally {
-                RequestContext.MaxArraySize = oldMaxArray;
+                KafkaReader.MaxArraySize = oldMaxArray;
             }
         }
 

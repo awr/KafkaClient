@@ -29,7 +29,7 @@ namespace KafkaClient.Protocol
                 var throttleTime = reader.ReadThrottleTime(context.ApiVersion >= 1);
                 var errorCode = (ErrorCode)reader.ReadInt16();
                 var groupCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(groupCount);
+                reader.AssertMaxArraySize(groupCount);
                 var groups = new Group[groupCount];
                 for (var g = 0; g < groupCount; g++) {
                     var groupId = reader.ReadString();

@@ -83,6 +83,19 @@ namespace KafkaClient.Protocol
             return ToSegment(4).ToUInt32();
         }
 
+        public static int MaxArraySize = 1000;
+        public static int MaxByteSize = 1000000;
+
+        public void AssertMaxArraySize(int size)
+        {
+            if (size > MaxArraySize) throw new BufferUnderRunException($"Cannot allocate an array of size {size} (> {MaxArraySize}). Configure this through {nameof(KafkaReader)}.{nameof(MaxArraySize)}.");
+        }
+
+        private void AssertMaxBytes(int byteSize)
+        {
+            if (byteSize > MaxByteSize) throw new BufferUnderRunException($"Cannot allocate an array of size {byteSize} bytes (> {MaxByteSize}). Configure this through {nameof(KafkaReader)}.{nameof(MaxByteSize)}.");
+        }
+
         public string ReadString(int? length = null)
         {
             if (!length.HasValue) {
@@ -96,9 +109,15 @@ namespace KafkaClient.Protocol
             return result;
         }
 
+        public ArraySegment<byte> ReadBytes()
+        {
+            return ReadBytes(ReadInt32());
+        }
+
         public ArraySegment<byte> ReadBytes(int count)
         {
             if (count == KafkaNullSize) { return EmptySegment; }
+            AssertMaxBytes(count);
             return ToSegment(count);
         }
 

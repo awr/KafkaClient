@@ -351,7 +351,6 @@ namespace KafkaClient.Protocol
             }
             if (messageSetSize.Value == 0) return new MessageTransaction(ImmutableList<Message>.Empty);
             if (!reader.HasBytes(messageSetSize.Value)) throw new BufferUnderRunException($"Message set of {messageSetSize} is not available.");
-            context.ThrowIfCountTooBig(messageSetSize.Value, true);
 
             if (!reader.HasBytes(MessageSetVersionOffset + 1)) throw new BufferUnderRunException("Message set header is not available.");
             reader.Position += MessageSetVersionOffset;
@@ -369,7 +368,6 @@ namespace KafkaClient.Protocol
         {
             var firstOffset = reader.ReadInt64();
             var length = reader.ReadInt32();
-            context.ThrowIfCountTooBig(length, true);
             var partitionLeaderEpoch = reader.ReadInt32();
             var version = reader.ReadByte();
 
@@ -397,7 +395,7 @@ namespace KafkaClient.Protocol
         {
             var messages = new List<Message>();
             var messageCount = reader.ReadInt32();
-            requestContext.ThrowIfCountTooBig(messageCount);
+            reader.AssertMaxArraySize(messageCount);
 
             for (var m = 0; m < messageCount; m++) {
                 var length = reader.ReadVarint32();
@@ -407,23 +405,19 @@ namespace KafkaClient.Protocol
                 var timestampDelta = reader.ReadVarint64();
                 var offsetDelta = reader.ReadVarint64();
                 var keyLength = reader.ReadVarint32();
-                requestContext.ThrowIfCountTooBig(keyLength, true);
                 var key = keyLength > 0 ? reader.ReadBytes(keyLength) : EmptySegment;
                 var valueLength = reader.ReadVarint32();
-                requestContext.ThrowIfCountTooBig(valueLength, true);
                 var value = valueLength > 0 ? reader.ReadBytes(valueLength) : EmptySegment;
 
                 MessageHeader[] headers = null;
                 var headerCount = reader.ReadVarint32();
                 if (headerCount > 0) {
-                    requestContext.ThrowIfCountTooBig(headerCount);
+                    reader.AssertMaxArraySize(headerCount);
                     headers = new MessageHeader[headerCount];
                     for (var h = 0; h < headerCount; h++) {
                         var headerKeyLength = reader.ReadVarint32();
-                        requestContext.ThrowIfCountTooBig(headerKeyLength, true);
                         var headerKey = headerKeyLength > 0 ? reader.ReadString(headerKeyLength) : null;
                         var headerValueLength = reader.ReadVarint32();
-                        requestContext.ThrowIfCountTooBig(headerValueLength, true);
                         var headerValue = headerKeyLength > 0 ? reader.ReadBytes(headerValueLength) : EmptySegment;
                         headers[h] = new MessageHeader(headerKey, headerValue);
                     }
@@ -450,7 +444,6 @@ namespace KafkaClient.Protocol
                 try {
                     var offset = reader.ReadInt64();
                     length = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(length.Value, true);
 
                     var crc = reader.ReadUInt32();
                     var crcHash = reader.ReadCrc(length.Value - 4);
@@ -465,12 +458,8 @@ namespace KafkaClient.Protocol
                             timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
                         }
                     }
-                    var keyLength = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(keyLength, true);
-                    var key = reader.ReadBytes(keyLength);
-                    var valueLength = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(valueLength, true);
-                    var value = reader.ReadBytes(valueLength);
+                    var key = reader.ReadBytes();
+                    var value = reader.ReadBytes();
 
                     codec = (MessageCodec)(Message.CodecMask & attribute);
                     if (codec == MessageCodec.None) {

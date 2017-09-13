@@ -36,7 +36,7 @@ namespace KafkaClient.Protocol
                 var throttleTime = reader.ReadThrottleTime();
 
                 var resourceCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(resourceCount);
+                reader.AssertMaxArraySize(resourceCount);
                 var resources = new ConfigResource[resourceCount];
                 for (var r = 0; r < resourceCount; r++ ) {
                     var errorCode = reader.ReadErrorCode();
@@ -44,7 +44,7 @@ namespace KafkaClient.Protocol
                     var resourceType = reader.ReadByte();
                     var resourceName = reader.ReadString();
                     var configCount = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(configCount);
+                    reader.AssertMaxArraySize(configCount);
                     var configs = new ConfigEntry[configCount];
                     for (var c = 0; c < configCount; c++) {
                         var configName = reader.ReadString();

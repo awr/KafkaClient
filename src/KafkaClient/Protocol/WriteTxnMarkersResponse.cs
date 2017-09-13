@@ -29,18 +29,18 @@ namespace KafkaClient.Protocol
         {
             using (var reader = new KafkaReader(bytes)) {
                 var markerCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(markerCount);
+                reader.AssertMaxArraySize(markerCount);
                 var markers = new TransactionMarker[markerCount];
                 for (var m = 0; m < markerCount; m++) {
                     var producerId = reader.ReadInt64();
                     var topicCount = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(topicCount);
+                    reader.AssertMaxArraySize(topicCount);
                     var topics = new List<TopicResponse>();
                     for (var t = 0; t < topicCount; t++) {
                         var topicName = reader.ReadString();
 
                         var partitionCount = reader.ReadInt32();
-                        context.ThrowIfCountTooBig(partitionCount);
+                        reader.AssertMaxArraySize(partitionCount);
                         for (var j = 0; j < partitionCount; j++) {
                             var partitionId = reader.ReadInt32();
                             var errorCode = (ErrorCode) reader.ReadInt16();

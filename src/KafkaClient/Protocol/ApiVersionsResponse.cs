@@ -30,7 +30,7 @@ namespace KafkaClient.Protocol
                 var errorCode = (ErrorCode)reader.ReadInt16();
 
                 var apiKeyCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(apiKeyCount);
+                reader.AssertMaxArraySize(apiKeyCount);
                 var apiKeys = new VersionSupport[apiKeyCount];
                 for (var i = 0; i < apiKeyCount; i++) {
                     var apiKey = (ApiKey)reader.ReadInt16();

@@ -37,13 +37,13 @@ namespace KafkaClient.Protocol
                 var throttleTime = reader.ReadThrottleTime();
 
                 var filterCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(filterCount);
+                reader.AssertMaxArraySize(filterCount);
                 var filters = new FilterResponse[filterCount];
                 for (var r = 0; r < filterCount; r++ ) {
                     var errorCode = (ErrorCode) reader.ReadInt16();
                     var errorMessage = reader.ReadString();
                     var aclCount = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(aclCount);
+                    reader.AssertMaxArraySize(aclCount);
                     var acls = new MatchingAcl[aclCount];
                     for (var a = 0; a < acls.Length; a++) {
                         var aclErrorCode = (ErrorCode) reader.ReadInt16();

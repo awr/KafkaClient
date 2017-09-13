@@ -36,13 +36,13 @@ namespace KafkaClient.Protocol
                 var errorMessage = reader.ReadString();
 
                 var resourceCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(resourceCount);
+                reader.AssertMaxArraySize(resourceCount);
                 var resources = new List<AclResource>();
                 for (var r = 0; r < resourceCount; r++ ) {
                     var resourceType = reader.ReadByte();
                     var resourceName = reader.ReadString();
                     var aclCount = reader.ReadInt32();
-                    context.ThrowIfCountTooBig(aclCount);
+                    reader.AssertMaxArraySize(aclCount);
                     for (var a = 0; a < aclCount; a++) {
                         var principal = reader.ReadString();
                         var host = reader.ReadString();

@@ -18,42 +18,38 @@ namespace KafkaClient.Assignment
         }
 
         /// <inheritdoc />
-        protected override ConsumerProtocolMetadata DecodeMetadata(string assignmentStrategy, IRequestContext context, IKafkaReader reader, int expectedLength)
+        protected override ConsumerProtocolMetadata DecodeMetadata(string assignmentStrategy, IKafkaReader reader, int expectedLength)
         {
             var version = reader.ReadInt16();
             var topicCount = reader.ReadInt32();
-            context.ThrowIfCountTooBig(topicCount);
+            reader.AssertMaxArraySize(topicCount);
             var topicNames = new string[topicCount];
             for (var t = 0; t < topicNames.Length; t++) {
                 topicNames[t] = reader.ReadString();
             }
-            var byteCount = reader.ReadInt32();
-            context.ThrowIfCountTooBig(byteCount, true);
-            var userData = reader.ReadBytes(byteCount);
+            var userData = reader.ReadBytes();
             return new ConsumerProtocolMetadata(topicNames, assignmentStrategy, userData, version);
         }
 
         /// <inheritdoc />
-        protected override ConsumerMemberAssignment DecodeAssignment(IRequestContext context, IKafkaReader reader, int expectedLength)
+        protected override ConsumerMemberAssignment DecodeAssignment(IKafkaReader reader, int expectedLength)
         {
             var version = reader.ReadInt16();
 
             var topicCount = reader.ReadInt32();
-            context.ThrowIfCountTooBig(topicCount);
+            reader.AssertMaxArraySize(topicCount);
             var topics = new List<TopicPartition>();
             for (var t = 0; t < topicCount; t++) {
                 var topicName = reader.ReadString();
 
                 var partitionCount = reader.ReadInt32();
-                context.ThrowIfCountTooBig(partitionCount);
+                reader.AssertMaxArraySize(partitionCount);
                 for (var p = 0; p < partitionCount; p++) {
                     var partitionId = reader.ReadInt32();
                     topics.Add(new TopicPartition(topicName, partitionId));
                 }
             }
-            var byteCount = reader.ReadInt32();
-            context.ThrowIfCountTooBig(byteCount, true);
-            var userData = reader.ReadBytes(byteCount);
+            var userData = reader.ReadBytes();
             return new ConsumerMemberAssignment(topics, userData, version);
         }
 

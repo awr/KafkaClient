@@ -27,7 +27,7 @@ namespace KafkaClient.Protocol
                 var errorCode = (ErrorCode)reader.ReadInt16();
 
                 var encoder = context.GetEncoder();
-                var memberAssignment = encoder.DecodeAssignment(context, reader);
+                var memberAssignment = encoder.DecodeAssignment(reader);
                 return new SyncGroupResponse(errorCode, memberAssignment, throttleTime);
             }
         }
