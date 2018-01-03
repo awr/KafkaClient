@@ -15,7 +15,7 @@
   <ItemGroup>
     <PackageReference Include="Nito.AsyncEx.Context" Version="1.1.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="1.0.2" />
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.9" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.11" />
   </ItemGroup>
 
   <ItemGroup>
