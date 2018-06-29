@@ -139,7 +139,7 @@ namespace KafkaClient.Tests.Integration
 
                         await AssertAsync.Throws<FetchOutOfRangeException>(
                             () => consumer.FetchAsync(CancellationToken.None, 5),
-                            ex => ex.Message.Contains($"{TestConfig.IntegrationUri.Host}:{TestConfig.IntegrationUri.Port} returned OFFSET_OUT_OF_RANGE for Fetch request"));
+                            ex => ex.Message.Contains($"{TestConfig.Kafka10IntegrationUri.Host}:{TestConfig.Kafka10IntegrationUri.Port} returned OFFSET_OUT_OF_RANGE for Fetch request"));
                     }
                 });
             }

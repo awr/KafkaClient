@@ -36,16 +36,15 @@ namespace KafkaClient.Tests
         public static async Task TemporaryTopicAsync(this IRouter router, Func<string, Task> asyncAction, int partitions = 1, [CallerMemberName] string name = null)
         {
             var topicName = TestConfig.TopicName(name);
-            try {
-                await router.SendToAnyAsync(new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TestConfig.DefaultTimeout), CancellationToken.None);
-            } catch (RequestException ex) when (ex.ErrorCode == ErrorCode.TOPIC_ALREADY_EXISTS) {
-                // ignore already exists
+            var request = new CreateTopicsRequest(new [] { new CreateTopicsRequest.Topic(topicName, partitions, 1) }, TestConfig.DefaultTimeout);
+            var response = await router.SendToAnyAsync(request, CancellationToken.None);
+            if (response.Errors.Any(e => e != ErrorCode.TOPIC_ALREADY_EXISTS && !e.IsSuccess())) {
+                throw request.ExtractExceptions(response);
             }
             try {
                 await asyncAction(topicName);
             } finally {
-                // right now deleting the topic isn't propagating properly, so subsequent runs of the test fail
-                // await router.SendToAnyAsync(new DeleteTopicsRequest(new [] { topicName }, TimeSpan.FromSeconds(1)), CancellationToken.None);
+                await router.SendToAnyAsync(new DeleteTopicsRequest(new[] { topicName }, TimeSpan.FromSeconds(1)), CancellationToken.None);
             }
         }
 
@@ -115,9 +114,7 @@ namespace KafkaClient.Tests
         public static TValue GetOrDefault<TKey, TValue>(
             this ConcurrentDictionary<TKey, TValue> dict, TKey key, TValue defaultValue)
         {
-            TValue value;
-            if (dict.TryGetValue(key, out value)) return value;
-            return defaultValue;
+            return dict.TryGetValue(key, out var value) ? value : defaultValue;
         }
 
         public static TimeSpan Times(this TimeSpan span, double multiplier)
@@ -131,5 +128,17 @@ namespace KafkaClient.Tests
                 yield return producer(i);
             }
         }
+
+        public static KafkaOptions WithUri(this KafkaOptions options, string uri) => options.WithUri(new Uri(uri));
+
+        public static KafkaOptions WithUri(this KafkaOptions options, Uri uri) => 
+            new KafkaOptions(
+                uri,
+                options.ConnectionConfiguration,
+                options.RouterConfiguration,
+                options.ConnectionFactory,
+                options.ProducerConfiguration,
+                options.ConsumerConfiguration,
+                options.Log);
     }
 }

@@ -12,10 +12,11 @@ namespace KafkaClient.Tests.Integration
     [Category("Integration")]
     public class CompressionTests
     {
-        [Test]
-        public async Task GzipCanCompressMessageAndSend()
+        [TestCase(TestConfig.Kafka10ConnectionString)]
+        [TestCase(TestConfig.Kafka11ConnectionString)]
+        public async Task GzipCanCompressMessageAndSend(string uri)
         {
-            using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
+            using (var router = await TestConfig.IntegrationOptions.WithUri(uri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start EnsureGzipCompressedMessageCanSend"));
                     var endpoint = await Endpoint.ResolveAsync(TestConfig.IntegrationOptions.ServerUris.First(), TestConfig.IntegrationOptions.Log);
@@ -43,14 +44,15 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
-        public async Task GzipCanDecompressMessageFromKafka()
+        [TestCase(TestConfig.Kafka10ConnectionString)]
+        [TestCase(TestConfig.Kafka11ConnectionString)]
+        public async Task GzipCanDecompressMessageFromKafka(string uri)
         {
             const int numberOfMessages = 3;
             const int partitionId = 0;
 
             TestConfig.Log.Info(() => LogEvent.Create(">> Start EnsureGzipCanDecompressMessageFromKafka"));
-            using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
+            using (var router = await TestConfig.IntegrationOptions.WithUri(uri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     OffsetsResponse.Topic offset;
                     var messages = new List<Message>();
@@ -78,10 +80,11 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
-        public async Task SnappyCanCompressMessageAndSend()
+        [TestCase(TestConfig.Kafka10ConnectionString)]
+        [TestCase(TestConfig.Kafka11ConnectionString)]
+        public async Task SnappyCanCompressMessageAndSend(string uri)
         {
-            using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
+            using (var router = await TestConfig.IntegrationOptions.WithUri(uri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     TestConfig.Log.Info(() => LogEvent.Create(">> Start EnsureGzipCompressedMessageCanSend"));
                     var endpoint = await Endpoint.ResolveAsync(TestConfig.IntegrationOptions.ServerUris.First(), TestConfig.IntegrationOptions.Log);
@@ -109,14 +112,15 @@ namespace KafkaClient.Tests.Integration
             }
         }
 
-        [Test]
-        public async Task SnappyCanDecompressMessageFromKafka()
+        [TestCase(TestConfig.Kafka10ConnectionString)]
+        [TestCase(TestConfig.Kafka11ConnectionString)]
+        public async Task SnappyCanDecompressMessageFromKafka(string uri)
         {
             const int numberOfMessages = 3;
             const int partitionId = 0;
 
             TestConfig.Log.Info(() => LogEvent.Create(">> Start EnsureGzipCanDecompressMessageFromKafka"));
-            using (var router = await TestConfig.IntegrationOptions.CreateRouterAsync()) {
+            using (var router = await TestConfig.IntegrationOptions.WithUri(uri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                     OffsetsResponse.Topic offset;
                     var messages = new List<Message>();

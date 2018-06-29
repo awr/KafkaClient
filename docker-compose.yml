@@ -1,0 +1,58 @@
+version: '3'
+services:
+  kafka11:
+    image: ches/kafka:0.10.2.1
+    restart: always
+    ports:
+     - "9094:9092"
+    environment:
+     - ZOOKEEPER_IP=zookeeper
+     - ZOOKEEPER_CHROOT=/v11
+     - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
+     - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafka11
+     - KAFKA_ADVERTISED_PORT=9094
+    links:
+      - zookeeper
+
+  kafka10:
+    image: ches/kafka:0.10.2.1
+    restart: always
+    ports:
+     - "9093:9092"
+    environment:
+     - ZOOKEEPER_IP=zookeeper
+     - ZOOKEEPER_CHROOT=/v10
+     - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
+     - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafka10
+     - KAFKA_ADVERTISED_PORT=9093
+    links:
+      - zookeeper
+
+  kafka9:
+    image: ches/kafka:0.9.0.1
+    restart: always
+    ports:
+     - "9092:9092"
+    environment:
+     - ZOOKEEPER_IP=zookeeper
+     - ZOOKEEPER_CHROOT=/v9
+     - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
+     - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+     - KAFKA_DELETE_TOPIC_ENABLE=true
+     - KAFKA_BROKER_ID=0
+     - KAFKA_ADVERTISED_HOST_NAME=kafka9
+     - KAFKA_ADVERTISED_PORT=9092
+    links:
+      - zookeeper
+
+  zookeeper:
+    image: zookeeper:3.4
+    restart: always
+    ports:
+     - "2181:2181"

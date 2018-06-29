@@ -26,7 +26,7 @@ namespace KafkaClient.Tests
 
         public static Endpoint ServerEndpoint()
         {
-            return new Endpoint(new IPEndPoint(IPAddress.Loopback, ServerPort()), "tcp://localhost");
+            return new Endpoint(new IPEndPoint(IPAddress.Loopback, ServerPort()), KafkaLocalConnectionString);
         }
 
         public static int ServerPort()
@@ -37,10 +37,17 @@ namespace KafkaClient.Tests
             }
         }
 
-        public static Uri IntegrationUri { get; } = new Uri("tcp://kafka:9092");
+        public const string KafkaLocalConnectionString = "tcp://localhost";
+        public const string Kafka9ConnectionString = "tcp://kafka9:9092";
+        public const string Kafka10ConnectionString = "tcp://kafka10:9093";
+        public const string Kafka11ConnectionString = "tcp://kafka11:9094";
+
+        public static Uri Kafka9IntegrationUri { get; } = new Uri(Kafka9ConnectionString);
+        public static Uri Kafka10IntegrationUri { get; } = new Uri(Kafka10ConnectionString);
+        public static Uri Kafka11IntegrationUri { get; } = new Uri(Kafka11ConnectionString);
 
         public static KafkaOptions Options { get; } = new KafkaOptions(
-            IntegrationUri,
+            Kafka10IntegrationUri,
             new ConnectionConfiguration(ConnectionConfiguration.Defaults.ConnectionRetry(TimeSpan.FromSeconds(10)), requestTimeout: TimeSpan.FromSeconds(10)),
             new RouterConfiguration(Retry.AtMost(2)),
             producerConfiguration: new ProducerConfiguration(stopTimeout: TimeSpan.FromSeconds(1)),
@@ -48,7 +55,7 @@ namespace KafkaClient.Tests
             log: Log);
 
         public static KafkaOptions IntegrationOptions { get; } = new KafkaOptions(
-            IntegrationUri,
+            Kafka10IntegrationUri,
             new ConnectionConfiguration(ConnectionConfiguration.Defaults.ConnectionRetry(TimeSpan.FromSeconds(10)), requestTimeout: TimeSpan.FromSeconds(10)),
             producerConfiguration: new ProducerConfiguration(stopTimeout: TimeSpan.FromSeconds(1)),
             consumerConfiguration: new ConsumerConfiguration(heartbeatTimeout: TimeSpan.FromSeconds(6)),

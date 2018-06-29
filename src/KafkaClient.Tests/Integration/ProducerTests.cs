@@ -117,7 +117,7 @@ namespace KafkaClient.Tests.Integration
             partitionSelector.Select(null, new ArraySegment<byte>())
                              .ReturnsForAnyArgs(_ => _.Arg<MetadataResponse.Topic>().PartitionMetadata.Single(p => p.PartitionId == 1));
 
-            using (var router = await new KafkaOptions(TestConfig.IntegrationUri).CreateRouterAsync()) {
+            using (var router = await new KafkaOptions(TestConfig.Kafka10IntegrationUri).CreateRouterAsync()) {
                 await router.TemporaryTopicAsync(async topicName => {
                 var offset = await router.GetOffsetsAsync(topicName, 0, CancellationToken.None);
                     using (var producer = new Producer(router, new ProducerConfiguration(partitionSelector: partitionSelector))) {
